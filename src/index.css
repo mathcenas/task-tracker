@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --border: 214.3 31.8% 91.4%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .input-base {
+    @apply mt-1 block w-full rounded-lg border-gray-300 shadow-sm 
+           focus:border-primary-500 focus:ring-primary-500 
+           dark:border-gray-600 dark:bg-gray-700 dark:text-white;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center px-4 py-2 border border-transparent 
+           rounded-lg shadow-sm text-sm font-medium text-white 
+           bg-primary-600 hover:bg-primary-700 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 
+           dark:bg-primary-500 dark:hover:bg-primary-600;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center px-4 py-2 border border-gray-300 
+           rounded-lg shadow-sm text-sm font-medium text-gray-700 
+           bg-white hover:bg-gray-50 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 
+           dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-soft p-6 
+           transition-all duration-200 ease-in-out 
+           dark:bg-gray-800 dark:shadow-none;
+  }
+
+  .card-hover {
+    @apply hover:shadow-lg hover:scale-[1.01] 
+           dark:hover:bg-gray-750;
+  }
+}
+
+/* Hide number input spinners */
+@layer utilities {
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+}

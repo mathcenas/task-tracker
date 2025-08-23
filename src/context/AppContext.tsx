@@ -1,0 +1,171 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Client, Project, Task } from '../types';
+import { generateSampleData } from '../utils/sampleData';
+
+interface AppContextType {
+  clients: Client[];
+  projects: Project[];
+  tasks: Task[];
+  addClient: (client: Omit<Client, 'id'>) => string;
+  addProject: (project: Omit<Project, 'id'>) => string;
+  addTask: (task: Omit<Task, 'id'>) => void;
+  updateTask: (task: Task) => void;
+  finishTask: (taskId: string) => void;
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  getClientProjects: (clientId: string) => Project[];
+  getClientTasks: (clientId: string) => Task[];
+  getProjectTasks: (projectId: string) => Task[];
+  getClient: (clientId: string) => Client | undefined;
+  getProject: (projectId: string) => Project | undefined;
+  getTask: (taskId: string) => Task | undefined;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [clients, setClients] = useState<Client[]>(() => {
+    const saved = localStorage.getItem('clients');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const saved = localStorage.getItem('projects');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem('tasks');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Initialize sample data if no data exists
+  useEffect(() => {
+    if (clients.length === 0 && projects.length === 0 && tasks.length === 0) {
+      const sampleData = generateSampleData();
+      
+      // Add clients first
+      const newClients = sampleData.clients.map(client => ({
+        ...client,
+        id: crypto.randomUUID()
+      }));
+      setClients(newClients);
+      
+      // Add projects with client references
+      const newProjects = sampleData.projects.map(project => {
+        const clientId = newClients.find(c => c.name === project.clientName)?.id || '';
+        return {
+          ...project,
+          id: crypto.randomUUID(),
+          clientId
+        };
+      });
+      setProjects(newProjects);
+      
+      // Add tasks with client and project references
+      const newTasks = sampleData.tasks.map(task => {
+        const clientId = newClients.find(c => c.name === task.clientName)?.id || '';
+        const projectId = newProjects.find(p => p.name === task.projectName)?.id || '';
+        return {
+          ...task,
+          id: crypto.randomUUID(),
+          clientId,
+          projectId
+        };
+      });
+      setTasks(newTasks);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('clients', JSON.stringify(clients));
+  }, [clients]);
+
+  useEffect(() => {
+    localStorage.setItem('projects', JSON.stringify(projects));
+  }, [projects]);
+
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  const addClient = (client: Omit<Client, 'id'>) => {
+    const id = crypto.randomUUID();
+    const newClient = { ...client, id };
+    setClients(prev => [...prev, newClient]);
+    return id;
+  };
+
+  const addProject = (project: Omit<Project, 'id'>) => {
+    const id = crypto.randomUUID();
+    const newProject = { ...project, id };
+    setProjects(prev => [...prev, newProject]);
+    return id;
+  };
+
+  const addTask = (task: Omit<Task, 'id'>) => {
+    const newTask = { ...task, id: crypto.randomUUID() };
+    setTasks(prev => [...prev, newTask]);
+  };
+
+  const updateTask = (task: Task) => {
+    setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+  };
+
+  const finishTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, finished: true } : t));
+  };
+
+  const getClientProjects = (clientId: string) => {
+    return projects.filter(project => project.clientId === clientId);
+  };
+
+  const getClientTasks = (clientId: string) => {
+    return tasks.filter(task => task.clientId === clientId);
+  };
+
+  const getProjectTasks = (projectId: string) => {
+    return tasks.filter(task => task.projectId === projectId);
+  };
+
+  const getClient = (clientId: string) => {
+    return clients.find(client => client.id === clientId);
+  };
+
+  const getProject = (projectId: string) => {
+    return projects.find(project => project.id === projectId);
+  };
+
+  const getTask = (taskId: string) => {
+    return tasks.find(task => task.id === taskId);
+  };
+
+  return (
+    <AppContext.Provider value={{
+      clients,
+      projects,
+      tasks,
+      addClient,
+      addProject,
+      addTask,
+      updateTask,
+      finishTask,
+      setTasks,
+      getClientProjects,
+      getClientTasks,
+      getProjectTasks,
+      getClient,
+      getProject,
+      getTask
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+};
