@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfWeek, endOfWeek, parseISO, format, isToday, isTomorrow, isYesterday, isThisWeek } from 'date-fns';
-import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap } from 'lucide-react';
+import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { Link } from 'react-router-dom';
 
@@ -9,6 +9,7 @@ export function WeeklyDashboard() {
   const { tasks, projects, getClient, getProject, finishTask, updateTask, getProjectTasks } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<'hours' | 'revenue' | 'pending' | null>(null);
 
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start week on Monday
@@ -118,42 +119,307 @@ export function WeeklyDashboard() {
     }
   };
 
+  const renderCardModal = () => {
+    if (!selectedCard) return null;
+
+    const modalContent = {
+      hours: {
+        title: 'Weekly Hours Breakdown',
+        icon: <Clock className="w-6 h-6 text-blue-500" />,
+        data: weeklyTasks.filter(t => t.type !== 'insumos').map(task => {
+          const client = getClient(task.clientId);
+          const project = getProject(task.projectId);
+          return {
+            ...task,
+            clientName: client?.name || 'Unknown',
+            projectName: project?.name || 'Unknown',
+            revenue: (task.hours || 0) * (client?.hourlyRate || 0)
+          };
+        }).sort((a, b) => (b.hours || 0) - (a.hours || 0))
+      },
+      revenue: {
+        title: 'Weekly Revenue Breakdown',
+        icon: <DollarSign className="w-6 h-6 text-green-500" />,
+        data: weeklyTasks.map(task => {
+          const client = getClient(task.clientId);
+          const project = getProject(task.projectId);
+          const revenue = task.type === 'insumos' 
+            ? -(task.cost || 0)
+            : (task.hours || 0) * (client?.hourlyRate || 0);
+          return {
+            ...task,
+            clientName: client?.name || 'Unknown',
+            projectName: project?.name || 'Unknown',
+            revenue
+          };
+        }).sort((a, b) => b.revenue - a.revenue)
+      },
+      pending: {
+        title: 'Pending Tasks Analysis',
+        icon: <Target className="w-6 h-6 text-purple-500" />,
+        data: unfinishedTasks.map(task => {
+          const client = getClient(task.clientId);
+          const project = getProject(task.projectId);
+          const daysOverdue = task.date < format(today, 'yyyy-MM-dd') 
+            ? Math.ceil((today.getTime() - new Date(task.date).getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+          return {
+            ...task,
+            clientName: client?.name || 'Unknown',
+            projectName: project?.name || 'Unknown',
+            daysOverdue
+          };
+        }).sort((a, b) => {
+          // Sort by priority first, then by days overdue
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+          }
+          return b.daysOverdue - a.daysOverdue;
+        })
+      }
+    };
+
+    const content = modalContent[selectedCard];
+
+    return (
+      <div className="fixed inset-0 z-50">
+        <div 
+          className="fixed inset-0 bg-black/50 animate-overlayShow dark:bg-black/70" 
+          onClick={() => setSelectedCard(null)}
+        />
+        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-contentShow">
+          <div className="w-[90vw] max-w-4xl max-h-[80vh] rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800 overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                {content.icon}
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {content.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedCard(null)}
+                className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto max-h-[60vh]">
+              {selectedCard === 'hours' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
+                      <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Total Hours</p>
+                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{totalHours.toFixed(1)}h</p>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg dark:bg-green-900/20">
+                      <p className="text-sm text-green-600 font-medium dark:text-green-400">Avg per Task</p>
+                      <p className="text-2xl font-bold text-green-900 dark:text-green-300">
+                        {content.data.length > 0 ? (totalHours / content.data.length).toFixed(1) : '0'}h
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20">
+                      <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Tasks Completed</p>
+                      <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">{content.data.length}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {content.data.map((task, index) => (
+                      <div key={task.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-600 font-medium text-sm dark:bg-blue-900 dark:text-blue-300">
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{task.clientName}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{task.projectName}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{task.hours?.toFixed(1)}h</p>
+                          <p className="text-sm text-green-600 dark:text-green-400">${task.revenue.toFixed(2)}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(task.date), 'MMM d')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedCard === 'revenue' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-green-50 p-4 rounded-lg dark:bg-green-900/20">
+                      <p className="text-sm text-green-600 font-medium dark:text-green-400">Total Revenue</p>
+                      <p className="text-2xl font-bold text-green-900 dark:text-green-300">${totalRevenue.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
+                      <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Service Revenue</p>
+                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">
+                        ${content.data.filter(t => t.revenue > 0).reduce((sum, t) => sum + t.revenue, 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20">
+                      <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supply Costs</p>
+                      <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">
+                        ${Math.abs(content.data.filter(t => t.revenue < 0).reduce((sum, t) => sum + t.revenue, 0)).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {content.data.map((task, index) => (
+                      <div key={task.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
+                        <div className="flex items-center space-x-3">
+                          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-medium text-sm ${
+                            task.revenue > 0 
+                              ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300'
+                              : 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300'
+                          }`}>
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{task.clientName}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{task.projectName}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${
+                            task.revenue > 0 
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            ${Math.abs(task.revenue).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {task.type === 'insumos' ? 'Supply Cost' : `${task.hours?.toFixed(1)}h`}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(task.date), 'MMM d')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedCard === 'pending' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-red-50 p-4 rounded-lg dark:bg-red-900/20">
+                      <p className="text-sm text-red-600 font-medium dark:text-red-400">Overdue</p>
+                      <p className="text-2xl font-bold text-red-900 dark:text-red-300">{overdueTasks.length}</p>
+                    </div>
+                    <div className="bg-yellow-50 p-4 rounded-lg dark:bg-yellow-900/20">
+                      <p className="text-sm text-yellow-600 font-medium dark:text-yellow-400">Due Today</p>
+                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-300">{todayTasks.length}</p>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
+                      <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Upcoming</p>
+                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{upcomingTasks.length}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {content.data.map((task, index) => (
+                      <div key={task.id} className={`flex items-center justify-between p-4 rounded-lg border-l-4 ${
+                        task.daysOverdue > 0 
+                          ? 'bg-red-50 border-red-500 dark:bg-red-900/10'
+                          : isToday(new Date(task.date))
+                          ? 'bg-yellow-50 border-yellow-500 dark:bg-yellow-900/10'
+                          : 'bg-blue-50 border-blue-500 dark:bg-blue-900/10'
+                      }`}>
+                        <div className="flex items-center space-x-3">
+                          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-medium text-sm ${
+                            task.priority === 'high' 
+                              ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300'
+                              : task.priority === 'medium'
+                              ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300'
+                              : 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300'
+                          }`}>
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{task.clientName}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{task.projectName}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          }`}>
+                            {task.priority}
+                          </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {task.daysOverdue > 0 
+                              ? `${task.daysOverdue} days overdue`
+                              : format(new Date(task.date), 'MMM d')
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Weekly Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div 
+          className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          onClick={() => setSelectedCard('hours')}
+        >
           <div className="flex items-center">
             <Clock className="w-8 h-8 text-blue-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">This Week</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalHours.toFixed(1)}h</p>
               <p className="text-xs text-blue-600 dark:text-blue-400">
-                {completionRate.toFixed(0)}% completion rate
+                Click for breakdown • {completionRate.toFixed(0)}% completion
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div 
+          className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          onClick={() => setSelectedCard('revenue')}
+        >
           <div className="flex items-center">
             <TrendingUp className="w-8 h-8 text-green-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Revenue</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalRevenue.toFixed(0)}</p>
               <p className="text-xs text-green-600 dark:text-green-400">
-                ${(totalRevenue / (totalHours || 1)).toFixed(0)}/hour avg
+                Click for breakdown • ${(totalRevenue / (totalHours || 1)).toFixed(0)}/hour avg
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div 
+          className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          onClick={() => setSelectedCard('pending')}
+        >
           <div className="flex items-center">
             <Target className="w-8 h-8 text-purple-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{unfinishedTasks.length}</p>
               <p className="text-xs text-purple-600 dark:text-purple-400">
-                {overdueTasks.length} overdue, {todayTasks.length} today
+                Click for analysis • {overdueTasks.length} overdue, {todayTasks.length} today
               </p>
             </div>
           </div>
@@ -531,6 +797,8 @@ export function WeeklyDashboard() {
         taskType={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.type || 'request' : 'request'}
         taskDescription={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.description : undefined}
       />
+
+      {renderCardModal()}
     </div>
   );
 }
