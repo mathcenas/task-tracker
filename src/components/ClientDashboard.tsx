@@ -333,14 +333,15 @@ export function ClientDashboard() {
                   onClick={() => {
                     const year = selectedMonth.getFullYear();
                     const month = selectedMonth.getMonth() + 1;
-                    const url = `${window.location.origin}/client/${selectedClient}/${year}/${month}`;
+                    const clientSlug = selectedClientData?.slug;
+                    const url = `${window.location.origin}/report/${clientSlug}/${year}/${month}`;
                     navigator.clipboard.writeText(url);
-                    alert(`Public report URL copied to clipboard:\n${url}`);
+                    alert(`✅ Simple URL copied to clipboard!\n\n${url}\n\nShare this clean URL with your client.`);
                   }}
                   className="inline-flex items-center px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-all duration-200"
                 >
                   <Calendar className="w-4 h-4 mr-2" />
-                  Get Public URL
+                  Copy Simple URL
                 </button>
               </div>
             </div>

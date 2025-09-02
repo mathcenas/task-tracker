@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { User, DollarSign, FolderPlus } from 'lucide-react';
+import { generateUniqueSlug } from '../utils/slugify';
 
 export const ClientForm: React.FC = () => {
-  const { addClient, addProject } = useApp();
+  const { addClient, addProject, clients } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -14,9 +15,14 @@ export const ClientForm: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Generate unique slug for the client
+    const existingSlugs = clients.map(c => c.slug);
+    const slug = generateUniqueSlug(formData.name, existingSlugs);
+    
     // Create the client
     const clientId = addClient({
       name: formData.name,
+      slug,
       email: formData.email,
       hourlyRate: parseFloat(formData.hourlyRate) || 0
     });

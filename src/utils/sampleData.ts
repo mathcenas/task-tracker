@@ -7,18 +7,21 @@ export function generateSampleData() {
   const clients: Omit<Client, 'id'>[] = [
     {
       name: 'Acme Corp',
+      slug: 'acme-corp',
       hourlyRate: 85,
       contactPerson: 'John Smith',
       email: 'john@acme.com'
     },
     {
       name: 'TechStart Inc',
+      slug: 'techstart-inc',
       hourlyRate: 95,
       contactPerson: 'Sarah Johnson',
       email: 'sarah@techstart.com'
     },
     {
       name: 'Global Solutions',
+      slug: 'global-solutions',
       hourlyRate: 75,
       contactPerson: 'Mike Wilson',
       email: 'mike@globalsolutions.com'

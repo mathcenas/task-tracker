@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Client, Project, Task } from '../types';
 import { generateSampleData } from '../utils/sampleData';
+import { generateUniqueSlug } from '../utils/slugify';
 
 interface AppContextType {
   clients: Client[];
@@ -18,6 +19,7 @@ interface AppContextType {
   getClient: (clientId: string) => Client | undefined;
   getProject: (projectId: string) => Project | undefined;
   getTask: (taskId: string) => Task | undefined;
+  getClientBySlug: (slug: string) => Client | undefined;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -46,7 +48,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Add clients first
       const newClients = sampleData.clients.map(client => ({
         ...client,
-        id: crypto.randomUUID()
+        id: crypto.randomUUID(),
+        slug: generateUniqueSlug(client.name, [])
       }));
       setClients(newClients);
       
@@ -90,7 +93,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addClient = (client: Omit<Client, 'id'>) => {
     const id = crypto.randomUUID();
-    const newClient = { ...client, id };
+    const existingSlugs = clients.map(c => c.slug);
+    const slug = generateUniqueSlug(client.name, existingSlugs);
+    const newClient = { ...client, id, slug };
     setClients(prev => [...prev, newClient]);
     return id;
   };
@@ -139,6 +144,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return tasks.find(task => task.id === taskId);
   };
 
+  const getClientBySlug = (slug: string) => {
+    return clients.find(client => client.slug === slug);
+  };
   return (
     <AppContext.Provider value={{
       clients,
@@ -155,7 +163,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       getProjectTasks,
       getClient,
       getProject,
-      getTask
+      getTask,
+      getClientBySlug
     }}>
       {children}
     </AppContext.Provider>

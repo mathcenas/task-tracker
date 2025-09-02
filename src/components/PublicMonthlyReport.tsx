@@ -7,10 +7,10 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 export function PublicMonthlyReport() {
-  const { clientId, year, month } = useParams<{ clientId: string; year: string; month: string }>();
-  const { getClient, getClientTasks, getProject } = useApp();
+  const { clientSlug, year, month } = useParams<{ clientSlug: string; year: string; month: string }>();
+  const { getClientBySlug, getClientTasks, getProject } = useApp();
 
-  if (!clientId || !year || !month) {
+  if (!clientSlug || !year || !month) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -21,14 +21,14 @@ export function PublicMonthlyReport() {
     );
   }
 
-  const client = getClient(clientId);
+  const client = getClientBySlug(clientSlug);
   const reportDate = new Date(parseInt(year), parseInt(month) - 1, 1);
   const monthStart = startOfMonth(reportDate);
   const monthEnd = endOfMonth(reportDate);
   const today = new Date();
   
   // Get client tasks for the requested month
-  const clientTasks = getClientTasks(clientId);
+  const clientTasks = client ? getClientTasks(client.id) : [];
   const monthlyTasks = clientTasks.filter(task => 
     task.finished && 
     isWithinInterval(new Date(task.date), { start: monthStart, end: monthEnd })
