@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfWeek, endOfWeek, parseISO, format, isToday, isTomorrow, isYesterday, isThisWeek } from 'date-fns';
-import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, Template, Repeat, CalendarDays } from 'lucide-react';
+import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
 import { TaskTemplates } from './TaskTemplates';
