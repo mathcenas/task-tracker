@@ -333,13 +333,24 @@ export function ClientDashboard() {
                   onClick={() => {
                     const year = selectedMonth.getFullYear();
                     const month = selectedMonth.getMonth() + 1;
-                    if (!selectedClientData?.slug) {
-                      alert('❌ Error: Client slug not found. Please refresh the page and try again.');
+                    
+                    // Debug: Log client data
+                    console.log('Selected client data:', selectedClientData);
+                    console.log('All clients:', clients.map(c => ({ name: c.name, slug: c.slug })));
+                    
+                    if (!selectedClientData) {
+                      alert(`❌ Error: Client not found. Please select a client first.`);
                       return;
                     }
+                    
+                    if (!selectedClientData.slug) {
+                      alert(`❌ Error: Client slug not found for "${selectedClientData.name}".\n\nThis usually happens with older clients. Please:\n1. Refresh the page\n2. Try again\n\nIf the problem persists, the client may need to be re-added.`);
+                      return;
+                    }
+                    
                     const url = `${window.location.origin}/report/${selectedClientData.slug}/${year}/${month}`;
                     navigator.clipboard.writeText(url);
-                    alert(`✅ Client report URL copied!\n\n${url}\n\nShare this URL with your client to view their monthly report.\n\nNote: This URL shows ONLY client information - no admin features visible.\n\nClient slug: ${selectedClientData.slug}`);
+                    alert(`✅ Client report URL copied!\n\n${url}\n\nShare this URL with your client to view their monthly report.\n\n📋 Details:\n• Client: ${selectedClientData.name}\n• Slug: ${selectedClientData.slug}\n• Month: ${format(selectedMonth, 'MMMM yyyy')}\n\n🔒 Note: This URL shows ONLY client information - no admin features visible.`);
                   }}
                   className="inline-flex items-center px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-all duration-200"
                 >

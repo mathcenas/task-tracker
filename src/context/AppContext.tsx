@@ -46,16 +46,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setClients(prevClients => {
       const needsSlugFix = prevClients.some(client => !client.slug);
       if (needsSlugFix) {
+        console.log('Fixing client slugs...');
         const existingSlugs: string[] = [];
-        return prevClients.map(client => {
+        const fixedClients = prevClients.map(client => {
           if (!client.slug) {
             const newSlug = generateUniqueSlug(client.name, existingSlugs);
+            console.log(`Generated slug for "${client.name}": ${newSlug}`);
             existingSlugs.push(newSlug);
             return { ...client, slug: newSlug };
           }
           existingSlugs.push(client.slug);
           return client;
         });
+        console.log('Fixed clients:', fixedClients.map(c => ({ name: c.name, slug: c.slug })));
+        return fixedClients;
       }
       return prevClients;
     });

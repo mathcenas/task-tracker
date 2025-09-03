@@ -52,6 +52,12 @@ export function PublicMonthlyReport() {
               <p className="text-sm text-gray-500 dark:text-gray-500">
                 Please check the URL or select from available clients below
               </p>
+              <div className="mt-4 p-4 bg-yellow-50 rounded-lg dark:bg-yellow-900/20">
+                <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                  <strong>Looking for:</strong> "{clientSlug}"<br/>
+                  <strong>Available clients:</strong> {clients.map(c => c.slug).join(', ')}
+                </p>
+              </div>
             </div>
 
             {clients.length > 0 && (
@@ -78,6 +84,9 @@ export function PublicMonthlyReport() {
                           <div>
                             <h3 className="font-semibold text-gray-900 dark:text-white">{availableClient.name}</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400">${availableClient.hourlyRate}/hour</p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">
+                              Slug: {availableClient.slug}
+                            </p>
                           </div>
                         </div>
                         <p className="text-sm text-blue-600 dark:text-blue-400">
