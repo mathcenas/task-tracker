@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Template, Plus, X, Save, Trash2, Copy } from 'lucide-react';
+import { BookTemplate as Template, Plus, X, Save, Trash2, Copy } from 'lucide-react';
 
 interface TaskTemplate {
   id: string;
