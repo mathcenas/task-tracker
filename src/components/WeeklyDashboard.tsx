@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfWeek, endOfWeek, parseISO, format, isToday, isTomorrow, isYesterday, isThisWeek } from 'date-fns';
-import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign } from 'lucide-react';
+import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, Template, Repeat, CalendarDays } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
+import { BulkTaskOperations } from './BulkTaskOperations';
+import { TaskTemplates } from './TaskTemplates';
+import { RecurringTaskManager } from './RecurringTaskManager';
+import { CalendarSync } from './CalendarSync';
 import { Link } from 'react-router-dom';
 
 export function WeeklyDashboard() {
@@ -10,6 +14,11 @@ export function WeeklyDashboard() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<'hours' | 'revenue' | 'pending' | null>(null);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [showBulkOperations, setShowBulkOperations] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showRecurringTasks, setShowRecurringTasks] = useState(false);
+  const [showCalendarSync, setShowCalendarSync] = useState(false);
 
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start week on Monday
@@ -108,6 +117,35 @@ export function WeeklyDashboard() {
     }
   };
 
+  const handleTaskSelection = (taskId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedTasks(prev => [...prev, taskId]);
+    } else {
+      setSelectedTasks(prev => prev.filter(id => id !== taskId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTasks.length === unfinishedTasks.length) {
+      setSelectedTasks([]);
+    } else {
+      setSelectedTasks(unfinishedTasks.map(task => task.id));
+    }
+  };
+
+  const handleUseTemplate = (template: any) => {
+    // Navigate to task form with template data pre-filled
+    const searchParams = new URLSearchParams({
+      template: JSON.stringify({
+        description: template.description,
+        type: template.type,
+        priority: template.priority,
+        estimatedHours: template.estimatedHours?.toString() || '',
+        estimatedCost: template.estimatedCost?.toString() || ''
+      })
+    });
+    window.location.href = `/add-task?${searchParams.toString()}`;
+  };
   const getTaskIcon = (type: string) => {
     switch (type) {
       case 'incident':
@@ -377,6 +415,68 @@ export function WeeklyDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Quick Actions Bar */}
+      <div className="bg-white rounded-lg shadow-lg p-4 dark:bg-gray-800">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-2">
+            <h3 className="font-medium text-gray-900 dark:text-white">Quick Actions</h3>
+            {selectedTasks.length > 0 && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium dark:bg-blue-900 dark:text-blue-200">
+                {selectedTasks.length} selected
+              </span>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowTemplates(true)}
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 transition-colors"
+            >
+              <Template className="w-4 h-4 mr-1" />
+              Templates
+            </button>
+            
+            <button
+              onClick={() => setShowRecurringTasks(true)}
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 transition-colors"
+            >
+              <Repeat className="w-4 h-4 mr-1" />
+              Recurring
+            </button>
+            
+            <button
+              onClick={() => setShowCalendarSync(true)}
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 transition-colors"
+            >
+              <CalendarDays className="w-4 h-4 mr-1" />
+              Calendar
+            </button>
+            
+            {unfinishedTasks.length > 0 && (
+              <>
+                <button
+                  onClick={handleSelectAll}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-700 dark:text-gray-400 transition-colors"
+                >
+                  <CheckSquare className="w-4 h-4 mr-1" />
+                  {selectedTasks.length === unfinishedTasks.length ? 'Deselect All' : 'Select All'}
+                </button>
+                
+                {selectedTasks.length > 0 && (
+                  <button
+                    onClick={() => setShowBulkOperations(true)}
+                    className="inline-flex items-center px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  >
+                    <CheckSquare className="w-4 h-4 mr-1" />
+                    Bulk Actions ({selectedTasks.length})
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Weekly Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div 
@@ -550,6 +650,13 @@ export function WeeklyDashboard() {
                 
                 return (
                   <div key={task.id} className={`flex justify-between items-center rounded-lg p-4 border-l-4 transition-all duration-200 hover:shadow-md ${getPriorityColor(task.priority)}`}>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.includes(task.id)}
+                        onChange={(e) => handleTaskSelection(task.id, e.target.checked)}
+                        className="form-checkbox text-blue-600 rounded h-4 w-4"
+                      />
                     <div className="flex items-start space-x-3 flex-1">
                       {getTaskIcon(task.type)}
                       <div className="flex-1">
@@ -577,6 +684,7 @@ export function WeeklyDashboard() {
                           )}
                         </div>
                       </div>
+                    </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Link
@@ -796,6 +904,29 @@ export function WeeklyDashboard() {
         onComplete={handleTaskComplete}
         taskType={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.type || 'request' : 'request'}
         taskDescription={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.description : undefined}
+      />
+
+      <BulkTaskOperations
+        selectedTasks={selectedTasks}
+        onSelectionChange={setSelectedTasks}
+        isOpen={showBulkOperations}
+        onClose={() => setShowBulkOperations(false)}
+      />
+
+      <TaskTemplates
+        isOpen={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        onUseTemplate={handleUseTemplate}
+      />
+
+      <RecurringTaskManager
+        isOpen={showRecurringTasks}
+        onClose={() => setShowRecurringTasks(false)}
+      />
+
+      <CalendarSync
+        isOpen={showCalendarSync}
+        onClose={() => setShowCalendarSync(false)}
       />
 
       {renderCardModal()}

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { format, addDays } from 'date-fns';
 
 export function TaskForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { clients, getClientProjects, addProject, addTask } = useApp();
   const [selectedClient, setSelectedClient] = useState('');
   const [formData, setFormData] = useState({
@@ -22,6 +23,31 @@ export function TaskForm() {
   });
   
   const [showQuickActions, setShowQuickActions] = useState(false);
+
+  // Check for template data in URL params
+  React.useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const templateData = searchParams.get('template');
+    
+    if (templateData) {
+      try {
+        const template = JSON.parse(templateData);
+        setFormData(prev => ({
+          ...prev,
+          description: template.description || prev.description,
+          type: template.type || prev.type,
+          priority: template.priority || prev.priority,
+          hours: template.estimatedHours || prev.hours,
+          cost: template.estimatedCost || prev.cost
+        }));
+        
+        // Clear the URL params
+        window.history.replaceState({}, '', location.pathname);
+      } catch (error) {
+        console.error('Error parsing template data:', error);
+      }
+    }
+  }, [location]);
 
   const clientProjects = selectedClient ? getClientProjects(selectedClient) : [];
   
