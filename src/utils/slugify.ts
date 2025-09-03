@@ -9,6 +9,12 @@ export function slugify(text: string): string {
 
 export function generateUniqueSlug(name: string, existingSlugs: string[]): string {
   let baseSlug = slugify(name);
+  
+  // Handle empty slugs
+  if (!baseSlug) {
+    baseSlug = 'client';
+  }
+  
   let slug = baseSlug;
   let counter = 1;
 

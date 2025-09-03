@@ -334,9 +334,13 @@ export function ClientDashboard() {
                     const year = selectedMonth.getFullYear();
                     const month = selectedMonth.getMonth() + 1;
                     const clientSlug = selectedClientData?.slug;
+                    if (!clientSlug) {
+                      alert('❌ Error: Client slug not found');
+                      return;
+                    }
                     const url = `${window.location.origin}/report/${clientSlug}/${year}/${month}`;
                     navigator.clipboard.writeText(url);
-                    alert(`✅ Client report URL copied!\n\n${url}\n\nShare this URL with your client to view their monthly report.`);
+                    alert(`✅ Client report URL copied!\n\n${url}\n\nShare this URL with your client to view their monthly report.\n\nNote: This URL shows ONLY client information - no admin features visible.`);
                   }}
                   className="inline-flex items-center px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-all duration-200"
                 >
