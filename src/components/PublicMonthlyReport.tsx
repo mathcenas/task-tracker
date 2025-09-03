@@ -47,57 +47,30 @@ export function PublicMonthlyReport() {
               </div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">TaskTracker Pro</h1>
               <p className="text-gray-600 dark:text-gray-400 mb-2">
-                Client "{clientSlug}" not found
+                Access Denied
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-500">
-                Please check the URL or select from available clients below
+                The requested client report could not be found or you don't have access to view it.
               </p>
-              <div className="mt-4 p-4 bg-yellow-50 rounded-lg dark:bg-yellow-900/20">
-                <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                  <strong>Looking for:</strong> "{clientSlug}"<br/>
-                  <strong>Available clients:</strong> {clients.map(c => c.slug).join(', ')}
+              <div className="mt-6 p-4 bg-red-50 rounded-lg dark:bg-red-900/20">
+                <p className="text-sm text-red-800 dark:text-red-300">
+                  <strong>Error:</strong> Client report not accessible
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                  Please contact your service provider if you believe this is an error.
                 </p>
               </div>
-            </div>
-
-            {clients.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
-                  Available Client Reports
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {clients.map(availableClient => {
-                    const currentYear = new Date().getFullYear();
-                    const currentMonth = new Date().getMonth() + 1;
-                    const reportUrl = `/report/${availableClient.slug}/${currentYear}/${currentMonth}`;
-                    
-                    return (
-                      <a
-                        key={availableClient.id}
-                        href={reportUrl}
-                        className="block p-6 border rounded-lg hover:shadow-md transition-all duration-200 hover:scale-[1.02] dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600"
-                      >
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg dark:bg-blue-900/20">
-                            <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white">{availableClient.name}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">${availableClient.hourlyRate}/hour</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">
-                              Slug: {availableClient.slug}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-blue-600 dark:text-blue-400">
-                          View {format(new Date(), 'MMMM yyyy')} Report →
-                        </p>
-                      </a>
-                    );
-                  })}
-                </div>
+              
+              <div className="mt-8">
+                <a
+                  href="/about"
+                  className="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Learn About TaskTracker Pro
+                </a>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
