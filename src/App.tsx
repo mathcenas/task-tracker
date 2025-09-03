@@ -10,6 +10,7 @@ import { ClientForm } from './components/ClientForm';
 import { TaskForm } from './components/TaskForm';
 import { EditTask } from './components/EditTask';
 import { PublicMonthlyReport } from './components/PublicMonthlyReport';
+import { AboutPage } from './components/AboutPage';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/task" element={<TaskForm />} />
             <Route path="/edit-task/:taskId" element={<EditTask />} />
             <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
+            <Route path="/about" element={<AboutPage />} />
           </Routes>
         </Layout>
       </Router>
