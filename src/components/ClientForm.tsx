@@ -15,11 +15,10 @@ export const ClientForm: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Generate unique slug for the client
+    // Create the client
     const existingSlugs = clients.map(c => c.slug);
     const slug = generateUniqueSlug(formData.name, existingSlugs);
     
-    // Create the client
     const clientId = addClient({
       name: formData.name,
       slug,

@@ -42,6 +42,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize sample data if no data exists
   useEffect(() => {
+    // Fix any existing clients that might have undefined slugs
+    setClients(prevClients => {
+      const needsSlugFix = prevClients.some(client => !client.slug);
+      if (needsSlugFix) {
+        const existingSlugs: string[] = [];
+        return prevClients.map(client => {
+          if (!client.slug) {
+            const newSlug = generateUniqueSlug(client.name, existingSlugs);
+            existingSlugs.push(newSlug);
+            return { ...client, slug: newSlug };
+          }
+          existingSlugs.push(client.slug);
+          return client;
+        });
+      }
+      return prevClients;
+    });
+
     if (clients.length === 0 && projects.length === 0 && tasks.length === 0) {
       const sampleData = generateSampleData();
       
@@ -94,7 +112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addClient = (client: Omit<Client, 'id'>) => {
     const id = crypto.randomUUID();
     const existingSlugs = clients.map(c => c.slug);
-    const slug = generateUniqueSlug(client.name, existingSlugs);
+    const slug = client.slug || generateUniqueSlug(client.name, existingSlugs);
     const newClient = { ...client, id, slug };
     setClients(prev => [...prev, newClient]);
     return id;
