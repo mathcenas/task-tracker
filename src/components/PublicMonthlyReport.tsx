@@ -35,7 +35,7 @@ export function PublicMonthlyReport() {
 
   const client = getClientBySlug(clientSlug);
   
-  // If client not found, show available clients
+  // If client not found, show access denied (no client info exposed)
   if (!client) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -89,8 +89,8 @@ export function PublicMonthlyReport() {
     isWithinInterval(new Date(task.date), { start: monthStart, end: monthEnd })
   );
   
-  // Report is available if there are completed tasks for that month
-  const isReportAvailable = monthlyTasks.length > 0;
+  // Report is always available for valid clients, even without completed tasks
+  const isReportAvailable = true;
 
   // Calculate 6-month trend data
   const trendData = Array.from({ length: 6 }, (_, i) => {
@@ -548,19 +548,19 @@ export function PublicMonthlyReport() {
               </div>
             </>
           ) : (
-            <div className="text-center py-16">
+            <div className="text-center py-12">
               <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-lg mx-auto mb-6 dark:bg-gray-700">
-                <FileText className="w-8 h-8 text-gray-400" />
+                <Calendar className="w-8 h-8 text-gray-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                No Tasks Completed
+                No Completed Tasks This Month
               </h3>
               <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                No completed tasks found for {format(reportDate, 'MMMM yyyy')}. 
-                Tasks will appear here once they are completed by your service provider.
+                No completed tasks found for <strong>{format(reportDate, 'MMMM yyyy')}</strong>. 
+                Your service provider will update this report as tasks are completed.
               </p>
               
-              {/* Show navigation to months with data */}
+              {/* Month Navigation */}
               <div className="flex justify-center space-x-4">
                 <button
                   onClick={previousMonth}
@@ -584,6 +584,15 @@ export function PublicMonthlyReport() {
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
               </div>
+              
+              {/* Show if there are any completed tasks in other months */}
+              {clientTasks.filter(t => t.finished).length > 0 && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                    📊 You have completed tasks in other months. Use the navigation above to view them.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
