@@ -11,6 +11,7 @@ import { TaskForm } from './components/TaskForm';
 import { EditTask } from './components/EditTask';
 import { PublicMonthlyReport } from './components/PublicMonthlyReport';
 import { AboutPage } from './components/AboutPage';
+import { AllTasksPage } from './components/AllTasksPage';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<WeeklyDashboard />} />
             <Route path="/monthly" element={<MonthlyDashboard />} />
+            <Route path="/tasks" element={<AllTasksPage />} />
             <Route path="/clients" element={<ClientDashboard />} />
             <Route path="/projects" element={<ProjectsDashboard />} />
             <Route path="/add-client" element={<ClientForm />} />
