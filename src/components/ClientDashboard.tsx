@@ -458,7 +458,6 @@ export function ClientDashboard() {
                           ${data.revenue.toFixed(0)}
                         </p>
                       </div>
-                      </div>
                     );
                   })}
                 </div>
