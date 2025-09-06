@@ -433,39 +433,63 @@ export function PublicMonthlyReport() {
                       const maxHours = Math.max(...trendData.map(d => d.hours));
                       const height = maxHours > 0 ? Math.max((data.hours / maxHours) * 100, 5) : 5;
                       const isCurrentMonth = format(reportDate, 'MMM') === data.month;
+                      const monthDate = subMonths(reportDate, 5 - index);
+                      const monthYear = monthDate.getFullYear();
+                      const monthNum = monthDate.getMonth() + 1;
                       
                       return (
-                        <div key={data.month} className="text-center">
+                        <div 
+                          key={data.month} 
+                          className="text-center cursor-pointer group transition-all duration-200 hover:scale-105"
+                          onClick={() => window.location.href = `/report/${clientSlug}/${monthYear}/${monthNum}`}
+                          title={`Click to view ${format(monthDate, 'MMMM yyyy')} report`}
+                        >
                           <div className="h-24 flex items-end justify-center mb-2">
                             <div 
                               className={`w-8 rounded-t transition-all duration-300 ${
                                 isCurrentMonth 
-                                  ? 'bg-blue-500' 
+                                  ? 'bg-blue-500 group-hover:bg-blue-600' 
                                   : data.hours > 0
-                                  ? 'bg-gray-400 dark:bg-gray-500'
-                                  : 'bg-gray-200 dark:bg-gray-600'
+                                  ? 'bg-gray-400 dark:bg-gray-500 group-hover:bg-blue-400 dark:group-hover:bg-blue-500'
+                                  : 'bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500'
                               }`}
                               style={{ height: `${height}%` }}
-                              title={`${data.hours.toFixed(1)} hours, $${data.revenue.toFixed(0)}`}
                             />
                           </div>
                           <p className={`text-xs font-medium ${
                             isCurrentMonth 
                               ? 'text-blue-600 dark:text-blue-400' 
-                              : 'text-gray-600 dark:text-gray-400'
+                              : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
                           }`}>
                             {data.month}
                           </p>
-                          <p className="text-xs text-gray-900 dark:text-white">{data.hours.toFixed(1)}h</p>
-                          <p className="text-xs text-green-600 dark:text-green-400">${data.revenue.toFixed(0)}</p>
+                          <p className={`text-xs font-medium transition-colors ${
+                            isCurrentMonth
+                              ? 'text-blue-900 dark:text-blue-300'
+                              : 'text-gray-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-300'
+                          }`}>
+                            {data.hours.toFixed(1)}h
+                          </p>
+                          <p className={`text-xs transition-colors ${
+                            isCurrentMonth
+                              ? 'text-green-700 dark:text-green-300'
+                              : 'text-green-600 dark:text-green-400 group-hover:text-green-700 dark:group-hover:text-green-300'
+                          }`}>
+                            ${data.revenue.toFixed(0)}
+                          </p>
                         </div>
                       );
                     })}
                   </div>
                   
-                  <div className="mt-4 flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                  <div className="mt-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
                     <span>6-month average: {(trendData.reduce((sum, d) => sum + d.hours, 0) / 6).toFixed(1)}h/month</span>
                     <span>Total revenue: ${trendData.reduce((sum, d) => sum + d.revenue, 0).toFixed(0)}</span>
+                  </div>
+                  <div className="mt-2 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      💡 <strong>Tip:</strong> Click on any month bar to view that month's detailed report
+                    </p>
                   </div>
                 </div>
               )}
