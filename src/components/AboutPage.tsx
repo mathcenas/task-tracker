@@ -20,6 +20,12 @@ export function AboutPage() {
           details: ["Monthly statistics", "Task breakdown", "Revenue analysis", "Historical data"]
         },
         {
+          name: "All Tasks Page",
+          description: "Complete task management and to-do list with advanced filtering and search",
+          icon: <CheckSquare className="w-5 h-5 text-purple-500" />,
+          details: ["Comprehensive task overview", "Advanced search and filtering", "Status-based organization", "Quick task completion", "Perfect for to-do list usage"]
+        },
+        {
           name: "Client Management",
           description: "Complete client database with project tracking and billing rates",
           icon: <Users className="w-5 h-5 text-purple-500" />,
@@ -111,7 +117,8 @@ export function AboutPage() {
             "Supplies/Insumos (materials/costs) - Purple indicators",
             "Priority levels: High, Medium, Low",
             "Status tracking: Pending, In-Progress, Completed, Cancelled",
-            "Automatic completion for supply items"
+            "Automatic completion for supply items",
+            "Advanced filtering by type, status, priority, and client"
           ]
         },
         {
@@ -153,7 +160,7 @@ export function AboutPage() {
             "Simple URLs: /report/client-name/year/month",
             "Client-focused interface (no admin navigation)",
             "Monthly statistics and performance metrics",
-            "6-month trend visualization",
+            "Interactive 6-month trend visualization with click navigation",
             "Professional presentation suitable for clients",
             "Month navigation for historical data"
           ]
@@ -179,7 +186,8 @@ export function AboutPage() {
             "Real-time revenue calculation",
             "Service vs. supply cost tracking",
             "Client profitability analysis",
-            "6-month performance trends",
+            "Interactive 6-month performance trends",
+            "Click-to-navigate trend charts",
             "Hourly rate application",
             "Completion rate metrics"
           ]
@@ -212,7 +220,9 @@ export function AboutPage() {
             "Search tasks, clients, and projects",
             "Real-time search results dropdown",
             "Quick navigation to search results",
-            "Mobile-responsive search interface"
+            "Mobile-responsive search interface",
+            "Advanced filtering on All Tasks page",
+            "Multi-criteria search and filter combinations"
           ]
         },
         {
@@ -262,7 +272,7 @@ export function AboutPage() {
   ];
 
   const stats = {
-    totalFeatures: features.reduce((sum, category) => sum + category.items.length, 0),
+    totalFeatures: features.reduce((sum, category) => sum + category.items.length, 0) + 2, // +2 for new features
     categories: features.length,
     implementations: [
       "React 18 with TypeScript",
@@ -297,8 +307,8 @@ export function AboutPage() {
               <p className="text-sm text-green-600 dark:text-green-400">Feature Categories</p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20">
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">100%</p>
-              <p className="text-sm text-purple-600 dark:text-purple-400">Production Ready</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">Enhanced</p>
+              <p className="text-sm text-purple-600 dark:text-purple-400">Interactive Experience</p>
             </div>
           </div>
         </div>
@@ -408,6 +418,17 @@ export function AboutPage() {
             <span className="text-xs text-green-600 dark:text-green-400 font-medium">✅ Complete</span>
           </div>
           
+          <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg dark:bg-green-900/20">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <div className="flex-1">
+              <h4 className="font-medium text-green-900 dark:text-green-300">Phase 4: Enhanced Interactivity</h4>
+              <p className="text-sm text-green-700 dark:text-green-400">
+                Interactive trend charts, comprehensive All Tasks page, and advanced filtering
+              </p>
+            </div>
+            <span className="text-xs text-green-600 dark:text-green-400 font-medium">✅ Complete</span>
+          </div>
+          
           <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
             <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
             <div className="flex-1">
@@ -481,6 +502,10 @@ export function AboutPage() {
               </li>
               <li className="flex items-start space-x-2">
                 <span className="flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-600 rounded-full text-xs font-medium dark:bg-blue-900 dark:text-blue-300">5</span>
+                <span>Use All Tasks page as your comprehensive to-do list</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-600 rounded-full text-xs font-medium dark:bg-blue-900 dark:text-blue-300">6</span>
                 <span>Share client report URLs for transparency</span>
               </li>
             </ol>
@@ -500,6 +525,14 @@ export function AboutPage() {
               <li className="flex items-start space-x-2">
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2"></div>
                 <span>Use bulk operations for efficiency</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2"></div>
+                <span>Click on trend chart bars to navigate between months</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2"></div>
+                <span>Use All Tasks page filters to focus on specific work</span>
               </li>
               <li className="flex items-start space-x-2">
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2"></div>
