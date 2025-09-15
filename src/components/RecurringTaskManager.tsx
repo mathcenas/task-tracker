@@ -20,6 +20,7 @@ interface RecurringTask {
   recurringWeekend?: boolean;
   recurringWeekendType?: 'first' | 'second' | 'third' | 'fourth' | 'last';
   recurringWeekendDay?: 'saturday' | 'sunday';
+  recurringEndDate?: string;
 }
 
 interface RecurringTaskManagerProps {
@@ -88,7 +89,8 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
     isActive: true,
     recurringWeekend: false,
     recurringWeekendType: 'first',
-    recurringWeekendDay: 'saturday'
+    recurringWeekendDay: 'saturday',
+    recurringEndDate: ''
   });
 
   useEffect(() => {
@@ -98,12 +100,12 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
   // Auto-generate overdue recurring tasks
   useEffect(() => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
     
     // Helper function to calculate next weekend date
     const getNextWeekendDate = (weekendType: string, weekendDay: string, baseDate: Date) => {
       const year = baseDate.getFullYear();
       const month = baseDate.getMonth();
-      const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       
       const targetDay = weekendDay === 'saturday' ? 6 : 0; // 6 = Saturday, 0 = Sunday
@@ -116,6 +118,8 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
           weekends.push(date);
         }
       }
+      
+      if (weekends.length === 0) return null;
       
       let targetDate;
       switch (weekendType) {
@@ -141,9 +145,40 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       return targetDate ? new Date(year, month, targetDate) : null;
     };
     
-    const tasksToGenerate = recurringTasks.filter(task => 
-      task.isActive && 
-      isBefore(new Date(task.nextDue), today)
+    const tasksToGenerate = recurringTasks.filter(task => {
+      if (!task.isActive) return false;
+      
+      const nextDueDate = new Date(task.nextDue);
+      nextDueDate.setHours(0, 0, 0, 0);
+      
+      // Check if task is overdue
+      const isOverdue = isBefore(nextDueDate, today) || nextDueDate.getTime() === today.getTime();
+      
+      // Check if task has expired (past end date)
+      if (task.recurringEndDate) {
+        const endDate = new Date(task.recurringEndDate);
+        endDate.setHours(23, 59, 59, 999);
+        if (isAfter(today, endDate)) {
+          return false;
+        }
+      }
+      
+      return isOverdue;
+    });
+
+    console.log('Checking recurring tasks:', {
+      today: today.toISOString().split('T')[0],
+      totalRecurringTasks: recurringTasks.length,
+      activeRecurringTasks: recurringTasks.filter(t => t.isActive).length,
+      tasksToGenerate: tasksToGenerate.length,
+      tasksDetails: tasksToGenerate.map(t => ({
+        name: t.name,
+        nextDue: t.nextDue,
+        recurringWeekend: t.recurringWeekend,
+        recurringWeekendType: t.recurringWeekendType,
+        recurringWeekendDay: t.recurringWeekendDay
+      }))
+    });
     );
 
     tasksToGenerate.forEach(recurringTask => {
@@ -179,10 +214,29 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
           recurringTask.recurringWeekendDay || 'saturday',
           nextMonth
         );
-        nextDue = nextWeekendDate ? format(nextWeekendDate, 'yyyy-MM-dd') : format(nextMonth, 'yyyy-MM-dd');
+        if (nextWeekendDate) {
+          nextDue = format(nextWeekendDate, 'yyyy-MM-dd');
+        } else {
+          // If no weekend found, try next month
+          const nextNextMonth = addMonths(nextMonth, 1);
+          const fallbackWeekendDate = getNextWeekendDate(
+            recurringTask.recurringWeekendType || 'first',
+            recurringTask.recurringWeekendDay || 'saturday',
+            nextNextMonth
+          );
+          nextDue = fallbackWeekendDate ? format(fallbackWeekendDate, 'yyyy-MM-dd') : format(nextNextMonth, 'yyyy-MM-dd');
+        }
       } else {
-        nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), recurringTask.dayOfMonth), 'yyyy-MM-dd');
+        const targetDay = Math.min(recurringTask.dayOfMonth, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
+        nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), targetDay), 'yyyy-MM-dd');
       }
+
+      console.log('Updating recurring task:', {
+        name: recurringTask.name,
+        oldNextDue: recurringTask.nextDue,
+        newNextDue: nextDue,
+        recurringWeekend: recurringTask.recurringWeekend
+      });
 
       setRecurringTasks(prev => prev.map(task => 
         task.id === recurringTask.id 
@@ -190,7 +244,6 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
           : task
       ));
     });
-  }, [recurringTasks, addTask]);
 
   if (!isOpen) return null;
 
@@ -254,7 +307,8 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       nextDue: editingTask?.nextDue || nextDue,
       recurringWeekend: newTask.recurringWeekend,
       recurringWeekendType: newTask.recurringWeekendType,
-      recurringWeekendDay: newTask.recurringWeekendDay
+      recurringWeekendDay: newTask.recurringWeekendDay,
+      recurringEndDate: newTask.recurringEndDate
     };
 
     if (editingTask) {
@@ -274,6 +328,10 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       projectId: '',
       dayOfMonth: 1,
       isActive: true
+      recurringWeekend: false,
+      recurringWeekendType: 'first',
+      recurringWeekendDay: 'saturday',
+      recurringEndDate: ''
     });
   };
 
@@ -297,7 +355,7 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
 
   const clientProjects = newTask.clientId ? getClientProjects(newTask.clientId) : [];
   const overdueTasks = recurringTasks.filter(task => 
-    task.isActive && isBefore(new Date(task.nextDue), new Date())
+    task.isActive && (isBefore(new Date(task.nextDue), new Date()) || format(new Date(task.nextDue), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'))
   );
 
   return (
@@ -547,6 +605,21 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                       />
                     </div>
                   )}
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={newTask.recurringEndDate || ''}
+                      onChange={(e) => setNewTask(prev => ({ ...prev, recurringEndDate: e.target.value }))}
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Leave empty for indefinite recurrence
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="flex space-x-3 mt-4">
@@ -573,7 +646,8 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                         isActive: true,
                         recurringWeekend: false,
                         recurringWeekendType: 'first',
-                        recurringWeekendDay: 'saturday'
+                        recurringWeekendDay: 'saturday',
+                        recurringEndDate: ''
                       });
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
@@ -652,6 +726,9 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                           Next due: {format(new Date(task.nextDue), 'MMM d, yyyy')}
                           {task.lastGenerated && (
                             <span className="ml-2">• Last generated: {format(new Date(task.lastGenerated), 'MMM d, yyyy')}</span>
+                          )}
+                          {task.recurringEndDate && (
+                            <span className="ml-2">• Ends: {format(new Date(task.recurringEndDate), 'MMM d, yyyy')}</span>
                           )}
                         </div>
                       </div>

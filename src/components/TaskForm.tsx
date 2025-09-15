@@ -22,7 +22,8 @@ export function TaskForm() {
     recurringDay: 1,
     recurringWeekend: false,
     recurringWeekendType: 'first' as 'first' | 'second' | 'third' | 'fourth' | 'last',
-    recurringWeekendDay: 'saturday' as 'saturday' | 'sunday'
+    recurringWeekendDay: 'saturday' as 'saturday' | 'sunday',
+    recurringEndDate: ''
   });
   
   const [showQuickActions, setShowQuickActions] = useState(false);
@@ -462,6 +463,22 @@ export function TaskForm() {
                       </p>
                     </div>
                   )}
+                  
+                  <div>
+                    <label htmlFor="recurringEndDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      id="recurringEndDate"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                      value={formData.recurringEndDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, recurringEndDate: e.target.value }))}
+                    />
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Leave empty for indefinite recurrence. Task will stop generating after this date.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

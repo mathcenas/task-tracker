@@ -37,5 +37,6 @@ export interface Task {
   recurringWeekend?: boolean; // Whether this is a weekend-based recurring task
   recurringWeekendType?: 'first' | 'second' | 'third' | 'fourth' | 'last'; // Which weekend of the month
   recurringWeekendDay?: 'saturday' | 'sunday'; // Which day of the weekend
+  recurringEndDate?: string; // End date for recurring tasks
   createdAt?: string;
 }
