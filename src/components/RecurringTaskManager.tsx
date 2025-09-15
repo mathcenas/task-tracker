@@ -213,10 +213,29 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
           recurringTask.recurringWeekendDay || 'saturday',
           nextMonth
         );
-        nextDue = nextWeekendDate ? format(nextWeekendDate, 'yyyy-MM-dd') : format(nextMonth, 'yyyy-MM-dd');
+        if (nextWeekendDate) {
+          nextDue = format(nextWeekendDate, 'yyyy-MM-dd');
+        } else {
+          // If no weekend found, try next month
+          const nextNextMonth = addMonths(nextMonth, 1);
+          const fallbackWeekendDate = getNextWeekendDate(
+            recurringTask.recurringWeekendType || 'first',
+            recurringTask.recurringWeekendDay || 'saturday',
+            nextNextMonth
+          );
+          nextDue = fallbackWeekendDate ? format(fallbackWeekendDate, 'yyyy-MM-dd') : format(nextNextMonth, 'yyyy-MM-dd');
+        }
       } else {
-        nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), recurringTask.dayOfMonth), 'yyyy-MM-dd');
+        const targetDay = Math.min(recurringTask.dayOfMonth, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
+        nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), targetDay), 'yyyy-MM-dd');
       }
+
+      console.log('Updating recurring task:', {
+        name: recurringTask.name,
+        oldNextDue: recurringTask.nextDue,
+        newNextDue: nextDue,
+        recurringWeekend: recurringTask.recurringWeekend
+      });
 
       setRecurringTasks(prev => prev.map(task => 
         task.id === recurringTask.id 
@@ -288,7 +307,8 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       nextDue: editingTask?.nextDue || nextDue,
       recurringWeekend: newTask.recurringWeekend,
       recurringWeekendType: newTask.recurringWeekendType,
-      recurringWeekendDay: newTask.recurringWeekendDay
+      recurringWeekendDay: newTask.recurringWeekendDay,
+      recurringEndDate: newTask.recurringEndDate
     };
 
     if (editingTask) {
