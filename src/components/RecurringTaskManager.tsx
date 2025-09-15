@@ -307,8 +307,7 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       nextDue: editingTask?.nextDue || nextDue,
       recurringWeekend: newTask.recurringWeekend,
       recurringWeekendType: newTask.recurringWeekendType,
-      recurringWeekendDay: newTask.recurringWeekendDay,
-      recurringEndDate: newTask.recurringEndDate
+      recurringWeekendDay: newTask.recurringWeekendDay
     };
 
     if (editingTask) {
@@ -327,11 +326,7 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       clientId: '',
       projectId: '',
       dayOfMonth: 1,
-      isActive: true,
-      recurringWeekend: false,
-      recurringWeekendType: 'first',
-      recurringWeekendDay: 'saturday',
-      recurringEndDate: ''
+      isActive: true
     });
   };
 
@@ -355,7 +350,7 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
 
   const clientProjects = newTask.clientId ? getClientProjects(newTask.clientId) : [];
   const overdueTasks = recurringTasks.filter(task => 
-    task.isActive && (isBefore(new Date(task.nextDue), new Date()) || format(new Date(task.nextDue), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'))
+    task.isActive && isBefore(new Date(task.nextDue), new Date())
   );
 
   return (
@@ -605,21 +600,6 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                       />
                     </div>
                   )}
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      End Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={newTask.recurringEndDate || ''}
-                      onChange={(e) => setNewTask(prev => ({ ...prev, recurringEndDate: e.target.value }))}
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Leave empty for indefinite recurrence
-                    </p>
-                  </div>
                 </div>
                 
                 <div className="flex space-x-3 mt-4">
