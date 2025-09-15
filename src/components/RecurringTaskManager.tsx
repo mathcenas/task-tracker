@@ -570,7 +570,10 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                         clientId: '',
                         projectId: '',
                         dayOfMonth: 1,
-                        isActive: true
+                        isActive: true,
+                        recurringWeekend: false,
+                        recurringWeekendType: 'first',
+                        recurringWeekendDay: 'saturday'
                       });
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
