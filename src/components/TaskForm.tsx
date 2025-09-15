@@ -463,7 +463,6 @@ export function TaskForm() {
                     </div>
                   )}
                 </div>
-                </label>
               </div>
             )}
           </div>
