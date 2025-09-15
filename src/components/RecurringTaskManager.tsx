@@ -646,8 +646,7 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                         isActive: true,
                         recurringWeekend: false,
                         recurringWeekendType: 'first',
-                        recurringWeekendDay: 'saturday',
-                        recurringEndDate: ''
+                        recurringWeekendDay: 'saturday'
                       });
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
