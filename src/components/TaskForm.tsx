@@ -370,6 +370,7 @@ export function TaskForm() {
                     This task will repeat every month on a specific day or weekend
                   </p>
                 </div>
+              </label>
             </div>
 
             {formData.isRecurring && (
