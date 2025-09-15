@@ -17,6 +17,9 @@ interface RecurringTask {
   isActive: boolean;
   lastGenerated?: string;
   nextDue: string;
+  recurringWeekend?: boolean;
+  recurringWeekendType?: 'first' | 'second' | 'third' | 'fourth' | 'last';
+  recurringWeekendDay?: 'saturday' | 'sunday';
 }
 
 interface RecurringTaskManagerProps {
@@ -66,7 +69,8 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
         dayOfMonth: 28,
         estimatedHours: 1,
         isActive: true,
-        nextDue: format(new Date(new Date().getFullYear(), new Date().getMonth(), 28), 'yyyy-MM-dd')
+        nextDue: format(new Date(new Date().getFullYear(), new Date().getMonth(), 28), 'yyyy-MM-dd'),
+        recurringWeekend: false
       }
     ];
   });
@@ -81,7 +85,10 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
     clientId: '',
     projectId: '',
     dayOfMonth: 1,
-    isActive: true
+    isActive: true,
+    recurringWeekend: false,
+    recurringWeekendType: 'first',
+    recurringWeekendDay: 'saturday'
   });
 
   useEffect(() => {
@@ -91,6 +98,49 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
   // Auto-generate overdue recurring tasks
   useEffect(() => {
     const today = new Date();
+    
+    // Helper function to calculate next weekend date
+    const getNextWeekendDate = (weekendType: string, weekendDay: string, baseDate: Date) => {
+      const year = baseDate.getFullYear();
+      const month = baseDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      
+      const targetDay = weekendDay === 'saturday' ? 6 : 0; // 6 = Saturday, 0 = Sunday
+      const weekends = [];
+      
+      // Find all weekends in the month
+      for (let date = 1; date <= lastDay.getDate(); date++) {
+        const currentDate = new Date(year, month, date);
+        if (currentDate.getDay() === targetDay) {
+          weekends.push(date);
+        }
+      }
+      
+      let targetDate;
+      switch (weekendType) {
+        case 'first':
+          targetDate = weekends[0];
+          break;
+        case 'second':
+          targetDate = weekends[1];
+          break;
+        case 'third':
+          targetDate = weekends[2];
+          break;
+        case 'fourth':
+          targetDate = weekends[3];
+          break;
+        case 'last':
+          targetDate = weekends[weekends.length - 1];
+          break;
+        default:
+          targetDate = weekends[0];
+      }
+      
+      return targetDate ? new Date(year, month, targetDate) : null;
+    };
+    
     const tasksToGenerate = recurringTasks.filter(task => 
       task.isActive && 
       isBefore(new Date(task.nextDue), today)
@@ -110,6 +160,9 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
         priority: recurringTask.priority,
         finished: false,
         isRecurring: true,
+        recurringWeekend: recurringTask.recurringWeekend,
+        recurringWeekendType: recurringTask.recurringWeekendType,
+        recurringWeekendDay: recurringTask.recurringWeekendDay,
         notes: `Auto-generated from recurring task: ${recurringTask.name}`
       };
 
@@ -118,7 +171,18 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       // Update the recurring task's next due date
       const currentDate = new Date(recurringTask.nextDue);
       const nextMonth = addMonths(currentDate, 1);
-      const nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), recurringTask.dayOfMonth), 'yyyy-MM-dd');
+      
+      let nextDue;
+      if (recurringTask.recurringWeekend) {
+        const nextWeekendDate = getNextWeekendDate(
+          recurringTask.recurringWeekendType || 'first',
+          recurringTask.recurringWeekendDay || 'saturday',
+          nextMonth
+        );
+        nextDue = nextWeekendDate ? format(nextWeekendDate, 'yyyy-MM-dd') : format(nextMonth, 'yyyy-MM-dd');
+      } else {
+        nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), recurringTask.dayOfMonth), 'yyyy-MM-dd');
+      }
 
       setRecurringTasks(prev => prev.map(task => 
         task.id === recurringTask.id 
@@ -133,10 +197,47 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
   const handleSaveTask = () => {
     if (!newTask.name || !newTask.description || !newTask.clientId) return;
 
-    const nextDue = format(
-      new Date(new Date().getFullYear(), new Date().getMonth() + 1, newTask.dayOfMonth!),
-      'yyyy-MM-dd'
-    );
+    // Helper function to calculate next weekend date
+    const getNextWeekendDate = (weekendType: string, weekendDay: string, baseDate: Date) => {
+      const year = baseDate.getFullYear();
+      const month = baseDate.getMonth();
+      const targetDay = weekendDay === 'saturday' ? 6 : 0;
+      const weekends = [];
+      
+      const lastDay = new Date(year, month + 1, 0);
+      for (let date = 1; date <= lastDay.getDate(); date++) {
+        const currentDate = new Date(year, month, date);
+        if (currentDate.getDay() === targetDay) {
+          weekends.push(date);
+        }
+      }
+      
+      let targetDate;
+      switch (weekendType) {
+        case 'first': targetDate = weekends[0]; break;
+        case 'second': targetDate = weekends[1]; break;
+        case 'third': targetDate = weekends[2]; break;
+        case 'fourth': targetDate = weekends[3]; break;
+        case 'last': targetDate = weekends[weekends.length - 1]; break;
+        default: targetDate = weekends[0];
+      }
+      
+      return targetDate ? new Date(year, month, targetDate) : null;
+    };
+
+    let nextDue;
+    const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+    
+    if (newTask.recurringWeekend) {
+      const nextWeekendDate = getNextWeekendDate(
+        newTask.recurringWeekendType || 'first',
+        newTask.recurringWeekendDay || 'saturday',
+        nextMonth
+      );
+      nextDue = nextWeekendDate ? format(nextWeekendDate, 'yyyy-MM-dd') : format(nextMonth, 'yyyy-MM-dd');
+    } else {
+      nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), newTask.dayOfMonth!), 'yyyy-MM-dd');
+    }
 
     const task: RecurringTask = {
       id: editingTask?.id || crypto.randomUUID(),
@@ -150,7 +251,10 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       estimatedHours: newTask.estimatedHours,
       estimatedCost: newTask.estimatedCost,
       isActive: newTask.isActive!,
-      nextDue: editingTask?.nextDue || nextDue
+      nextDue: editingTask?.nextDue || nextDue,
+      recurringWeekend: newTask.recurringWeekend,
+      recurringWeekendType: newTask.recurringWeekendType,
+      recurringWeekendDay: newTask.recurringWeekendDay
     };
 
     if (editingTask) {
@@ -260,16 +364,80 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Day of Month
+                      Recurrence Schedule
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="31"
-                      value={newTask.dayOfMonth || 1}
-                      onChange={(e) => setNewTask(prev => ({ ...prev, dayOfMonth: parseInt(e.target.value) }))}
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="recurringType"
+                            checked={!newTask.recurringWeekend}
+                            onChange={() => setNewTask(prev => ({ ...prev, recurringWeekend: false }))}
+                            className="form-radio text-blue-600"
+                          />
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Specific day of month</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="recurringType"
+                            checked={newTask.recurringWeekend}
+                            onChange={() => setNewTask(prev => ({ ...prev, recurringWeekend: true }))}
+                            className="form-radio text-blue-600"
+                          />
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Weekend of month</span>
+                        </label>
+                      </div>
+                      
+                      {!newTask.recurringWeekend ? (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            Day of Month
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={newTask.dayOfMonth || 1}
+                            onChange={(e) => setNewTask(prev => ({ ...prev, dayOfMonth: parseInt(e.target.value) }))}
+                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Which Weekend
+                            </label>
+                            <select
+                              value={newTask.recurringWeekendType || 'first'}
+                              onChange={(e) => setNewTask(prev => ({ ...prev, recurringWeekendType: e.target.value as 'first' | 'second' | 'third' | 'fourth' | 'last' }))}
+                              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            >
+                              <option value="first">First weekend</option>
+                              <option value="second">Second weekend</option>
+                              <option value="third">Third weekend</option>
+                              <option value="fourth">Fourth weekend</option>
+                              <option value="last">Last weekend</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Weekend Day
+                            </label>
+                            <select
+                              value={newTask.recurringWeekendDay || 'saturday'}
+                              onChange={(e) => setNewTask(prev => ({ ...prev, recurringWeekendDay: e.target.value as 'saturday' | 'sunday' }))}
+                              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            >
+                              <option value="saturday">Saturday</option>
+                              <option value="sunday">Sunday</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="md:col-span-2">
@@ -460,7 +628,10 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                         <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                           <span className="flex items-center">
                             <Calendar className="w-3 h-3 mr-1" />
-                            Day {task.dayOfMonth} of each month
+                            {task.recurringWeekend 
+                              ? `${task.recurringWeekendType} ${task.recurringWeekendDay} of each month`
+                              : `Day ${task.dayOfMonth} of each month`
+                            }
                           </span>
                           <span>{client?.name} • {project?.name}</span>
                           {task.estimatedHours && (

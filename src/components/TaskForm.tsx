@@ -19,7 +19,10 @@ export function TaskForm() {
     priority: 'medium' as 'low' | 'medium' | 'high',
     cost: '',
     isRecurring: false,
-    recurringDay: 1
+    recurringDay: 1,
+    recurringWeekend: false,
+    recurringWeekendType: 'first' as 'first' | 'second' | 'third' | 'fourth' | 'last',
+    recurringWeekendDay: 'saturday' as 'saturday' | 'sunday'
   });
   
   const [showQuickActions, setShowQuickActions] = useState(false);
@@ -88,6 +91,9 @@ export function TaskForm() {
       finished: formData.type === 'insumos' ? true : (formData.hours && Number(formData.hours) > 0),
       isRecurring: formData.isRecurring,
       recurringDay: formData.isRecurring ? formData.recurringDay : undefined,
+      recurringWeekend: formData.isRecurring ? formData.recurringWeekend : undefined,
+      recurringWeekendType: formData.isRecurring && formData.recurringWeekend ? formData.recurringWeekendType : undefined,
+      recurringWeekendDay: formData.isRecurring && formData.recurringWeekend ? formData.recurringWeekendDay : undefined,
       createdAt: new Date().toISOString()
     };
 
@@ -361,7 +367,7 @@ export function TaskForm() {
                     Monthly Recurring Task
                   </span>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    This task will repeat every month on the same day
+                    This task will repeat every month on a specific day or weekend
                   </p>
                 </div>
               </label>
@@ -369,21 +375,95 @@ export function TaskForm() {
 
             {formData.isRecurring && (
               <div className="ml-7">
-                <label htmlFor="recurringDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Day of Month
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Recurrence Type
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="recurringType"
+                          value="day"
+                          checked={!formData.recurringWeekend}
+                          onChange={() => setFormData(prev => ({ ...prev, recurringWeekend: false }))}
+                          className="form-radio text-blue-600"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Specific day of month</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="recurringType"
+                          value="weekend"
+                          checked={formData.recurringWeekend}
+                          onChange={() => setFormData(prev => ({ ...prev, recurringWeekend: true }))}
+                          className="form-radio text-blue-600"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Weekend of month</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {!formData.recurringWeekend ? (
+                    <div>
+                      <label htmlFor="recurringDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Day of Month
+                      </label>
+                      <input
+                        type="number"
+                        id="recurringDay"
+                        min="1"
+                        max="31"
+                        className="mt-1 block w-32 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                        value={formData.recurringDay}
+                        onChange={(e) => setFormData(prev => ({ ...prev, recurringDay: parseInt(e.target.value) }))}
+                      />
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        Task will recur on day {formData.recurringDay} of each month
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label htmlFor="recurringWeekendType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Which Weekend
+                        </label>
+                        <select
+                          id="recurringWeekendType"
+                          className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                          value={formData.recurringWeekendType || 'first'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, recurringWeekendType: e.target.value as 'first' | 'second' | 'third' | 'fourth' | 'last' }))}
+                        >
+                          <option value="first">First weekend of month</option>
+                          <option value="second">Second weekend of month</option>
+                          <option value="third">Third weekend of month</option>
+                          <option value="fourth">Fourth weekend of month</option>
+                          <option value="last">Last weekend of month</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="recurringWeekendDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Weekend Day
+                        </label>
+                        <select
+                          id="recurringWeekendDay"
+                          className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                          value={formData.recurringWeekendDay || 'saturday'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, recurringWeekendDay: e.target.value as 'saturday' | 'sunday' }))}
+                        >
+                          <option value="saturday">Saturday</option>
+                          <option value="sunday">Sunday</option>
+                        </select>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Task will recur on the {formData.recurringWeekendType || 'first'} {formData.recurringWeekendDay || 'Saturday'} of each month
+                      </p>
+                    </div>
+                  )}
+                </div>
                 </label>
-                <input
-                  type="number"
-                  id="recurringDay"
-                  min="1"
-                  max="31"
-                  className="mt-1 block w-32 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
-                  value={formData.recurringDay}
-                  onChange={(e) => setFormData(prev => ({ ...prev, recurringDay: parseInt(e.target.value) }))}
-                />
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Task will recur on day {formData.recurringDay} of each month
-                </p>
               </div>
             )}
           </div>
