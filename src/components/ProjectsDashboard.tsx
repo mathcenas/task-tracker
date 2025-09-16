@@ -6,7 +6,13 @@ import { Link, useNavigate } from 'react-router-dom';
 
 export function ProjectsDashboard() {
   const { projects, clients, getClient, getProjectTasks } = useApp();
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
+
+  // Force refresh when data changes
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [projects.length, clients.length]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

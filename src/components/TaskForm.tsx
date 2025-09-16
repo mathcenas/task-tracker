@@ -171,7 +171,8 @@ export function TaskForm() {
       status: formData.status,
       priority: formData.priority,
       finished: formData.type === 'insumos' ? true : (formData.hours && Number(formData.hours) > 0),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      completedAt: (formData.type === 'insumos' || (formData.hours && Number(formData.hours) > 0)) ? new Date().toISOString() : undefined
     };
 
     addTask(task);

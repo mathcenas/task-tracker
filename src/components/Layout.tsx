@@ -11,7 +11,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   
+  // Force refresh when data changes
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [tasks.length, clients.length, projects.length]);
+
   // Search functionality
   const searchResults = searchQuery.length > 2 ? {
     tasks: tasks.filter(task => 

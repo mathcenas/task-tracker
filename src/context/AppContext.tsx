@@ -139,7 +139,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const finishTask = (taskId: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, finished: true } : t));
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, finished: true, completedAt: new Date().toISOString() } : t));
   };
 
   const getClientProjects = (clientId: string) => {
@@ -169,6 +169,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const getClientBySlug = (slug: string) => {
     return clients.find(client => client.slug === slug);
   };
+
+  const deleteTask = (taskId: string) => {
+    setTasks(prev => prev.filter(task => task.id !== taskId));
+  };
+
+  const deleteClient = (clientId: string) => {
+    // Also delete associated projects and tasks
+    setProjects(prev => prev.filter(project => project.clientId !== clientId));
+    setTasks(prev => prev.filter(task => task.clientId !== clientId));
+    setClients(prev => prev.filter(client => client.id !== clientId));
+  };
+
+  const deleteProject = (projectId: string) => {
+    // Also delete associated tasks
+    setTasks(prev => prev.filter(task => task.projectId !== projectId));
+    setProjects(prev => prev.filter(project => project.id !== projectId));
+  };
+
+  const updateClient = (client: Client) => {
+    setClients(prev => prev.map(c => c.id === client.id ? client : c));
+  };
+
+  const updateProject = (project: Project) => {
+    setProjects(prev => prev.map(p => p.id === project.id ? project : p));
+  };
+
   return (
     <AppContext.Provider value={{
       clients,
@@ -186,11 +212,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       getClient,
       getProject,
       getTask,
-      getClientBySlug
+      getClientBySlug,
+      deleteTask,
+      deleteClient,
+      deleteProject,
+      updateClient,
+      updateProject
     }}>
       {children}
     </AppContext.Provider>
   );
+  deleteTask: (taskId: string) => void;
+  deleteClient: (clientId: string) => void;
+  deleteProject: (projectId: string) => void;
+  updateClient: (client: Client) => void;
+  updateProject: (project: Project) => void;
 }
 
 export const useApp = () => {

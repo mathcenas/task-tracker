@@ -7,7 +7,7 @@ import { ArrowLeft, Save, Trash2 } from 'lucide-react';
 export function EditTask() {
   const navigate = useNavigate();
   const { taskId } = useParams<{ taskId: string }>();
-  const { getTask, updateTask, tasks, setTasks, clients, projects, getClient, getProject } = useApp();
+  const { getTask, updateTask, deleteTask, getClient, getProject } = useApp();
   
   const task = taskId ? getTask(taskId) : null;
   const [formData, setFormData] = useState({
@@ -94,7 +94,7 @@ export function EditTask() {
 
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-      setTasks(prev => prev.filter(t => t.id !== task.id));
+      deleteTask(task.id);
       navigate('/');
     }
   };

@@ -10,10 +10,16 @@ export function ClientDashboard() {
   const { clients, getClientTasks, getProject } = useApp();
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
 
   const selectedClientTasks = selectedClient ? getClientTasks(selectedClient) : [];
   const selectedClientData = clients.find(c => c.id === selectedClient);
+
+  // Force refresh when tasks change
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [selectedClientTasks.length, selectedClient]);
 
   // Filter tasks for selected month
   const monthStart = startOfMonth(selectedMonth);

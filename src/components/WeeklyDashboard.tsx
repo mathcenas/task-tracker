@@ -19,6 +19,12 @@ export function WeeklyDashboard() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Force refresh when tasks change
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [tasks.length]);
 
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start week on Monday
@@ -107,13 +113,15 @@ export function WeeklyDashboard() {
       const task = tasks.find(t => t.id === selectedTaskId);
       if (task) {
         if (task.type === 'insumos') {
-          finishTask(selectedTaskId);
+          updateTask({ ...task, finished: true, completedAt: new Date().toISOString() });
         } else {
-          updateTask({ ...task, hours, finished: true });
+          updateTask({ ...task, hours, finished: true, completedAt: new Date().toISOString() });
         }
       }
       setIsModalOpen(false);
       setSelectedTaskId(null);
+      // Clear selections after completion
+      setSelectedTasks(prev => prev.filter(id => id !== selectedTaskId));
     }
   };
 

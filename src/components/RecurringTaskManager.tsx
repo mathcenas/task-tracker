@@ -197,7 +197,8 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
         recurringWeekend: recurringTask.recurringWeekend,
         recurringWeekendType: recurringTask.recurringWeekendType,
         recurringWeekendDay: recurringTask.recurringWeekendDay,
-        notes: `Auto-generated from recurring task: ${recurringTask.name}`
+        notes: `Auto-generated from recurring task: ${recurringTask.name}`,
+        createdAt: new Date().toISOString()
       };
 
       addTask(taskData);

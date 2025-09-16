@@ -14,6 +14,12 @@ export function AllTasksPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Force refresh when tasks change
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [tasks.length]);
 
   // Get unique clients for filter
   const clients = [...new Set(tasks.map(task => task.clientId))]
@@ -103,9 +109,9 @@ export function AllTasksPage() {
       const task = tasks.find(t => t.id === selectedTaskId);
       if (task) {
         if (task.type === 'insumos') {
-          updateTask({ ...task, finished: true });
+          updateTask({ ...task, finished: true, completedAt: new Date().toISOString() });
         } else {
-          updateTask({ ...task, hours, finished: true });
+          updateTask({ ...task, hours, finished: true, completedAt: new Date().toISOString() });
         }
       }
       setIsModalOpen(false);

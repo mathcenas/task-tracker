@@ -7,9 +7,15 @@ import { Link } from 'react-router-dom';
 export function MonthlyDashboard() {
   const { tasks, getClient, getProject } = useApp();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
+
+  // Force refresh when tasks change
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [tasks.length, currentDate]);
 
   // Filter only completed tasks
   const monthlyTasks = tasks.filter(task => 

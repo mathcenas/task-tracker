@@ -11,7 +11,7 @@ interface BulkTaskOperationsProps {
 }
 
 export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, onClose }: BulkTaskOperationsProps) {
-  const { tasks, updateTask, setTasks, getClient } = useApp();
+  const { tasks, updateTask, deleteTask, getClient } = useApp();
   const [isProcessing, setIsProcessing] = useState(false);
   const [bulkAction, setBulkAction] = useState<'complete' | 'delete' | 'reschedule' | null>(null);
   const [newDate, setNewDate] = useState('');
@@ -42,7 +42,7 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
   const handleBulkDelete = async () => {
     if (window.confirm(`Are you sure you want to delete ${selectedTasks.length} tasks? This action cannot be undone.`)) {
       setIsProcessing(true);
-      setTasks(prev => prev.filter(task => !selectedTasks.includes(task.id)));
+      selectedTasks.forEach(taskId => deleteTask(taskId));
       setIsProcessing(false);
       onSelectionChange([]);
       onClose();

@@ -9,6 +9,7 @@ import 'jspdf-autotable';
 export function PublicMonthlyReport() {
   const { clientSlug, year, month } = useParams<{ clientSlug: string; year: string; month: string }>();
   const { getClientBySlug, getClientTasks, getProject, clients } = useApp();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Handle missing parameters
   if (!clientSlug || !year || !month) {
@@ -34,6 +35,11 @@ export function PublicMonthlyReport() {
   }
 
   const client = getClientBySlug(clientSlug);
+
+  // Force refresh when data changes
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [clientSlug, year, month]);
   
   // If client not found, show access denied (no client info exposed)
   if (!client) {
