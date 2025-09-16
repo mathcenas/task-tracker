@@ -6,7 +6,7 @@ import { format, addDays } from 'date-fns';
 export function TaskForm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clients, getClientProjects, addProject, addTask } = useApp();
+  const { clients, getClientProjects, addProject, addTask, tasks } = useApp();
   const [selectedClient, setSelectedClient] = useState('');
   const [formData, setFormData] = useState({
     projectId: '',
@@ -27,6 +27,15 @@ export function TaskForm() {
   });
   
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [recurringTasks, setRecurringTasks] = useState(() => {
+    const saved = localStorage.getItem('recurringTasks');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Save recurring tasks to localStorage whenever they change
+  React.useEffect(() => {
+    localStorage.setItem('recurringTasks', JSON.stringify(recurringTasks));
+  }, [recurringTasks]);
 
   // Check for template data in URL params
   React.useEffect(() => {
@@ -79,6 +88,84 @@ export function TaskForm() {
       finalProjectId = addProject(newProject);
     }
 
+    // Helper function to calculate next weekend date
+    const getNextWeekendDate = (weekendType: string, weekendDay: string, baseDate: Date) => {
+      const year = baseDate.getFullYear();
+      const month = baseDate.getMonth();
+      const targetDay = weekendDay === 'saturday' ? 6 : 0; // 6 = Saturday, 0 = Sunday
+      const weekends = [];
+      
+      const lastDay = new Date(year, month + 1, 0);
+      for (let date = 1; date <= lastDay.getDate(); date++) {
+        const currentDate = new Date(year, month, date);
+        if (currentDate.getDay() === targetDay) {
+          weekends.push(date);
+        }
+      }
+      
+      let targetDate;
+      switch (weekendType) {
+        case 'first': targetDate = weekends[0]; break;
+        case 'second': targetDate = weekends[1]; break;
+        case 'third': targetDate = weekends[2]; break;
+        case 'fourth': targetDate = weekends[3]; break;
+        case 'last': targetDate = weekends[weekends.length - 1]; break;
+        default: targetDate = weekends[0];
+      }
+      
+      return targetDate ? new Date(year, month, targetDate) : null;
+    };
+
+    // If this is a recurring task, save it to recurring tasks
+    if (formData.isRecurring) {
+      const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+      let nextDue;
+      
+      if (formData.recurringWeekend) {
+        const nextWeekendDate = getNextWeekendDate(
+          formData.recurringWeekendType,
+          formData.recurringWeekendDay,
+          nextMonth
+        );
+        nextDue = nextWeekendDate ? format(nextWeekendDate, 'yyyy-MM-dd') : format(nextMonth, 'yyyy-MM-dd');
+      } else {
+        const targetDay = Math.min(formData.recurringDay, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
+        nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), targetDay), 'yyyy-MM-dd');
+      }
+
+      const recurringTask = {
+        id: crypto.randomUUID(),
+        name: `Recurring: ${formData.description}`,
+        description: formData.description,
+        type: formData.type,
+        priority: formData.priority,
+        clientId: selectedClient,
+        projectId: finalProjectId,
+        dayOfMonth: formData.recurringDay,
+        estimatedHours: formData.type !== 'insumos' ? Number(formData.hours) : undefined,
+        estimatedCost: formData.type === 'insumos' ? Number(formData.cost) : undefined,
+        isActive: true,
+        nextDue,
+        recurringWeekend: formData.recurringWeekend,
+        recurringWeekendType: formData.recurringWeekendType,
+        recurringWeekendDay: formData.recurringWeekendDay,
+        recurringEndDate: formData.recurringEndDate || undefined
+      };
+
+      setRecurringTasks(prev => [...prev, recurringTask]);
+      
+      // Show success message and redirect
+      alert(`✅ Recurring task created successfully!\n\n📋 Task: ${formData.description}\n📅 Schedule: ${
+        formData.recurringWeekend 
+          ? `${formData.recurringWeekendType} ${formData.recurringWeekendDay} of each month`
+          : `Day ${formData.recurringDay} of each month`
+      }\n🎯 Next due: ${format(new Date(nextDue), 'MMM d, yyyy')}\n\n💡 You can manage recurring tasks from the Weekly Dashboard > Quick Actions > Recurring.`);
+      
+      navigate('/');
+      return;
+    }
+
+    // Regular task creation
     const task = {
       clientId: selectedClient,
       projectId: finalProjectId,
@@ -90,11 +177,6 @@ export function TaskForm() {
       status: formData.status,
       priority: formData.priority,
       finished: formData.type === 'insumos' ? true : (formData.hours && Number(formData.hours) > 0),
-      isRecurring: formData.isRecurring,
-      recurringDay: formData.isRecurring ? formData.recurringDay : undefined,
-      recurringWeekend: formData.isRecurring ? formData.recurringWeekend : undefined,
-      recurringWeekendType: formData.isRecurring && formData.recurringWeekend ? formData.recurringWeekendType : undefined,
-      recurringWeekendDay: formData.isRecurring && formData.recurringWeekend ? formData.recurringWeekendDay : undefined,
       createdAt: new Date().toISOString()
     };
 
