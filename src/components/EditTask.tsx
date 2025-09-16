@@ -75,6 +75,20 @@ export function EditTask() {
     };
 
     updateTask(updatedTask);
+    
+    // Redirect to client dashboard if task is completed and has a client
+    if (updatedTask.finished && task.clientId) {
+      const client = getClient(task.clientId);
+      if (client && client.slug) {
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        navigate(`/report/${client.slug}/${year}/${month}`);
+        return;
+      }
+    }
+    
+    // Default redirect to dashboard
     navigate('/');
   };
 

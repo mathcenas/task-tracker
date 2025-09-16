@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { format, addDays } from 'date-fns';
+import { format, addDays, addMonths, startOfMonth } from 'date-fns';
 
 export function TaskForm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clients, getClientProjects, addProject, addTask, tasks } = useApp();
+  const { clients, getClientProjects, addProject, addTask, tasks, getClient } = useApp();
   const [selectedClient, setSelectedClient] = useState('');
   const [formData, setFormData] = useState({
     projectId: '',
@@ -27,15 +27,6 @@ export function TaskForm() {
   });
   
   const [showQuickActions, setShowQuickActions] = useState(false);
-  const [recurringTasks, setRecurringTasks] = useState(() => {
-    const saved = localStorage.getItem('recurringTasks');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Save recurring tasks to localStorage whenever they change
-  React.useEffect(() => {
-    localStorage.setItem('recurringTasks', JSON.stringify(recurringTasks));
-  }, [recurringTasks]);
 
   // Check for template data in URL params
   React.useEffect(() => {
@@ -152,7 +143,10 @@ export function TaskForm() {
         recurringEndDate: formData.recurringEndDate || undefined
       };
 
-      setRecurringTasks(prev => [...prev, recurringTask]);
+      // Save to localStorage directly
+      const existingRecurringTasks = JSON.parse(localStorage.getItem('recurringTasks') || '[]');
+      const updatedRecurringTasks = [...existingRecurringTasks, recurringTask];
+      localStorage.setItem('recurringTasks', JSON.stringify(updatedRecurringTasks));
       
       // Show success message and redirect
       alert(`✅ Recurring task created successfully!\n\n📋 Task: ${formData.description}\n📅 Schedule: ${
@@ -181,6 +175,20 @@ export function TaskForm() {
     };
 
     addTask(task);
+    
+    // Redirect to client dashboard if task is completed and has a client
+    if (task.finished && selectedClient) {
+      const client = getClient(selectedClient);
+      if (client && client.slug) {
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        navigate(`/report/${client.slug}/${year}/${month}`);
+        return;
+      }
+    }
+    
+    // Default redirect to dashboard
     navigate('/');
   };
 
@@ -578,7 +586,12 @@ export function TaskForm() {
               type="submit"
               className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200 transform hover:scale-105"
             >
-              {formData.hours ? 'Add & Complete Task' : 'Add Task'}
+              {formData.isRecurring 
+                ? 'Create Recurring Task'
+                : formData.hours || formData.type === 'insumos' 
+                ? 'Add & Complete Task' 
+                : 'Add Task'
+              }
             </button>
           </div>
         </form>
