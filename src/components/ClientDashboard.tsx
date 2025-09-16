@@ -463,7 +463,6 @@ export function ClientDashboard() {
                 </div>
                 
                 <div className="mt-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-                            <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200 group">
                   <span>Total revenue: ${trendData.reduce((sum, d) => sum + d.revenue, 0).toFixed(0)}</span>
                 </div>
                 <div className="mt-2 text-center">
@@ -484,11 +483,10 @@ export function ClientDashboard() {
                       const project = getProject(task.projectId);
                       
                       return (
-                        <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200">
+                        <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200 group">
                           <div className="flex justify-between items-start">
                             <div className="flex items-start space-x-3 flex-1">
-                                <div className="flex items-center space-x-3">
-                                  <div className="text-right">
+                              {getTaskIcon(task.type)}
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2 mb-1">
                                   <p className="text-sm font-medium text-gray-900 dark:text-white">{project?.name}</p>
@@ -506,36 +504,28 @@ export function ClientDashboard() {
                                   }`}>
                                     {task.type}
                                   </span>
-                                  </div>
-                                  <Link
-                                    to={`/edit-task/${task.id}`}
-                                    className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-600 transition-colors opacity-0 group-hover:opacity-100"
-                                    title="Edit task"
-                                  >
-                                    <Pencil className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                  </Link>
                                 </div>
                               </div>
                             </div>
                             <div className="flex items-center space-x-3">
                               <div className="text-right">
-                              {task.type === 'insumos' ? (
-                                <div>
-                                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
-                                    ${task.cost?.toFixed(2)}
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">Supply cost</p>
-                                </div>
-                              ) : (
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {task.hours?.toFixed(1)}h
-                                  </p>
-                                  <p className="text-sm text-green-600 dark:text-green-400">
-                                    ${((task.hours || 0) * (selectedClientData?.hourlyRate || 0)).toFixed(2)}
-                                  </p>
-                                </div>
-                              )}
+                                {task.type === 'insumos' ? (
+                                  <div>
+                                    <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                                      ${task.cost?.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Supply cost</p>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                      {task.hours?.toFixed(1)}h
+                                    </p>
+                                    <p className="text-sm text-green-600 dark:text-green-400">
+                                      ${((task.hours || 0) * (selectedClientData?.hourlyRate || 0)).toFixed(2)}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                               <Link
                                 to={`/edit-task/${task.id}`}
