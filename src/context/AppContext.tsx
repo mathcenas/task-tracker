@@ -222,11 +222,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AppContext.Provider>
   );
-  deleteTask: (taskId: string) => void;
-  deleteClient: (clientId: string) => void;
-  deleteProject: (projectId: string) => void;
-  updateClient: (client: Client) => void;
-  updateProject: (project: Project) => void;
 }
 
 export const useApp = () => {
