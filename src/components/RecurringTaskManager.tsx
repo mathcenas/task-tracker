@@ -251,46 +251,89 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
   const handleSaveTask = () => {
     if (!newTask.name || !newTask.description || !newTask.clientId) return;
 
-    // Helper function to calculate next weekend date
-    const getNextWeekendDate = (weekendType: string, weekendDay: string, baseDate: Date) => {
-      const year = baseDate.getFullYear();
-      const month = baseDate.getMonth();
-      const targetDay = weekendDay === 'saturday' ? 6 : 0;
-      const weekends = [];
-      
-      const lastDay = new Date(year, month + 1, 0);
-      for (let date = 1; date <= lastDay.getDate(); date++) {
-        const currentDate = new Date(year, month, date);
-        if (currentDate.getDay() === targetDay) {
-          weekends.push(date);
-        }
-      }
-      
-      let targetDate;
-      switch (weekendType) {
-        case 'first': targetDate = weekends[0]; break;
-        case 'second': targetDate = weekends[1]; break;
-        case 'third': targetDate = weekends[2]; break;
-        case 'fourth': targetDate = weekends[3]; break;
-        case 'last': targetDate = weekends[weekends.length - 1]; break;
-        default: targetDate = weekends[0];
-      }
-      
-      return targetDate ? new Date(year, month, targetDate) : null;
-    };
-
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    
     let nextDue;
-    const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
     
     if (newTask.recurringWeekend) {
+      // Helper function to calculate next weekend date
+      const getNextWeekendDate = (weekendType: string, weekendDay: string, baseDate: Date) => {
+        const year = baseDate.getFullYear();
+        const month = baseDate.getMonth();
+        const targetDay = weekendDay === 'saturday' ? 6 : 0;
+        const weekends = [];
+        
+        const lastDay = new Date(year, month + 1, 0);
+        for (let date = 1; date <= lastDay.getDate(); date++) {
+          const currentDate = new Date(year, month, date);
+          if (currentDate.getDay() === targetDay) {
+            weekends.push(date);
+          }
+        }
+        
+        let targetDate;
+        switch (weekendType) {
+          case 'first': targetDate = weekends[0]; break;
+          case 'second': targetDate = weekends[1]; break;
+          case 'third': targetDate = weekends[2]; break;
+          case 'fourth': targetDate = weekends[3]; break;
+          case 'last': targetDate = weekends[weekends.length - 1]; break;
+          default: targetDate = weekends[0];
+        }
+        
+        return targetDate ? new Date(year, month, targetDate) : null;
+      };
+
+      // Try current month first
+      let targetMonth = new Date(currentYear, currentMonth, 1);
+      const thisMonthWeekend = getNextWeekendDate(
+        newTask.recurringWeekendType || 'first',
+        newTask.recurringWeekendDay || 'saturday',
+        targetMonth
+      );
+      
+      if (thisMonthWeekend && thisMonthWeekend.getDate() >= currentDay) {
+        nextDue = format(thisMonthWeekend, 'yyyy-MM-dd');
+      } else {
+        // Move to next month
+        targetMonth = new Date(currentYear, currentMonth + 1, 1);
+        const nextMonthWeekend = getNextWeekendDate(
+          newTask.recurringWeekendType || 'first',
+          newTask.recurringWeekendDay || 'saturday',
+          targetMonth
+        );
+        nextDue = nextMonthWeekend ? format(nextMonthWeekend, 'yyyy-MM-dd') : format(targetMonth, 'yyyy-MM-dd');
+      }
+    } else {
+      // For day-of-month recurring tasks
+      const targetDay = newTask.dayOfMonth!;
+      
+      // Check if the target day has already passed this month
+      if (targetDay >= currentDay) {
+        // Target day is today or in the future this month
+        const thisMonthDate = new Date(currentYear, currentMonth, targetDay);
+        nextDue = format(thisMonthDate, 'yyyy-MM-dd');
+      } else {
+        // Target day has passed, schedule for next month
+        const nextMonth = new Date(currentYear, currentMonth + 1, 1);
+        const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+        const actualDay = Math.min(targetDay, daysInNextMonth);
+        const nextMonthDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), actualDay);
+        nextDue = format(nextMonthDate, 'yyyy-MM-dd');
+      }
+    }
+
+    // Old logic (keeping for reference but not using)
+    if (false && newTask.recurringWeekend) {
       const nextWeekendDate = getNextWeekendDate(
         newTask.recurringWeekendType || 'first',
         newTask.recurringWeekendDay || 'saturday',
-        nextMonth
+        new Date(currentYear, currentMonth + 1, 1)
       );
-      nextDue = nextWeekendDate ? format(nextWeekendDate, 'yyyy-MM-dd') : format(nextMonth, 'yyyy-MM-dd');
-    } else {
-      nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), newTask.dayOfMonth!), 'yyyy-MM-dd');
+      nextDue = nextWeekendDate ? format(nextWeekendDate, 'yyyy-MM-dd') : format(new Date(currentYear, currentMonth + 1, 1), 'yyyy-MM-dd');
     }
 
     const task: RecurringTask = {
