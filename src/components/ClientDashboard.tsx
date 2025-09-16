@@ -463,7 +463,7 @@ export function ClientDashboard() {
                 </div>
                 
                 <div className="mt-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-                  <span>6-month average: {(trendData.reduce((sum, d) => sum + d.hours, 0) / 6).toFixed(1)}h/month</span>
+                            <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200 group">
                   <span>Total revenue: ${trendData.reduce((sum, d) => sum + d.revenue, 0).toFixed(0)}</span>
                 </div>
                 <div className="mt-2 text-center">
@@ -487,7 +487,8 @@ export function ClientDashboard() {
                         <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200">
                           <div className="flex justify-between items-start">
                             <div className="flex items-start space-x-3 flex-1">
-                              {getTaskIcon(task.type)}
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-right">
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2 mb-1">
                                   <p className="text-sm font-medium text-gray-900 dark:text-white">{project?.name}</p>
@@ -505,10 +506,19 @@ export function ClientDashboard() {
                                   }`}>
                                     {task.type}
                                   </span>
+                                  </div>
+                                  <Link
+                                    to={`/edit-task/${task.id}`}
+                                    className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Edit task"
+                                  >
+                                    <Pencil className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                  </Link>
                                 </div>
                               </div>
                             </div>
-                            <div className="text-right ml-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="text-right">
                               {task.type === 'insumos' ? (
                                 <div>
                                   <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
@@ -526,6 +536,14 @@ export function ClientDashboard() {
                                   </p>
                                 </div>
                               )}
+                              </div>
+                              <Link
+                                to={`/edit-task/${task.id}`}
+                                className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Edit task"
+                              >
+                                <Pencil className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              </Link>
                             </div>
                           </div>
                         </div>
