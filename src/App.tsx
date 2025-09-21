@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { WeeklyDashboard } from './components/WeeklyDashboard';
 import { MonthlyDashboard } from './components/MonthlyDashboard';
@@ -16,23 +17,25 @@ import { AllTasksPage } from './components/AllTasksPage';
 export default function App() {
   return (
     <AppProvider>
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<WeeklyDashboard />} />
-            <Route path="/monthly" element={<MonthlyDashboard />} />
-            <Route path="/tasks" element={<AllTasksPage />} />
-            <Route path="/clients" element={<ClientDashboard />} />
-            <Route path="/projects" element={<ProjectsDashboard />} />
-            <Route path="/add-client" element={<ClientForm />} />
-            <Route path="/add-task" element={<TaskForm />} />
-            <Route path="/task" element={<TaskForm />} />
-            <Route path="/edit-task/:taskId" element={<EditTask />} />
-            <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
-            <Route path="/about" element={<AboutPage />} />
-          </Routes>
-        </Layout>
-      </Router>
+      <ProtectedRoute>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<WeeklyDashboard />} />
+              <Route path="/monthly" element={<MonthlyDashboard />} />
+              <Route path="/tasks" element={<AllTasksPage />} />
+              <Route path="/clients" element={<ClientDashboard />} />
+              <Route path="/projects" element={<ProjectsDashboard />} />
+              <Route path="/add-client" element={<ClientForm />} />
+              <Route path="/add-task" element={<TaskForm />} />
+              <Route path="/task" element={<TaskForm />} />
+              <Route path="/edit-task/:taskId" element={<EditTask />} />
+              <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
+              <Route path="/about" element={<AboutPage />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </ProtectedRoute>
     </AppProvider>
   );
 }

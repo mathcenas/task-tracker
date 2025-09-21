@@ -8,9 +8,18 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - NGINX_USER=nginx
+      - NGINX_GROUP=nginx
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run

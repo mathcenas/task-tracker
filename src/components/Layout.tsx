@@ -2,6 +2,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
+import { UserProfile } from './auth/UserProfile';
+import { authService } from '../auth/authService';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
@@ -12,6 +14,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
   
   // Force refresh when data changes
   React.useEffect(() => {
@@ -204,6 +208,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
               
               <ThemeToggle />
+              
+              {/* User Profile Button */}
+              <button
+                onClick={() => setShowUserProfile(true)}
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="User Profile"
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+                  currentUser?.role === 'admin' ? 'bg-red-500' : 'bg-blue-500'
+                }`}>
+                  {currentUser?.username?.charAt(0).toUpperCase()}
+                </div>
+              </button>
+              
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -282,6 +300,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </nav>
+
+      {/* User Profile Modal */}
+      {showUserProfile && (
+        <UserProfile onClose={() => setShowUserProfile(false)} />
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
