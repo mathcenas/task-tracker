@@ -13,14 +13,25 @@ export interface User {
   isActive: boolean;
 }
 
-// Pre-hashed passwords for security
+// Simple hash function for demo purposes (NOT for production use)
+function simpleHash(password: string): string {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash.toString(16);
+}
+
+// Demo passwords for authentication
 // Default password for admin: "TaskTracker2025!"
 // Default password for user: "User2025!"
 const STATIC_USERS: User[] = [
   {
     id: '1',
     username: 'admin',
-    passwordHash: '$2a$12$LQv3c1yqBwEHXyvHrCpy2Oe4OvyMpAVnVThdjHtwMO9PSFlEWjgga', // TaskTracker2025!
+    passwordHash: simpleHash('TaskTracker2025!'),
     email: 'admin@tasktracker.pro',
     role: 'admin',
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -30,7 +41,7 @@ const STATIC_USERS: User[] = [
   {
     id: '2',
     username: 'user',
-    passwordHash: '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // User2025!
+    passwordHash: simpleHash('User2025!'),
     email: 'user@tasktracker.pro',
     role: 'user',
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -54,8 +65,9 @@ export class AuthDatabase {
 
   // Verify password
   async verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
-    console.warn('Password verification should be implemented on a secure backend server');
-    return false;
+    // Simple hash comparison for demo purposes
+    const inputHash = simpleHash(plainPassword);
+    return inputHash === hashedPassword;
   }
 
   // Update user login attempts
@@ -95,8 +107,8 @@ export class AuthDatabase {
 
   // Hash password (for creating new users)
   async hashPassword(plainPassword: string): Promise<string> {
-    console.warn('Password hashing should be implemented on a secure backend server');
-    throw new Error('Password hashing not available in browser environment');
+    // Simple hash for demo purposes
+    return simpleHash(plainPassword);
   }
 
   // Validate password strength
