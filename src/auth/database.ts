@@ -1,5 +1,3 @@
-import bcrypt from 'bcryptjs';
-
 // Static user database with hashed passwords
 // In production, this should be moved to environment variables or external secure storage
 export interface User {
@@ -56,12 +54,8 @@ export class AuthDatabase {
 
   // Verify password
   async verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
-    try {
-      return await bcrypt.compare(plainPassword, hashedPassword);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
+    console.warn('Password verification should be implemented on a secure backend server');
+    return false;
   }
 
   // Update user login attempts
@@ -101,8 +95,8 @@ export class AuthDatabase {
 
   // Hash password (for creating new users)
   async hashPassword(plainPassword: string): Promise<string> {
-    const saltRounds = 12;
-    return await bcrypt.hash(plainPassword, saltRounds);
+    console.warn('Password hashing should be implemented on a secure backend server');
+    throw new Error('Password hashing not available in browser environment');
   }
 
   // Validate password strength
