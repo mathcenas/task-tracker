@@ -35,12 +35,25 @@ export function WeeklyDashboard() {
     return taskDate >= weekStart && taskDate <= weekEnd && task.finished;
   });
 
+  // Show ALL unfinished tasks regardless of date
   const unfinishedTasks = tasks.filter(task => !task.finished);
   
   // Categorize unfinished tasks
-  const overdueTasks = unfinishedTasks.filter(task => new Date(task.date) < today);
+  const overdueTasks = unfinishedTasks.filter(task => {
+    const taskDate = new Date(task.date);
+    taskDate.setHours(0, 0, 0, 0);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    return taskDate < todayDate;
+  });
   const todayTasks = unfinishedTasks.filter(task => isToday(new Date(task.date)));
-  const upcomingTasks = unfinishedTasks.filter(task => new Date(task.date) > today);
+  const upcomingTasks = unfinishedTasks.filter(task => {
+    const taskDate = new Date(task.date);
+    taskDate.setHours(0, 0, 0, 0);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    return taskDate > todayDate;
+  });
   
   // Quick stats
   const thisWeekTasks = tasks.filter(task => isThisWeek(new Date(task.date), { weekStartsOn: 1 }));

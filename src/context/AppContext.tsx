@@ -136,10 +136,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateTask = (task: Task) => {
     setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+    console.log('Task updated:', task);
   };
 
   const finishTask = (taskId: string) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, finished: true, completedAt: new Date().toISOString() } : t));
+    console.log('Task finished:', taskId);
   };
 
   const getClientProjects = (clientId: string) => {

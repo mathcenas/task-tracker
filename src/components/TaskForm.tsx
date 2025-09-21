@@ -220,6 +220,7 @@ export function TaskForm() {
     };
 
     addTask(task);
+    console.log('Task added:', task);
     
     // Redirect to client dashboard if task is completed and has a client
     if (task.finished && selectedClient) {
