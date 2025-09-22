@@ -92,8 +92,18 @@ export function PublicMonthlyReport() {
   const clientTasks = getClientTasks(client.id);
   const monthlyTasks = clientTasks.filter(task => 
     task.finished && 
-    isWithinInterval(new Date(task.date), { start: monthStart, end: monthEnd })
+    isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
   );
+  
+  console.log('🌐 Public Report - filtering for:', {
+    clientSlug,
+    year,
+    month,
+    monthStart: format(monthStart, 'yyyy-MM-dd'),
+    monthEnd: format(monthEnd, 'yyyy-MM-dd'),
+    clientTasks: clientTasks.length,
+    monthlyTasks: monthlyTasks.length
+  });
   
   // Report is always available for valid clients, even without completed tasks
   const isReportAvailable = true;
@@ -103,7 +113,7 @@ export function PublicMonthlyReport() {
     const month = subMonths(reportDate, 5 - i);
     const monthTasks = clientTasks.filter(task => 
       task.finished && 
-      isWithinInterval(new Date(task.date), { start: startOfMonth(month), end: endOfMonth(month) })
+      isWithinInterval(parseISO(task.date), { start: startOfMonth(month), end: endOfMonth(month) })
     );
     const hours = monthTasks.filter(t => t.type !== 'insumos').reduce((sum, task) => sum + (task.hours || 0), 0);
     const revenue = hours * client.hourlyRate;

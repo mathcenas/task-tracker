@@ -25,17 +25,30 @@ export function ClientDashboard() {
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
   
+  console.log('📅 Filtering tasks for month:', {
+    selectedMonth: format(selectedMonth, 'yyyy-MM'),
+    monthStart: format(monthStart, 'yyyy-MM-dd'),
+    monthEnd: format(monthEnd, 'yyyy-MM-dd'),
+    totalClientTasks: selectedClientTasks.length
+  });
+  
   const monthlyTasks = selectedClientTasks.filter(task => 
     task.finished && 
-    isWithinInterval(new Date(task.date), { start: monthStart, end: monthEnd })
+    isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
   );
+  
+  console.log('📊 Monthly tasks found:', monthlyTasks.length, monthlyTasks.map(t => ({ 
+    description: t.description, 
+    date: t.date, 
+    finished: t.finished 
+  })));
   
   // Calculate 6-month trend data
   const trendData = Array.from({ length: 6 }, (_, i) => {
     const month = subMonths(selectedMonth, 5 - i);
     const monthTasks = selectedClientTasks.filter(task => 
       task.finished && 
-      isWithinInterval(new Date(task.date), { start: startOfMonth(month), end: endOfMonth(month) })
+      isWithinInterval(parseISO(task.date), { start: startOfMonth(month), end: endOfMonth(month) })
     );
     const hours = monthTasks.filter(t => t.type !== 'insumos').reduce((sum, task) => sum + (task.hours || 0), 0);
     const revenue = hours * (selectedClientData?.hourlyRate || 0);

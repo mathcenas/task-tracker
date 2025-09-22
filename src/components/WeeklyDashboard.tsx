@@ -31,8 +31,16 @@ export function WeeklyDashboard() {
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
   const weeklyTasks = tasks.filter(task => {
-    const taskDate = parseISO(task.date);
+    const taskDate = parseISO(task.date + 'T00:00:00'); // Ensure consistent timezone handling
     return taskDate >= weekStart && taskDate <= weekEnd && task.finished;
+  });
+  
+  console.log('📅 Weekly Dashboard - filtering for week:', {
+    weekStart: format(weekStart, 'yyyy-MM-dd'),
+    weekEnd: format(weekEnd, 'yyyy-MM-dd'),
+    totalTasks: tasks.length,
+    completedTasks: tasks.filter(t => t.finished).length,
+    weeklyTasks: weeklyTasks.length
   });
 
   // Show ALL unfinished tasks regardless of date
@@ -40,15 +48,15 @@ export function WeeklyDashboard() {
   
   // Categorize unfinished tasks
   const overdueTasks = unfinishedTasks.filter(task => {
-    const taskDate = new Date(task.date);
+    const taskDate = parseISO(task.date + 'T00:00:00');
     taskDate.setHours(0, 0, 0, 0);
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
     return taskDate < todayDate;
   });
-  const todayTasks = unfinishedTasks.filter(task => isToday(new Date(task.date)));
+  const todayTasks = unfinishedTasks.filter(task => isToday(parseISO(task.date + 'T00:00:00')));
   const upcomingTasks = unfinishedTasks.filter(task => {
-    const taskDate = new Date(task.date);
+    const taskDate = parseISO(task.date + 'T00:00:00');
     taskDate.setHours(0, 0, 0, 0);
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
@@ -56,7 +64,7 @@ export function WeeklyDashboard() {
   });
   
   // Quick stats
-  const thisWeekTasks = tasks.filter(task => isThisWeek(new Date(task.date), { weekStartsOn: 1 }));
+  const thisWeekTasks = tasks.filter(task => isThisWeek(parseISO(task.date + 'T00:00:00'), { weekStartsOn: 1 }));
   const completionRate = thisWeekTasks.length > 0 ? (weeklyTasks.length / thisWeekTasks.length) * 100 : 0;
   
   // Get active projects with their stats

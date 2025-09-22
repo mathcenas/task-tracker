@@ -132,16 +132,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addTask = (task: Omit<Task, 'id'>) => {
     const newTask = { ...task, id: crypto.randomUUID() };
     setTasks(prev => [...prev, newTask]);
+    console.log('✅ Task added successfully:', {
+      id: newTask.id,
+      description: newTask.description,
+      date: newTask.date,
+      finished: newTask.finished,
+      clientId: newTask.clientId,
+      projectId: newTask.projectId
+    });
   };
 
   const updateTask = (task: Task) => {
     setTasks(prev => prev.map(t => t.id === task.id ? task : t));
-    console.log('Task updated:', task);
+    console.log('🔄 Task updated successfully:', {
+      id: task.id,
+      description: task.description,
+      date: task.date,
+      finished: task.finished,
+      hours: task.hours,
+      cost: task.cost
+    });
   };
 
   const finishTask = (taskId: string) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, finished: true, completedAt: new Date().toISOString() } : t));
-    console.log('Task finished:', taskId);
+    console.log('✅ Task finished successfully:', taskId);
   };
 
   const getClientProjects = (clientId: string) => {

@@ -68,6 +68,8 @@ export function TaskForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('📝 Creating task with date:', formData.date);
+    
     let finalProjectId = formData.projectId;
     
     if (formData.projectId === 'new' && formData.newProject) {

@@ -20,8 +20,17 @@ export function MonthlyDashboard() {
   // Filter only completed tasks
   const monthlyTasks = tasks.filter(task => 
     task.finished && 
-    isWithinInterval(new Date(task.date), { start: monthStart, end: monthEnd })
+    isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
   );
+  
+  console.log('📅 Monthly Dashboard - filtering for:', {
+    month: format(currentDate, 'yyyy-MM'),
+    monthStart: format(monthStart, 'yyyy-MM-dd'),
+    monthEnd: format(monthEnd, 'yyyy-MM-dd'),
+    totalTasks: tasks.length,
+    completedTasks: tasks.filter(t => t.finished).length,
+    monthlyTasks: monthlyTasks.length
+  });
 
   const totalHours = monthlyTasks
     .filter(task => task.type !== 'insumos')
