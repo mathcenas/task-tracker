@@ -133,18 +133,42 @@ class AuthService {
 
   // Validate session
   validateSession(token: string): Session | null {
-    const session = this.sessions.get(token);
-    
+    let session = this.sessions.get(token);
+
+    // If not in memory, try to restore from localStorage
+    if (!session) {
+      try {
+        const encryptedSession = localStorage.getItem('tasktracker_session');
+        if (encryptedSession) {
+          const sessionData = JSON.parse(atob(encryptedSession));
+          if (sessionData.token === token) {
+            // Restore session to memory
+            session = {
+              userId: sessionData.userId,
+              username: sessionData.username,
+              role: sessionData.role,
+              expiresAt: sessionData.expiresAt,
+              createdAt: Date.now()
+            };
+            this.sessions.set(token, session);
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+      }
+    }
+
     if (!session) {
       return null;
     }
-    
+
     // Check if session has expired
     if (Date.now() > session.expiresAt) {
       this.sessions.delete(token);
+      localStorage.removeItem('tasktracker_session');
       return null;
     }
-    
+
     return session;
   }
 

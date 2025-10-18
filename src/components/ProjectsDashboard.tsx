@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format } from 'date-fns';
 import { Folder, AlertTriangle, FileText, Package, Clock, CheckCircle, PauseCircle, Pencil } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export function ProjectsDashboard() {
   const { projects, clients, getClient, getProjectTasks } = useApp();
