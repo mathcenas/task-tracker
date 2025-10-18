@@ -68,8 +68,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <LayoutDashboard className="w-4 h-4" />
                   <span>Weekly</span>
                 </Link>
-                <Link 
-                  to="/monthly" 
+                <Link
+                  to="/fortnight"
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/fortnight')}`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>15 Days</span>
+                </Link>
+                <Link
+                  to="/monthly"
                   className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/monthly')}`}
                 >
                   <Calendar className="w-4 h-4" />
@@ -247,8 +254,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <LayoutDashboard className="w-4 h-4" />
                   <span>Weekly Dashboard</span>
                 </Link>
-                <Link 
-                  to="/monthly" 
+                <Link
+                  to="/fortnight"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/fortnight')}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>15-Day Dashboard</span>
+                </Link>
+                <Link
+                  to="/monthly"
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/monthly')}`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

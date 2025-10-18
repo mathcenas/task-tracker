@@ -237,31 +237,45 @@ class AuthService {
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Validate current password
-    const dbUser = authDatabase.getUserById(user.id);
-    if (!dbUser) {
-      return { success: false, error: 'User not found' };
-    }
-
-    const isCurrentPasswordValid = await authDatabase.verifyPassword(currentPassword, dbUser.passwordHash);
-    if (!isCurrentPasswordValid) {
-      return { success: false, error: 'Current password is incorrect' };
-    }
-
     // Validate new password strength
     const validation = authDatabase.validatePasswordStrength(newPassword);
     if (!validation.isValid) {
       return { success: false, error: validation.errors.join(', ') };
     }
 
-    // Hash new password
-    const newPasswordHash = await authDatabase.hashPassword(newPassword);
-    
-    // Update password (in a real app, this would update the database)
-    console.log(`Password change requested for user ${user.username}`);
-    console.log('New password hash:', newPasswordHash);
-    
-    return { success: true };
+    try {
+      // Get session token
+      const encryptedSession = localStorage.getItem('tasktracker_session');
+      if (!encryptedSession) {
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      const sessionData = JSON.parse(atob(encryptedSession));
+
+      // Call API to change password
+      const response = await fetch(`http://localhost:3001/api/users/${user.id}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.token}`
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Failed to change password' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Password change error:', error);
+      return { success: false, error: 'An error occurred while changing password' };
+    }
   }
 }
 

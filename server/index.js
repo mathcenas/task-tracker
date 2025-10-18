@@ -214,13 +214,17 @@ app.get('/api/clients', authenticateToken, (req, res) => {
 
 app.post('/api/clients', authenticateToken, (req, res) => {
   const { id, name, slug, hourlyRate, contactPerson, email, phone } = req.body;
-  
-  db.run(`INSERT INTO clients (id, name, slug, hourly_rate, contact_person, email, phone) 
+
+  db.run(`INSERT INTO clients (id, name, slug, hourly_rate, contact_person, email, phone)
           VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [id, name, slug, hourlyRate, contactPerson, email, phone],
     function(err) {
       if (err) {
-        return res.status(500).json({ error: 'Database error' });
+        console.error('Error creating client:', err);
+        if (err.message.includes('UNIQUE constraint')) {
+          return res.status(400).json({ error: 'Client with this name or slug already exists' });
+        }
+        return res.status(500).json({ error: 'Database error: ' + err.message });
       }
       res.json({ success: true, id });
     }
@@ -327,6 +331,43 @@ app.delete('/api/tasks/:id', authenticateToken, (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
     res.json({ success: true });
+  });
+});
+
+// User routes
+app.put('/api/users/:id/password', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { currentPassword, newPassword } = req.body;
+
+  // Verify user is updating their own password or is admin
+  if (req.user.id !== id && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  // Get user from database
+  db.get('SELECT * FROM users WHERE id = ?', [id], (err, user) => {
+    if (err || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    bcrypt.compare(currentPassword, user.password_hash, (err, isValid) => {
+      if (err || !isValid) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+
+      // Hash new password
+      const newPasswordHash = bcrypt.hashSync(newPassword, 10);
+
+      // Update password
+      db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newPasswordHash, id], (err) => {
+        if (err) {
+          console.error('Error updating password:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ success: true });
+      });
+    });
   });
 });
 

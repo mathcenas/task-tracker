@@ -4,6 +4,7 @@ import { AppProvider } from './context/AppContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { WeeklyDashboard } from './components/WeeklyDashboard';
+import { ForthnightDashboard } from './components/ForthnightDashboard';
 import { MonthlyDashboard } from './components/MonthlyDashboard';
 import { ClientDashboard } from './components/ClientDashboard';
 import { ProjectsDashboard } from './components/ProjectsDashboard';
@@ -22,6 +23,7 @@ export default function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<WeeklyDashboard />} />
+              <Route path="/fortnight" element={<ForthnightDashboard />} />
               <Route path="/monthly" element={<MonthlyDashboard />} />
               <Route path="/tasks" element={<AllTasksPage />} />
               <Route path="/clients" element={<ClientDashboard />} />
