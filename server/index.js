@@ -1,8 +1,13 @@
-const express = require('express');
-const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcryptjs');
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import sqlite3 from 'sqlite3';
+import bcrypt from 'bcryptjs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const { verbose } = sqlite3;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,7 +21,7 @@ const dbPath = process.env.NODE_ENV === 'production'
   ? '/app/data/tasktracker.db' 
   : path.join(__dirname, 'tasktracker.db');
 
-const db = new sqlite3.Database(dbPath, (err) => {
+const db = new (verbose().Database)(dbPath, (err) => {
   if (err) {
     console.error('Error opening database:', err);
   } else {

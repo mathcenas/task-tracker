@@ -1,7 +1,9 @@
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcryptjs');
-const path = require('path');
-const fs = require('fs');
+import sqlite3 from 'sqlite3';
+import bcrypt from 'bcryptjs';
+import path from 'path';
+import fs from 'fs';
+
+const { verbose } = sqlite3;
 
 // Ensure data directory exists
 const dataDir = '/app/data';
@@ -12,7 +14,7 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = '/app/data/tasktracker.db';
 console.log('Initializing database at:', dbPath);
 
-const db = new sqlite3.Database(dbPath, (err) => {
+const db = new (verbose().Database)(dbPath, (err) => {
   if (err) {
     console.error('Error opening database:', err);
     process.exit(1);
