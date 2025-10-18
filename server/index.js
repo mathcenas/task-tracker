@@ -215,17 +215,28 @@ app.get('/api/clients', authenticateToken, (req, res) => {
 app.post('/api/clients', authenticateToken, (req, res) => {
   const { id, name, slug, hourlyRate, contactPerson, email, phone } = req.body;
 
+  console.log('Creating client with data:', { id, name, slug, hourlyRate, contactPerson, email, phone });
+
+  // Validate required fields
+  if (!id || !name || !slug) {
+    console.error('Missing required fields:', { id, name, slug });
+    return res.status(400).json({ error: 'Missing required fields: id, name, and slug are required' });
+  }
+
   db.run(`INSERT INTO clients (id, name, slug, hourly_rate, contact_person, email, phone)
           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, name, slug, hourlyRate, contactPerson, email, phone],
+    [id, name, slug, hourlyRate || 0, contactPerson || null, email || null, phone || null],
     function(err) {
       if (err) {
         console.error('Error creating client:', err);
+        console.error('Error code:', err.code);
+        console.error('Error message:', err.message);
         if (err.message.includes('UNIQUE constraint')) {
           return res.status(400).json({ error: 'Client with this name or slug already exists' });
         }
         return res.status(500).json({ error: 'Database error: ' + err.message });
       }
+      console.log('Client created successfully with id:', id);
       res.json({ success: true, id });
     }
   );
