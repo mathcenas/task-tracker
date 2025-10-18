@@ -2,16 +2,17 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Client, Project, Task } from '../types';
 import { generateSampleData } from '../utils/sampleData';
 import { generateUniqueSlug } from '../utils/slugify';
+import { apiService } from '../services/api';
 
 interface AppContextType {
   clients: Client[];
   projects: Project[];
   tasks: Task[];
-  addClient: (client: Omit<Client, 'id'>) => string;
-  addProject: (project: Omit<Project, 'id'>) => string;
-  addTask: (task: Omit<Task, 'id'>) => void;
-  updateTask: (task: Task) => void;
-  finishTask: (taskId: string) => void;
+  addClient: (client: Omit<Client, 'id'>) => Promise<string>;
+  addProject: (project: Omit<Project, 'id'>) => Promise<string>;
+  addTask: (task: Omit<Task, 'id'>) => Promise<void>;
+  updateTask: (task: Task) => Promise<void>;
+  finishTask: (taskId: string) => Promise<void>;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   getClientProjects: (clientId: string) => Project[];
   getClientTasks: (clientId: string) => Task[];
@@ -25,146 +26,118 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [clients, setClients] = useState<Client[]>(() => {
-    const saved = localStorage.getItem('clients');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [clients, setClients] = useState<Client[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem('projects');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('tasks');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Initialize sample data if no data exists
+  // Load data from API on mount
   useEffect(() => {
-    // Fix any existing clients that might have undefined slugs
-    setClients(prevClients => {
-      const needsSlugFix = prevClients.some(client => !client.slug);
-      if (needsSlugFix) {
-        console.log('Fixing client slugs...');
-        const existingSlugs: string[] = [];
-        const fixedClients = prevClients.map(client => {
-          if (!client.slug) {
-            const newSlug = generateUniqueSlug(client.name, existingSlugs);
-            console.log(`Generated slug for "${client.name}": ${newSlug}`);
-            existingSlugs.push(newSlug);
-            return { ...client, slug: newSlug };
-          }
-          existingSlugs.push(client.slug);
-          return client;
-        });
-        console.log('Fixed clients:', fixedClients.map(c => ({ name: c.name, slug: c.slug })));
-        return fixedClients;
-      }
-      return prevClients;
-    });
+    const loadData = async () => {
+      try {
+        const [clientsData, projectsData, tasksData] = await Promise.all([
+          apiService.getClients(),
+          apiService.getProjects(),
+          apiService.getTasks()
+        ]);
 
-    if (clients.length === 0 && projects.length === 0 && tasks.length === 0) {
-      const sampleData = generateSampleData();
-      
-      // Add clients first
-      const newClients = sampleData.clients.map(client => ({
-        ...client,
-        id: crypto.randomUUID(),
-        slug: generateUniqueSlug(client.name, [])
-      }));
-      setClients(newClients);
-      
-      // Add projects with client references
-      const newProjects = sampleData.projects.map(project => {
-        const clientId = newClients.find(c => c.name === project.clientName)?.id || '';
-        return {
-          ...project,
-          id: crypto.randomUUID(),
-          clientId
-        };
-      });
-      setProjects(newProjects);
-      
-      // Add tasks with client and project references
-      const newTasks = sampleData.tasks.map(task => {
-        const clientId = newClients.find(c => c.name === task.clientName)?.id || '';
-        const projectId = newProjects.find(p => p.name === task.projectName)?.id || '';
-        return {
-          ...task,
-          id: crypto.randomUUID(),
-          clientId,
-          projectId
-        };
-      });
-      setTasks(newTasks);
-    }
+        setClients(clientsData);
+        setProjects(projectsData);
+        setTasks(tasksData);
+        console.log('✅ Data loaded from API:', { clients: clientsData.length, projects: projectsData.length, tasks: tasksData.length });
+      } catch (error) {
+        console.error('❌ Error loading data from API:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('clients', JSON.stringify(clients));
-  }, [clients]);
-
-  useEffect(() => {
-    localStorage.setItem('projects', JSON.stringify(projects));
-  }, [projects]);
-
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const addClient = (client: Omit<Client, 'id'>) => {
+  const addClient = async (client: Omit<Client, 'id'>) => {
     const id = crypto.randomUUID();
     const existingSlugs = clients.map(c => c.slug);
     const slug = client.slug || generateUniqueSlug(client.name, existingSlugs);
     const newClient = { ...client, id, slug };
-    const updatedClients = [...clients, newClient];
-    setClients(updatedClients);
-    localStorage.setItem('clients', JSON.stringify(updatedClients));
-    console.log('✅ Client added successfully:', newClient.name);
-    return id;
+
+    try {
+      await apiService.createClient(newClient);
+      setClients(prev => [...prev, newClient]);
+      console.log('✅ Client added successfully:', newClient.name);
+      return id;
+    } catch (error) {
+      console.error('❌ Error adding client:', error);
+      throw error;
+    }
   };
 
-  const addProject = (project: Omit<Project, 'id'>) => {
+  const addProject = async (project: Omit<Project, 'id'>) => {
     const id = crypto.randomUUID();
     const newProject = { ...project, id };
-    const updatedProjects = [...projects, newProject];
-    setProjects(updatedProjects);
-    localStorage.setItem('projects', JSON.stringify(updatedProjects));
-    console.log('✅ Project added successfully:', newProject.name);
-    return id;
+
+    try {
+      await apiService.createProject(newProject);
+      setProjects(prev => [...prev, newProject]);
+      console.log('✅ Project added successfully:', newProject.name);
+      return id;
+    } catch (error) {
+      console.error('❌ Error adding project:', error);
+      throw error;
+    }
   };
 
-  const addTask = (task: Omit<Task, 'id'>) => {
+  const addTask = async (task: Omit<Task, 'id'>) => {
     const newTask = { ...task, id: crypto.randomUUID() };
-    const updatedTasks = [...tasks, newTask];
-    setTasks(updatedTasks);
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
-    console.log('✅ Task added successfully:', {
-      id: newTask.id,
-      description: newTask.description,
-      date: newTask.date,
-      finished: newTask.finished,
-      clientId: newTask.clientId,
-      projectId: newTask.projectId
-    });
+
+    try {
+      await apiService.createTask(newTask);
+      setTasks(prev => [...prev, newTask]);
+      console.log('✅ Task added successfully:', {
+        id: newTask.id,
+        description: newTask.description,
+        date: newTask.date,
+        finished: newTask.finished,
+        clientId: newTask.clientId,
+        projectId: newTask.projectId
+      });
+    } catch (error) {
+      console.error('❌ Error adding task:', error);
+      throw error;
+    }
   };
 
-  const updateTask = (task: Task) => {
-    setTasks(prev => prev.map(t => t.id === task.id ? task : t));
-    console.log('🔄 Task updated successfully:', {
-      id: task.id,
-      description: task.description,
-      date: task.date,
-      finished: task.finished,
-      hours: task.hours,
-      cost: task.cost
-    });
+  const updateTask = async (task: Task) => {
+    try {
+      await apiService.updateTask(task.id, task);
+      setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+      console.log('🔄 Task updated successfully:', {
+        id: task.id,
+        description: task.description,
+        date: task.date,
+        finished: task.finished,
+        hours: task.hours,
+        cost: task.cost
+      });
+    } catch (error) {
+      console.error('❌ Error updating task:', error);
+      throw error;
+    }
   };
 
-  const finishTask = (taskId: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, finished: true, completedAt: new Date().toISOString() } : t));
-    console.log('✅ Task finished successfully:', taskId);
+  const finishTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      const updatedTask = { ...task, finished: true, completedAt: new Date().toISOString() };
+      try {
+        await apiService.updateTask(taskId, updatedTask);
+        setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+        console.log('✅ Task finished successfully:', taskId);
+      } catch (error) {
+        console.error('❌ Error finishing task:', error);
+        throw error;
+      }
+    }
   };
 
   const getClientProjects = (clientId: string) => {

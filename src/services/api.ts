@@ -74,44 +74,137 @@ class ApiService {
 
   // Client methods
   async getClients() {
-    return this.request('/clients');
+    const clients = await this.request('/clients');
+    return clients.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      hourlyRate: c.hourly_rate,
+      contactPerson: c.contact_person,
+      email: c.email,
+      phone: c.phone,
+      createdAt: c.created_at
+    }));
   }
 
   async createClient(client: any) {
+    const payload = {
+      id: client.id,
+      name: client.name,
+      slug: client.slug,
+      hourlyRate: client.hourlyRate,
+      contactPerson: client.contactPerson,
+      email: client.email,
+      phone: client.phone
+    };
     return this.request('/clients', {
       method: 'POST',
-      body: JSON.stringify(client),
+      body: JSON.stringify(payload),
     });
   }
 
   // Project methods
   async getProjects() {
-    return this.request('/projects');
+    const projects = await this.request('/projects');
+    return projects.map((p: any) => ({
+      id: p.id,
+      clientId: p.client_id,
+      name: p.name,
+      description: p.description,
+      startDate: p.start_date,
+      status: p.status,
+      createdAt: p.created_at
+    }));
   }
 
   async createProject(project: any) {
+    const payload = {
+      id: project.id,
+      clientId: project.clientId,
+      name: project.name,
+      description: project.description,
+      startDate: project.startDate,
+      status: project.status
+    };
     return this.request('/projects', {
       method: 'POST',
-      body: JSON.stringify(project),
+      body: JSON.stringify(payload),
     });
   }
 
   // Task methods
   async getTasks() {
-    return this.request('/tasks');
+    const tasks = await this.request('/tasks');
+    return tasks.map((t: any) => ({
+      id: t.id,
+      clientId: t.client_id,
+      projectId: t.project_id,
+      description: t.description,
+      hours: t.hours,
+      cost: t.cost,
+      date: t.date,
+      type: t.type,
+      status: t.status,
+      priority: t.priority,
+      finished: Boolean(t.finished),
+      notes: t.notes,
+      completedAt: t.completed_at,
+      assignedTo: t.assigned_to,
+      isRecurring: Boolean(t.is_recurring),
+      recurringDay: t.recurring_day,
+      recurringWeekend: Boolean(t.recurring_weekend),
+      recurringWeekendType: t.recurring_weekend_type,
+      recurringWeekendDay: t.recurring_weekend_day,
+      recurringEndDate: t.recurring_end_date,
+      createdAt: t.created_at
+    }));
   }
 
   async createTask(task: any) {
+    const payload = {
+      id: task.id,
+      clientId: task.clientId,
+      projectId: task.projectId,
+      description: task.description,
+      hours: task.hours,
+      cost: task.cost,
+      date: task.date,
+      type: task.type,
+      status: task.status,
+      priority: task.priority,
+      finished: task.finished,
+      notes: task.notes,
+      completedAt: task.completedAt,
+      assignedTo: task.assignedTo,
+      isRecurring: task.isRecurring,
+      recurringDay: task.recurringDay,
+      recurringWeekend: task.recurringWeekend,
+      recurringWeekendType: task.recurringWeekendType,
+      recurringWeekendDay: task.recurringWeekendDay,
+      recurringEndDate: task.recurringEndDate
+    };
     return this.request('/tasks', {
       method: 'POST',
-      body: JSON.stringify(task),
+      body: JSON.stringify(payload),
     });
   }
 
   async updateTask(id: string, task: any) {
+    const payload = {
+      description: task.description,
+      hours: task.hours,
+      cost: task.cost,
+      date: task.date,
+      type: task.type,
+      status: task.status,
+      priority: task.priority,
+      finished: task.finished,
+      notes: task.notes,
+      completedAt: task.completedAt
+    };
     return this.request(`/tasks/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(task),
+      body: JSON.stringify(payload),
     });
   }
 

@@ -58,9 +58,9 @@ export function EditTask() {
   const client = getClient(task.clientId);
   const project = getProject(task.projectId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const updatedTask = {
       ...task,
       description: formData.description,
@@ -74,7 +74,7 @@ export function EditTask() {
       finished: formData.type === 'insumos' ? true : (formData.hours ? true : formData.finished)
     };
 
-    updateTask(updatedTask);
+    await updateTask(updatedTask);
     
     // Redirect to client dashboard if task is completed and has a client
     if (updatedTask.finished && task.clientId) {

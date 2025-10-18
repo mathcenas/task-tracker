@@ -71,14 +71,14 @@ export function TaskForm() {
     console.log('📝 Creating task with date:', formData.date);
     
     let finalProjectId = formData.projectId;
-    
+
     if (formData.projectId === 'new' && formData.newProject) {
       const newProject = {
         clientId: selectedClient,
         name: formData.newProject,
         status: 'active' as const
       };
-      finalProjectId = addProject(newProject);
+      finalProjectId = await addProject(newProject);
     }
 
     // Helper function to calculate next weekend date
@@ -221,7 +221,7 @@ export function TaskForm() {
       completedAt: (formData.type === 'insumos' || (formData.hours && Number(formData.hours) > 0)) ? new Date().toISOString() : undefined
     };
 
-    addTask(task);
+    await addTask(task);
     console.log('Task added:', task);
     
     // Redirect to client dashboard if task is completed and has a client

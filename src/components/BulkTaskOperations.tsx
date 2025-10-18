@@ -23,17 +23,17 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
 
   const handleBulkComplete = async () => {
     setIsProcessing(true);
-    
+
     for (const taskId of selectedTasks) {
       const task = tasks.find(t => t.id === taskId);
       if (task && !task.finished && task.type !== 'insumos') {
         // For bulk completion, we'll set a default 1 hour for service tasks
-        updateTask({ ...task, hours: 1, finished: true });
+        await updateTask({ ...task, hours: 1, finished: true });
       } else if (task && !task.finished && task.type === 'insumos') {
-        updateTask({ ...task, finished: true });
+        await updateTask({ ...task, finished: true });
       }
     }
-    
+
     setIsProcessing(false);
     onSelectionChange([]);
     onClose();
@@ -51,16 +51,16 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
 
   const handleBulkReschedule = async () => {
     if (!newDate) return;
-    
+
     setIsProcessing(true);
-    
+
     for (const taskId of selectedTasks) {
       const task = tasks.find(t => t.id === taskId);
       if (task) {
-        updateTask({ ...task, date: newDate });
+        await updateTask({ ...task, date: newDate });
       }
     }
-    
+
     setIsProcessing(false);
     onSelectionChange([]);
     onClose();

@@ -15,45 +15,50 @@ export const ClientForm: React.FC = () => {
   });
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Create the client
-    const existingSlugs = clients.map(c => c.slug);
-    const slug = generateUniqueSlug(formData.name, existingSlugs);
-    
-    const clientId = addClient({
-      name: formData.name,
-      slug,
-      email: formData.email,
-      hourlyRate: parseFloat(formData.hourlyRate) || 0
-    });
 
-    // Create initial project if provided
-    if (formData.initialProjectName.trim()) {
-      addProject({
-        name: formData.initialProjectName,
-        clientId,
-        status: 'active'
+    try {
+      // Create the client
+      const existingSlugs = clients.map(c => c.slug);
+      const slug = generateUniqueSlug(formData.name, existingSlugs);
+
+      const clientId = await addClient({
+        name: formData.name,
+        slug,
+        email: formData.email,
+        hourlyRate: parseFloat(formData.hourlyRate) || 0
       });
+
+      // Create initial project if provided
+      if (formData.initialProjectName.trim()) {
+        await addProject({
+          name: formData.initialProjectName,
+          clientId,
+          status: 'active'
+        });
+      }
+
+      // Show success message
+      setShowSuccess(true);
+
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        hourlyRate: '0',
+        initialProjectName: ''
+      });
+
+      // Hide success message and navigate after a delay
+      setTimeout(() => {
+        setShowSuccess(false);
+        navigate('/');
+      }, 1500);
+    } catch (error) {
+      console.error('Error creating client:', error);
+      alert('Failed to create client. Please try again.');
     }
-
-    // Show success message
-    setShowSuccess(true);
-
-    // Reset form
-    setFormData({
-      name: '',
-      email: '',
-      hourlyRate: '0',
-      initialProjectName: ''
-    });
-
-    // Hide success message and navigate after a delay
-    setTimeout(() => {
-      setShowSuccess(false);
-      navigate('/');
-    }, 1500);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
