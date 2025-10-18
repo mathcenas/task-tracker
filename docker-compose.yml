@@ -11,6 +11,10 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=TaskTracker2025!
+      - USER_USERNAME=user
+      - USER_PASSWORD=User2025!
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
       interval: 30s

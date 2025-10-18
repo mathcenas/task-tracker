@@ -124,21 +124,26 @@ const initDB = async () => {
     });
   }
 
-  // Create default users
-  const adminPassword = bcrypt.hashSync('TaskTracker2025!', 10);
-  const userPassword = bcrypt.hashSync('User2025!', 10);
-  
+  // Create default users with environment variable credentials
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const adminPasswordPlain = process.env.ADMIN_PASSWORD || 'TaskTracker2025!';
+  const userUsername = process.env.USER_USERNAME || 'user';
+  const userPasswordPlain = process.env.USER_PASSWORD || 'User2025!';
+
+  const adminPassword = bcrypt.hashSync(adminPasswordPlain, 10);
+  const userPassword = bcrypt.hashSync(userPasswordPlain, 10);
+
   await new Promise((resolve, reject) => {
-    db.run(`INSERT OR IGNORE INTO users (id, username, password_hash, email, role) VALUES 
-      ('admin-1', 'admin', ?, 'admin@tasktracker.pro', 'admin'),
-      ('user-1', 'user', ?, 'user@tasktracker.pro', 'user')`, 
-      [adminPassword, userPassword],
+    db.run(`INSERT OR IGNORE INTO users (id, username, password_hash, email, role) VALUES
+      ('admin-1', ?, ?, 'admin@tasktracker.pro', 'admin'),
+      ('user-1', ?, ?, 'user@tasktracker.pro', 'user')`,
+      [adminUsername, adminPassword, userUsername, userPassword],
       (err) => {
         if (err) {
           console.error('Error creating users:', err);
           reject(err);
         } else {
-          console.log('Default users created');
+          console.log(`Default users created: ${adminUsername} (admin), ${userUsername} (user)`);
           resolve();
         }
       }

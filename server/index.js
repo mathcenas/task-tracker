@@ -123,14 +123,24 @@ const initDB = () => {
     });
   });
 
-  // Create default admin user
-  const adminPassword = bcrypt.hashSync('TaskTracker2025!', 10);
-  const userPassword = bcrypt.hashSync('User2025!', 10);
-  
-  db.run(`INSERT OR IGNORE INTO users (id, username, password_hash, email, role) VALUES 
-    ('admin-1', 'admin', ?, 'admin@tasktracker.pro', 'admin'),
-    ('user-1', 'user', ?, 'user@tasktracker.pro', 'user')`, 
-    [adminPassword, userPassword]);
+  // Create default users with environment variable credentials
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const adminPasswordPlain = process.env.ADMIN_PASSWORD || 'TaskTracker2025!';
+  const userUsername = process.env.USER_USERNAME || 'user';
+  const userPasswordPlain = process.env.USER_PASSWORD || 'User2025!';
+
+  const adminPassword = bcrypt.hashSync(adminPasswordPlain, 10);
+  const userPassword = bcrypt.hashSync(userPasswordPlain, 10);
+
+  db.run(`INSERT OR IGNORE INTO users (id, username, password_hash, email, role) VALUES
+    ('admin-1', ?, ?, 'admin@tasktracker.pro', 'admin'),
+    ('user-1', ?, ?, 'user@tasktracker.pro', 'user')`,
+    [adminUsername, adminPassword, userUsername, userPassword],
+    (err) => {
+      if (!err) {
+        console.log(`Default users initialized: ${adminUsername} (admin), ${userUsername} (user)`);
+      }
+    });
 };
 
 initDB();
