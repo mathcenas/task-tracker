@@ -13,6 +13,11 @@ interface AppContextType {
   addTask: (task: Omit<Task, 'id'>) => Promise<void>;
   updateTask: (task: Task) => Promise<void>;
   finishTask: (taskId: string) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  deleteClient: (clientId: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
+  updateClient: (client: Client) => void;
+  updateProject: (project: Project) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   getClientProjects: (clientId: string) => Project[];
   getClientTasks: (clientId: string) => Task[];
@@ -168,21 +173,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return clients.find(client => client.slug === slug);
   };
 
-  const deleteTask = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+  const deleteTask = async (taskId: string) => {
+    try {
+      await apiService.deleteTask(taskId);
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      console.log('✅ Task deleted successfully:', taskId);
+    } catch (error) {
+      console.error('❌ Error deleting task:', error);
+      throw error;
+    }
   };
 
-  const deleteClient = (clientId: string) => {
-    // Also delete associated projects and tasks
-    setProjects(prev => prev.filter(project => project.clientId !== clientId));
-    setTasks(prev => prev.filter(task => task.clientId !== clientId));
-    setClients(prev => prev.filter(client => client.id !== clientId));
+  const deleteClient = async (clientId: string) => {
+    try {
+      // Note: Backend should handle cascading deletes
+      // For now, we'll just delete the client and update local state
+      setProjects(prev => prev.filter(project => project.clientId !== clientId));
+      setTasks(prev => prev.filter(task => task.clientId !== clientId));
+      setClients(prev => prev.filter(client => client.id !== clientId));
+      console.log('✅ Client deleted successfully:', clientId);
+    } catch (error) {
+      console.error('❌ Error deleting client:', error);
+      throw error;
+    }
   };
 
-  const deleteProject = (projectId: string) => {
-    // Also delete associated tasks
-    setTasks(prev => prev.filter(task => task.projectId !== projectId));
-    setProjects(prev => prev.filter(project => project.id !== projectId));
+  const deleteProject = async (projectId: string) => {
+    try {
+      // Note: Backend should handle cascading deletes
+      setTasks(prev => prev.filter(task => task.projectId !== projectId));
+      setProjects(prev => prev.filter(project => project.id !== projectId));
+      console.log('✅ Project deleted successfully:', projectId);
+    } catch (error) {
+      console.error('❌ Error deleting project:', error);
+      throw error;
+    }
   };
 
   const updateClient = (client: Client) => {

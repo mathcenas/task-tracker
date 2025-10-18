@@ -42,7 +42,9 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
   const handleBulkDelete = async () => {
     if (window.confirm(`Are you sure you want to delete ${selectedTasks.length} tasks? This action cannot be undone.`)) {
       setIsProcessing(true);
-      selectedTasks.forEach(taskId => deleteTask(taskId));
+      for (const taskId of selectedTasks) {
+        await deleteTask(taskId);
+      }
       setIsProcessing(false);
       onSelectionChange([]);
       onClose();
