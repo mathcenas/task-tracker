@@ -17,35 +17,39 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Production stage with Node.js
+FROM node:20-alpine
 
 # Install security updates
-RUN apk update && apk upgrade && apk add --no-cache \
-    ca-certificates \
-    && rm -rf /var/cache/apk/*
+RUN apk update && apk upgrade && apk add --no-cache ca-certificates sqlite
 
-# Copy built application from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Create app directory and data directory
+WORKDIR /app
+RUN mkdir -p /app/data
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy built application and server files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/package*.json ./
 
-# Create non-root user for nginx
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+# Install production dependencies
+RUN npm ci --only=production
+
+# Initialize database
+RUN NODE_ENV=production node server/init-db.js
+
+# Create non-root user
+RUN addgroup -g 1001 -S appuser && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G appuser -g appuser appuser
 
 # Set proper permissions
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
-    chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d
+RUN chown -R appuser:appuser /app
 
 # Switch to non-root user
-USER nginx
+USER appuser
 
-# Expose port 80
-EXPOSE 80
+# Expose port 3001
+EXPOSE 3001
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start the application
+CMD ["node", "server/index.js"]
