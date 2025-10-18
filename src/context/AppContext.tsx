@@ -62,43 +62,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addClient = async (client: Omit<Client, 'id'>) => {
     const id = crypto.randomUUID();
+    console.log('🆔 [AppContext] Generated client ID:', id);
     const existingSlugs = clients.map(c => c.slug);
     const slug = client.slug || generateUniqueSlug(client.name, existingSlugs);
     const newClient = { ...client, id, slug };
+    console.log('📦 [AppContext] New client object:', newClient);
 
     try {
+      console.log('🔄 [AppContext] Calling apiService.createClient...');
       await apiService.createClient(newClient);
+      console.log('✅ [AppContext] API call successful, updating state');
       setClients(prev => [...prev, newClient]);
-      console.log('✅ Client added successfully:', newClient.name);
+      console.log('✅ [AppContext] Client added successfully:', newClient.name);
       return id;
     } catch (error) {
-      console.error('❌ Error adding client:', error);
+      console.error('❌ [AppContext] Error adding client:', error);
+      console.error('❌ [AppContext] Client data that failed:', newClient);
       throw error;
     }
   };
 
   const addProject = async (project: Omit<Project, 'id'>) => {
     const id = crypto.randomUUID();
+    console.log('🆔 [AppContext] Generated project ID:', id);
     const newProject = { ...project, id };
+    console.log('📦 [AppContext] New project object:', newProject);
 
     try {
+      console.log('🔄 [AppContext] Calling apiService.createProject...');
       await apiService.createProject(newProject);
+      console.log('✅ [AppContext] API call successful, updating state');
       setProjects(prev => [...prev, newProject]);
-      console.log('✅ Project added successfully:', newProject.name);
+      console.log('✅ [AppContext] Project added successfully:', newProject.name);
       return id;
     } catch (error) {
-      console.error('❌ Error adding project:', error);
+      console.error('❌ [AppContext] Error adding project:', error);
+      console.error('❌ [AppContext] Project data that failed:', newProject);
       throw error;
     }
   };
 
   const addTask = async (task: Omit<Task, 'id'>) => {
     const newTask = { ...task, id: crypto.randomUUID() };
+    console.log('📦 [AppContext] New task object:', newTask);
 
     try {
+      console.log('🔄 [AppContext] Calling apiService.createTask...');
       await apiService.createTask(newTask);
+      console.log('✅ [AppContext] API call successful, updating state');
       setTasks(prev => [...prev, newTask]);
-      console.log('✅ Task added successfully:', {
+      console.log('✅ [AppContext] Task added successfully:', {
         id: newTask.id,
         description: newTask.description,
         date: newTask.date,
@@ -107,7 +120,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         projectId: newTask.projectId
       });
     } catch (error) {
-      console.error('❌ Error adding task:', error);
+      console.error('❌ [AppContext] Error adding task:', error);
+      console.error('❌ [AppContext] Task data that failed:', newTask);
       throw error;
     }
   };

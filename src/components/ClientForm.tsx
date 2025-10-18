@@ -18,25 +18,35 @@ export const ClientForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('🚀 [ClientForm] Form submitted with data:', formData);
+
     try {
       // Create the client
       const existingSlugs = clients.map(c => c.slug);
       const slug = generateUniqueSlug(formData.name, existingSlugs);
+      console.log('📝 [ClientForm] Generated slug:', slug);
+      console.log('📝 [ClientForm] Existing slugs:', existingSlugs);
 
-      const clientId = await addClient({
+      const clientData = {
         name: formData.name,
         slug,
         email: formData.email,
         hourlyRate: parseFloat(formData.hourlyRate) || 0
-      });
+      };
+      console.log('📤 [ClientForm] Sending client data:', clientData);
+
+      const clientId = await addClient(clientData);
+      console.log('✅ [ClientForm] Client created with ID:', clientId);
 
       // Create initial project if provided
       if (formData.initialProjectName.trim()) {
+        console.log('📤 [ClientForm] Creating initial project:', formData.initialProjectName);
         await addProject({
           name: formData.initialProjectName,
           clientId,
           status: 'active'
         });
+        console.log('✅ [ClientForm] Initial project created');
       }
 
       // Show success message
@@ -56,8 +66,12 @@ export const ClientForm: React.FC = () => {
         navigate('/');
       }, 1500);
     } catch (error) {
-      console.error('Error creating client:', error);
-      alert('Failed to create client. Please try again.');
+      console.error('❌ [ClientForm] Error creating client:', error);
+      console.error('❌ [ClientForm] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      alert(`Failed to create client: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

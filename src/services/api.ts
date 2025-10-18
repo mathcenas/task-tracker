@@ -29,17 +29,33 @@ class ApiService {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
+    console.log('🌐 [ApiService] Making request:', {
+      method: options.method || 'GET',
+      url,
+      hasAuth: !!this.token,
+      body: options.body ? JSON.parse(options.body as string) : undefined
+    });
+
     const response = await fetch(url, {
       ...options,
       headers,
     });
 
+    console.log('📥 [ApiService] Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Network error' }));
+      console.error('❌ [ApiService] Request failed:', error);
       throw new Error(error.error || 'Request failed');
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('✅ [ApiService] Request successful:', data);
+    return data;
   }
 
   // Auth methods
@@ -97,6 +113,7 @@ class ApiService {
       email: client.email,
       phone: client.phone
     };
+    console.log('📤 [ApiService] createClient payload:', payload);
     return this.request('/clients', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -126,6 +143,7 @@ class ApiService {
       startDate: project.startDate,
       status: project.status
     };
+    console.log('📤 [ApiService] createProject payload:', payload);
     return this.request('/projects', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -183,6 +201,7 @@ class ApiService {
       recurringWeekendDay: task.recurringWeekendDay,
       recurringEndDate: task.recurringEndDate
     };
+    console.log('📤 [ApiService] createTask payload:', payload);
     return this.request('/tasks', {
       method: 'POST',
       body: JSON.stringify(payload),
