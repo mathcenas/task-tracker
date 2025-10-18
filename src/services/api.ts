@@ -6,19 +6,31 @@ class ApiService {
   private token: string | null = null;
 
   constructor() {
+    this.loadToken();
+  }
+
+  private loadToken() {
     // Get token from localStorage
     const session = localStorage.getItem('tasktracker_session');
     if (session) {
       try {
         const sessionData = JSON.parse(atob(session));
         this.token = sessionData.token;
+        console.log('🔑 [ApiService] Token loaded:', this.token ? 'present' : 'missing');
       } catch (error) {
-        console.error('Error parsing session:', error);
+        console.error('❌ [ApiService] Error parsing session:', error);
+        this.token = null;
       }
+    } else {
+      console.log('⚠️ [ApiService] No session found in localStorage');
+      this.token = null;
     }
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {
+    // Reload token before each request to ensure we have the latest
+    this.loadToken();
+
     const url = `${API_BASE_URL}/api${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
@@ -32,6 +44,7 @@ class ApiService {
     console.log('🌐 [ApiService] Making request:', {
       method: options.method || 'GET',
       url,
+      token: this.token || 'NO TOKEN',
       hasAuth: !!this.token,
       body: options.body ? JSON.parse(options.body as string) : undefined
     });
@@ -67,7 +80,7 @@ class ApiService {
 
     if (response.success) {
       this.token = response.token;
-      
+
       // Store session
       const sessionData = {
         token: response.token,
@@ -76,8 +89,9 @@ class ApiService {
         role: response.user.role,
         expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
       };
-      
+
       localStorage.setItem('tasktracker_session', btoa(JSON.stringify(sessionData)));
+      console.log('✅ [ApiService] Login successful, token stored:', response.token);
     }
 
     return response;
