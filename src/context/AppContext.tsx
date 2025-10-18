@@ -118,20 +118,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const existingSlugs = clients.map(c => c.slug);
     const slug = client.slug || generateUniqueSlug(client.name, existingSlugs);
     const newClient = { ...client, id, slug };
-    setClients(prev => [...prev, newClient]);
+    const updatedClients = [...clients, newClient];
+    setClients(updatedClients);
+    localStorage.setItem('clients', JSON.stringify(updatedClients));
+    console.log('✅ Client added successfully:', newClient.name);
     return id;
   };
 
   const addProject = (project: Omit<Project, 'id'>) => {
     const id = crypto.randomUUID();
     const newProject = { ...project, id };
-    setProjects(prev => [...prev, newProject]);
+    const updatedProjects = [...projects, newProject];
+    setProjects(updatedProjects);
+    localStorage.setItem('projects', JSON.stringify(updatedProjects));
+    console.log('✅ Project added successfully:', newProject.name);
     return id;
   };
 
   const addTask = (task: Omit<Task, 'id'>) => {
     const newTask = { ...task, id: crypto.randomUUID() };
-    setTasks(prev => [...prev, newTask]);
+    const updatedTasks = [...tasks, newTask];
+    setTasks(updatedTasks);
+    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
     console.log('✅ Task added successfully:', {
       id: newTask.id,
       description: newTask.description,

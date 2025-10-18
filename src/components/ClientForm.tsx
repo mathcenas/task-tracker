@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { User, DollarSign, FolderPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, DollarSign, FolderPlus, CheckCircle } from 'lucide-react';
 import { generateUniqueSlug } from '../utils/slugify';
 
 export const ClientForm: React.FC = () => {
   const { addClient, addProject, clients } = useApp();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     hourlyRate: '0',
     initialProjectName: ''
   });
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +38,9 @@ export const ClientForm: React.FC = () => {
       });
     }
 
+    // Show success message
+    setShowSuccess(true);
+
     // Reset form
     setFormData({
       name: '',
@@ -42,6 +48,12 @@ export const ClientForm: React.FC = () => {
       hourlyRate: '0',
       initialProjectName: ''
     });
+
+    // Hide success message and navigate after a delay
+    setTimeout(() => {
+      setShowSuccess(false);
+      navigate('/');
+    }, 1500);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +65,13 @@ export const ClientForm: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 relative">
+      {showSuccess && (
+        <div className="absolute top-4 right-4 flex items-center space-x-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in">
+          <CheckCircle className="w-5 h-5" />
+          <span>Client added successfully!</span>
+        </div>
+      )}
       <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
         <User className="w-5 h-5 mr-2" />
         Add New Client
