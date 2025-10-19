@@ -23,9 +23,10 @@ const dbPath = process.env.NODE_ENV === 'production'
 
 const db = new (verbose().Database)(dbPath, (err) => {
   if (err) {
-    console.error('Error opening database:', err);
+    console.error('❌ Error opening database:', err);
   } else {
-    console.log('Connected to SQLite database at:', dbPath);
+    console.log('✅ Connected to SQLite database at:', dbPath);
+    console.log('📁 Database file exists:', require('fs').existsSync(dbPath));
   }
 });
 
@@ -215,11 +216,11 @@ app.get('/api/clients', authenticateToken, (req, res) => {
 app.post('/api/clients', authenticateToken, (req, res) => {
   const { id, name, slug, hourlyRate, contactPerson, email, phone } = req.body;
 
-  console.log('Creating client with data:', { id, name, slug, hourlyRate, contactPerson, email, phone });
+  console.log('📝 [API] Creating client with data:', { id, name, slug, hourlyRate, contactPerson, email, phone });
 
   // Validate required fields
   if (!id || !name || !slug) {
-    console.error('Missing required fields:', { id, name, slug });
+    console.error('❌ [API] Missing required fields:', { id, name, slug });
     return res.status(400).json({ error: 'Missing required fields: id, name, and slug are required' });
   }
 
@@ -228,15 +229,27 @@ app.post('/api/clients', authenticateToken, (req, res) => {
     [id, name, slug, hourlyRate || 0, contactPerson || null, email || null, phone || null],
     function(err) {
       if (err) {
-        console.error('Error creating client:', err);
-        console.error('Error code:', err.code);
-        console.error('Error message:', err.message);
+        console.error('❌ [API] Error creating client:', err);
+        console.error('❌ [API] Error code:', err.code);
+        console.error('❌ [API] Error message:', err.message);
         if (err.message.includes('UNIQUE constraint')) {
           return res.status(400).json({ error: 'Client with this name or slug already exists' });
         }
         return res.status(500).json({ error: 'Database error: ' + err.message });
       }
-      console.log('Client created successfully with id:', id);
+      console.log('✅ [API] Client created successfully with id:', id);
+
+      // Verify the client was saved by reading it back
+      db.get('SELECT * FROM clients WHERE id = ?', [id], (err, client) => {
+        if (err) {
+          console.error('❌ [API] Error verifying client:', err);
+        } else if (client) {
+          console.log('✅ [API] Client verified in database:', client);
+        } else {
+          console.error('❌ [API] Client not found after insert!');
+        }
+      });
+
       res.json({ success: true, id });
     }
   );
@@ -283,13 +296,15 @@ app.get('/api/tasks', authenticateToken, (req, res) => {
 });
 
 app.post('/api/tasks', authenticateToken, (req, res) => {
-  const { 
-    id, clientId, projectId, description, hours, cost, date, type, 
+  const {
+    id, clientId, projectId, description, hours, cost, date, type,
     status, priority, finished, notes, completedAt, assignedTo,
     isRecurring, recurringDay, recurringWeekend, recurringWeekendType,
     recurringWeekendDay, recurringEndDate
   } = req.body;
-  
+
+  console.log('📝 [API] Creating task with data:', { id, clientId, projectId, description });
+
   db.run(`INSERT INTO tasks (
     id, client_id, project_id, description, hours, cost, date, type,
     status, priority, finished, notes, completed_at, assigned_to,
@@ -299,14 +314,27 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
     [
       id, clientId, projectId, description, hours, cost, date, type,
       status, priority, finished ? 1 : 0, notes, completedAt, assignedTo,
-      isRecurring ? 1 : 0, recurringDay, recurringWeekend ? 1 : 0, 
+      isRecurring ? 1 : 0, recurringDay, recurringWeekend ? 1 : 0,
       recurringWeekendType, recurringWeekendDay, recurringEndDate
     ],
     function(err) {
       if (err) {
-        console.error('Error inserting task:', err);
-        return res.status(500).json({ error: 'Database error' });
+        console.error('❌ [API] Error inserting task:', err);
+        return res.status(500).json({ error: 'Database error: ' + err.message });
       }
+      console.log('✅ [API] Task created successfully with id:', id);
+
+      // Verify the task was saved by reading it back
+      db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+        if (err) {
+          console.error('❌ [API] Error verifying task:', err);
+        } else if (task) {
+          console.log('✅ [API] Task verified in database:', task);
+        } else {
+          console.error('❌ [API] Task not found after insert!');
+        }
+      });
+
       res.json({ success: true, id });
     }
   );
@@ -384,7 +412,27 @@ app.put('/api/users/:id/password', authenticateToken, (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  // Check database connectivity
+  db.get('SELECT COUNT(*) as count FROM clients', (err, result) => {
+    if (err) {
+      console.error('❌ [Health Check] Database error:', err);
+      return res.status(500).json({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        database: 'disconnected',
+        error: err.message
+      });
+    }
+
+    console.log('✅ [Health Check] Database is healthy, clients count:', result.count);
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      dbPath: dbPath,
+      clientCount: result.count
+    });
+  });
 });
 
 // Serve static files in production
