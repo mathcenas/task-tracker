@@ -174,16 +174,6 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               )}
             </button>
           </div>
-
-          <div className="text-center">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/20 dark:border-blue-800">
-              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Demo Credentials</h4>
-              <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
-                <p><strong>Admin:</strong> admin / TaskTracker2025!</p>
-                <p><strong>User:</strong> user / User2025!</p>
-              </div>
-            </div>
-          </div>
         </form>
       </div>
     </div>

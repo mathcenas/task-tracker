@@ -18,26 +18,33 @@ import { AllTasksPage } from './components/AllTasksPage';
 export default function App() {
   return (
     <AppProvider>
-      <ProtectedRoute>
-        <Router>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<WeeklyDashboard />} />
-              <Route path="/fortnight" element={<ForthnightDashboard />} />
-              <Route path="/monthly" element={<MonthlyDashboard />} />
-              <Route path="/tasks" element={<AllTasksPage />} />
-              <Route path="/clients" element={<ClientDashboard />} />
-              <Route path="/projects" element={<ProjectsDashboard />} />
-              <Route path="/add-client" element={<ClientForm />} />
-              <Route path="/add-task" element={<TaskForm />} />
-              <Route path="/task" element={<TaskForm />} />
-              <Route path="/edit-task/:taskId" element={<EditTask />} />
-              <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
-              <Route path="/about" element={<AboutPage />} />
-            </Routes>
-          </Layout>
-        </Router>
-      </ProtectedRoute>
+      <Router>
+        <Routes>
+          {/* Public routes - no authentication required */}
+          <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
+          <Route path="/about" element={<AboutPage />} />
+
+          {/* Protected routes - authentication required */}
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<WeeklyDashboard />} />
+                  <Route path="/fortnight" element={<ForthnightDashboard />} />
+                  <Route path="/monthly" element={<MonthlyDashboard />} />
+                  <Route path="/tasks" element={<AllTasksPage />} />
+                  <Route path="/clients" element={<ClientDashboard />} />
+                  <Route path="/projects" element={<ProjectsDashboard />} />
+                  <Route path="/add-client" element={<ClientForm />} />
+                  <Route path="/add-task" element={<TaskForm />} />
+                  <Route path="/task" element={<TaskForm />} />
+                  <Route path="/edit-task/:taskId" element={<EditTask />} />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
     </AppProvider>
   );
 }
