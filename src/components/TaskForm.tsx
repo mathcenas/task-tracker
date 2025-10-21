@@ -8,6 +8,7 @@ export function TaskForm() {
   const location = useLocation();
   const { clients, getClientProjects, addProject, addTask, tasks, getClient } = useApp();
   const [selectedClient, setSelectedClient] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     projectId: '',
     newProject: '',
@@ -67,7 +68,10 @@ export function TaskForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     console.log('📝 Creating task with date:', formData.date);
     
     let finalProjectId = formData.projectId;
@@ -221,23 +225,17 @@ export function TaskForm() {
       completedAt: (formData.type === 'insumos' || (formData.hours && Number(formData.hours) > 0)) ? new Date().toISOString() : undefined
     };
 
-    await addTask(task);
-    console.log('Task added:', task);
-    
-    // Redirect to client dashboard if task is completed and has a client
-    if (task.finished && selectedClient) {
-      const client = getClient(selectedClient);
-      if (client && client.slug) {
-        const currentDate = new Date();
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1;
-        navigate(`/report/${client.slug}/${year}/${month}`);
-        return;
-      }
+    try {
+      await addTask(task);
+      console.log('✅ Task added successfully:', task);
+
+      // Default redirect to dashboard
+      navigate('/');
+    } catch (error) {
+      console.error('❌ Error adding task:', error);
+      alert('Failed to add task. Please try again.');
+      setIsSubmitting(false);
     }
-    
-    // Default redirect to dashboard
-    navigate('/');
   };
 
   return (
@@ -632,14 +630,24 @@ export function TaskForm() {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200 transform hover:scale-105"
+              disabled={isSubmitting}
+              className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {formData.isRecurring 
-                ? 'Create Recurring Task'
-                : formData.hours || formData.type === 'insumos' 
-                ? 'Add & Complete Task' 
-                : 'Add Task'
-              }
+              {isSubmitting ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Adding...
+                </span>
+              ) : (
+                formData.isRecurring
+                  ? 'Create Recurring Task'
+                  : formData.hours || formData.type === 'insumos'
+                  ? 'Add & Complete Task'
+                  : 'Add Task'
+              )}
             </button>
           </div>
         </form>
