@@ -152,15 +152,26 @@ const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('🔐 [Auth] Authenticating request:', {
+    path: req.path,
+    method: req.method,
+    authHeader: authHeader ? 'present' : 'missing',
+    token: token || 'NO TOKEN',
+    expectedToken: 'demo-token'
+  });
+
   if (!token) {
+    console.error('❌ [Auth] No token provided');
     return res.status(401).json({ error: 'Access token required' });
   }
 
   // Simple token validation (in production, use JWT)
   if (token === 'demo-token') {
+    console.log('✅ [Auth] Token valid, user authenticated');
     req.user = { id: 'admin-1', role: 'admin' };
     next();
   } else {
+    console.error('❌ [Auth] Invalid token provided:', token);
     res.status(403).json({ error: 'Invalid token' });
   }
 };
