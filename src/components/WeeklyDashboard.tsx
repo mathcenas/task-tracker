@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfWeek, endOfWeek, parseISO, format, isToday, isTomorrow, isYesterday, isThisWeek } from 'date-fns';
-import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays } from 'lucide-react';
+import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays, Filter } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
 import { TaskTemplates } from './TaskTemplates';
@@ -20,6 +20,9 @@ export function WeeklyDashboard() {
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
 
   // Force refresh when tasks change
   React.useEffect(() => {
@@ -44,24 +47,53 @@ export function WeeklyDashboard() {
   });
 
   // Show ALL unfinished tasks regardless of date
-  const unfinishedTasks = tasks.filter(task => !task.finished);
-  
+  const allUnfinishedTasks = tasks.filter(task => !task.finished);
+
   // Categorize unfinished tasks
-  const overdueTasks = unfinishedTasks.filter(task => {
+  const overdueTasks = allUnfinishedTasks.filter(task => {
     const taskDate = parseISO(task.date + 'T00:00:00');
     taskDate.setHours(0, 0, 0, 0);
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
     return taskDate < todayDate;
   });
-  const todayTasks = unfinishedTasks.filter(task => isToday(parseISO(task.date + 'T00:00:00')));
-  const upcomingTasks = unfinishedTasks.filter(task => {
+  const todayTasks = allUnfinishedTasks.filter(task => isToday(parseISO(task.date + 'T00:00:00')));
+  const upcomingTasks = allUnfinishedTasks.filter(task => {
     const taskDate = parseISO(task.date + 'T00:00:00');
     taskDate.setHours(0, 0, 0, 0);
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
     return taskDate > todayDate;
   });
+  const completedTasks = tasks.filter(task => task.finished);
+
+  // Apply filters
+  let filteredTasks = [...tasks];
+
+  // Status filter
+  if (taskFilter === 'overdue') {
+    filteredTasks = overdueTasks;
+  } else if (taskFilter === 'today') {
+    filteredTasks = todayTasks;
+  } else if (taskFilter === 'upcoming') {
+    filteredTasks = upcomingTasks;
+  } else if (taskFilter === 'completed') {
+    filteredTasks = completedTasks;
+  } else if (taskFilter === 'all') {
+    filteredTasks = allUnfinishedTasks;
+  }
+
+  // Priority filter
+  if (priorityFilter !== 'all') {
+    filteredTasks = filteredTasks.filter(task => task.priority === priorityFilter);
+  }
+
+  // Type filter
+  if (typeFilter !== 'all') {
+    filteredTasks = filteredTasks.filter(task => task.type === typeFilter);
+  }
+
+  const unfinishedTasks = filteredTasks.filter(task => !task.finished);
   
   // Quick stats
   const thisWeekTasks = tasks.filter(task => isThisWeek(parseISO(task.date + 'T00:00:00'), { weekStartsOn: 1 }));
@@ -546,7 +578,7 @@ export function WeeklyDashboard() {
             <Target className="w-8 h-8 text-purple-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{unfinishedTasks.length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
               <p className="text-xs text-purple-600 dark:text-purple-400">
                 Click for analysis • {overdueTasks.length} overdue, {todayTasks.length} today
               </p>
@@ -555,8 +587,197 @@ export function WeeklyDashboard() {
         </div>
       </div>
 
+      {/* Task Filters */}
+      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <Filter className="w-5 h-5 text-blue-500 mr-2" />
+            Filter Tasks
+          </h3>
+          <button
+            onClick={() => {
+              setTaskFilter('all');
+              setPriorityFilter('all');
+              setTypeFilter('all');
+            }}
+            className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+          >
+            Clear Filters
+          </button>
+        </div>
+
+        {/* Status Filter */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Status
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setTaskFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                taskFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              All Pending ({allUnfinishedTasks.length})
+            </button>
+            <button
+              onClick={() => setTaskFilter('overdue')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                taskFilter === 'overdue'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Overdue ({overdueTasks.length})
+            </button>
+            <button
+              onClick={() => setTaskFilter('today')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                taskFilter === 'today'
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Today ({todayTasks.length})
+            </button>
+            <button
+              onClick={() => setTaskFilter('upcoming')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                taskFilter === 'upcoming'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Upcoming ({upcomingTasks.length})
+            </button>
+            <button
+              onClick={() => setTaskFilter('completed')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                taskFilter === 'completed'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Completed ({completedTasks.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Priority Filter */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Priority
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setPriorityFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                priorityFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setPriorityFilter('high')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                priorityFilter === 'high'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              🔴 High Priority
+            </button>
+            <button
+              onClick={() => setPriorityFilter('medium')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                priorityFilter === 'medium'
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              🟡 Medium Priority
+            </button>
+            <button
+              onClick={() => setPriorityFilter('low')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                priorityFilter === 'low'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              🟢 Low Priority
+            </button>
+          </div>
+        </div>
+
+        {/* Type Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Type
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setTypeFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                typeFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              All Types
+            </button>
+            <button
+              onClick={() => setTypeFilter('incident')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                typeFilter === 'incident'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Incident
+            </button>
+            <button
+              onClick={() => setTypeFilter('request')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                typeFilter === 'request'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Request
+            </button>
+            <button
+              onClick={() => setTypeFilter('insumos')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                typeFilter === 'insumos'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              Supplies
+            </button>
+          </div>
+        </div>
+
+        {/* Active filters summary */}
+        {(taskFilter !== 'all' || priorityFilter !== 'all' || typeFilter !== 'all') && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
+              <strong>Showing {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}</strong>
+              {taskFilter !== 'all' && ` • Status: ${taskFilter}`}
+              {priorityFilter !== 'all' && ` • Priority: ${priorityFilter}`}
+              {typeFilter !== 'all' && ` • Type: ${typeFilter}`}
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Priority Tasks Section */}
-      {(overdueTasks.length > 0 || todayTasks.length > 0) && (
+      {(overdueTasks.length > 0 || todayTasks.length > 0) && taskFilter === 'all' && (
         <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
