@@ -1,11 +1,26 @@
 import React from 'react';
-import { authService } from '../../auth/authService';
+import { api } from '../../services/api';
 import { LoginForm } from './LoginForm';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: 'admin' | 'user';
 }
+
+const getSession = () => {
+  try {
+    const encryptedSession = localStorage.getItem('tasktracker_session');
+    if (!encryptedSession) return null;
+    const sessionData = JSON.parse(atob(encryptedSession));
+    if (Date.now() > sessionData.expiresAt) {
+      localStorage.removeItem('tasktracker_session');
+      return null;
+    }
+    return sessionData;
+  } catch {
+    return null;
+  }
+};
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
@@ -17,15 +32,14 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }, [requiredRole]);
 
   const checkAuthentication = () => {
-    const session = authService.getCurrentSession();
-    const user = authService.getCurrentUser();
-    
-    if (session && user) {
+    const session = getSession();
+
+    if (session) {
       setIsAuthenticated(true);
-      
+
       // Check role-based permissions
       if (requiredRole) {
-        if (requiredRole === 'admin' && user.role !== 'admin') {
+        if (requiredRole === 'admin' && session.role !== 'admin') {
           setHasPermission(false);
         } else {
           setHasPermission(true);
@@ -37,7 +51,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       setIsAuthenticated(false);
       setHasPermission(false);
     }
-    
+
     setIsLoading(false);
   };
 
@@ -66,7 +80,10 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
             You don't have permission to access this resource.
           </p>
           <button
-            onClick={() => authService.logout()}
+            onClick={() => {
+              api.logout();
+              window.location.reload();
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Sign Out

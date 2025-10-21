@@ -3,9 +3,18 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
-import { authService } from '../auth/authService';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+
+const getSession = () => {
+  try {
+    const encryptedSession = localStorage.getItem('tasktracker_session');
+    if (!encryptedSession) return null;
+    return JSON.parse(atob(encryptedSession));
+  } catch {
+    return null;
+  }
+};
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -15,7 +24,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
+  const session = getSession();
+  const [currentUser] = useState(session ? {
+    username: session.username,
+    role: session.role
+  } : null);
   
   // Force refresh when data changes
   React.useEffect(() => {

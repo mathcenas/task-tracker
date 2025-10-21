@@ -1,13 +1,31 @@
 import React, { useState } from 'react';
-import { authService } from '../../auth/authService';
+import { api } from '../../services/api';
 import { User, Lock, LogOut, Shield, Calendar, Clock } from 'lucide-react';
+
+const getSession = () => {
+  try {
+    const encryptedSession = localStorage.getItem('tasktracker_session');
+    if (!encryptedSession) return null;
+    return JSON.parse(atob(encryptedSession));
+  } catch {
+    return null;
+  }
+};
 
 interface UserProfileProps {
   onClose: () => void;
 }
 
 export function UserProfile({ onClose }: UserProfileProps) {
-  const [user, setUser] = useState(authService.getCurrentUser());
+  const session = getSession();
+  const [user] = useState(session ? {
+    id: session.userId,
+    username: session.username,
+    email: `${session.username}@tasktracker.pro`,
+    role: session.role,
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString()
+  } : null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -18,7 +36,7 @@ export function UserProfile({ onClose }: UserProfileProps) {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const handleLogout = () => {
-    authService.logout();
+    api.logout();
     window.location.reload();
   };
 
@@ -32,18 +50,7 @@ export function UserProfile({ onClose }: UserProfileProps) {
       return;
     }
 
-    const result = await authService.changePassword(
-      passwordForm.currentPassword,
-      passwordForm.newPassword
-    );
-
-    if (result.success) {
-      setPasswordSuccess(true);
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setShowChangePassword(false);
-    } else {
-      setPasswordError(result.error || 'Failed to change password');
-    }
+    setPasswordError('Password change not implemented yet');
   };
 
   if (!user) return null;

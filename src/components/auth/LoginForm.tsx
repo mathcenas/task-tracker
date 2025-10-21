@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { authService } from '../../auth/authService';
+import { api } from '../../services/api';
 import { Lock, User, Eye, EyeOff, AlertTriangle, Clock } from 'lucide-react';
 
 interface LoginFormProps {
@@ -25,20 +25,25 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setLockedUntil(null);
 
     try {
-      const result = await authService.login(formData.username, formData.password);
-      
-      if (result.success) {
+      const result = await api.login(formData.username, formData.password);
+
+      if (result.success && result.token) {
+        // Store session in localStorage
+        const encryptedSession = btoa(JSON.stringify({
+          token: result.token,
+          userId: result.user.id,
+          username: result.user.username,
+          role: result.user.role,
+          expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+        }));
+
+        localStorage.setItem('tasktracker_session', encryptedSession);
         onLoginSuccess();
       } else {
         setError(result.error || 'Login failed');
-        if (result.remainingAttempts !== undefined) {
-          setRemainingAttempts(result.remainingAttempts);
-        }
-        if (result.lockedUntil) {
-          setLockedUntil(result.lockedUntil);
-        }
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
