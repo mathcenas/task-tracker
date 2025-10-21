@@ -48,8 +48,8 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Expose port 3001
-EXPOSE 3001
+# Expose port 3000
+EXPOSE 3000
 
 # Start the application
 CMD ["node", "server/index.js"]

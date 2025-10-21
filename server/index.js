@@ -4,13 +4,14 @@ import sqlite3 from 'sqlite3';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const { verbose } = sqlite3;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -26,7 +27,7 @@ const db = new (verbose().Database)(dbPath, (err) => {
     console.error('❌ Error opening database:', err);
   } else {
     console.log('✅ Connected to SQLite database at:', dbPath);
-    console.log('📁 Database file exists:', require('fs').existsSync(dbPath));
+    console.log('📁 Database file exists:', fs.existsSync(dbPath));
   }
 });
 

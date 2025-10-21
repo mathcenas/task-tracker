@@ -1,6 +1,6 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
+const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? '' // Same origin in production
-  : 'http://localhost:3001';
+  : 'http://localhost:3000';
 
 class ApiService {
   private token: string | null = null;
