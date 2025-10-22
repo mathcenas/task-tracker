@@ -247,6 +247,20 @@ class ApiService {
     });
   }
 
+  // Backup & Restore
+  async exportBackup() {
+    console.log('📦 [ApiService] Exporting database backup...');
+    return this.request('/backup');
+  }
+
+  async importBackup(backupData: any) {
+    console.log('📥 [ApiService] Importing database backup...');
+    return this.request('/restore', {
+      method: 'POST',
+      body: JSON.stringify(backupData),
+    });
+  }
+
   // Health check
   async healthCheck() {
     return this.request('/health');

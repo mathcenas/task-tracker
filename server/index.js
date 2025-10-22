@@ -422,6 +422,152 @@ app.put('/api/users/:id/password', authenticateToken, (req, res) => {
   });
 });
 
+// Backup - Export all data
+app.get('/api/backup', authenticate, (req, res) => {
+  console.log('📦 Exporting database backup...');
+
+  const backup = {
+    exportDate: new Date().toISOString(),
+    version: '1.0',
+    data: {}
+  };
+
+  // Export clients
+  db.all('SELECT * FROM clients', (err, clients) => {
+    if (err) {
+      console.error('Error exporting clients:', err);
+      return res.status(500).json({ error: 'Failed to export clients' });
+    }
+    backup.data.clients = clients;
+
+    // Export projects
+    db.all('SELECT * FROM projects', (err, projects) => {
+      if (err) {
+        console.error('Error exporting projects:', err);
+        return res.status(500).json({ error: 'Failed to export projects' });
+      }
+      backup.data.projects = projects;
+
+      // Export tasks
+      db.all('SELECT * FROM tasks', (err, tasks) => {
+        if (err) {
+          console.error('Error exporting tasks:', err);
+          return res.status(500).json({ error: 'Failed to export tasks' });
+        }
+        backup.data.tasks = tasks;
+
+        console.log('✅ Backup created:', {
+          clients: clients.length,
+          projects: projects.length,
+          tasks: tasks.length
+        });
+
+        res.json(backup);
+      });
+    });
+  });
+});
+
+// Restore - Import data
+app.post('/api/restore', authenticate, (req, res) => {
+  const { data } = req.body;
+
+  if (!data || !data.clients || !data.projects || !data.tasks) {
+    return res.status(400).json({ error: 'Invalid backup format' });
+  }
+
+  console.log('📥 Restoring database from backup...');
+  console.log('Data to restore:', {
+    clients: data.clients.length,
+    projects: data.projects.length,
+    tasks: data.tasks.length
+  });
+
+  // Start transaction
+  db.serialize(() => {
+    // Clear existing data
+    db.run('DELETE FROM tasks', (err) => {
+      if (err) {
+        console.error('Error clearing tasks:', err);
+        return res.status(500).json({ error: 'Failed to clear tasks' });
+      }
+
+      db.run('DELETE FROM projects', (err) => {
+        if (err) {
+          console.error('Error clearing projects:', err);
+          return res.status(500).json({ error: 'Failed to clear projects' });
+        }
+
+        db.run('DELETE FROM clients', (err) => {
+          if (err) {
+            console.error('Error clearing clients:', err);
+            return res.status(500).json({ error: 'Failed to clear clients' });
+          }
+
+          // Insert clients
+          const clientStmt = db.prepare('INSERT INTO clients VALUES (?, ?, ?, ?, ?, ?, ?)');
+          data.clients.forEach(client => {
+            clientStmt.run([
+              client.id,
+              client.name,
+              client.slug,
+              client.hourly_rate,
+              client.contact_email,
+              client.created_at,
+              client.notes
+            ]);
+          });
+          clientStmt.finalize();
+
+          // Insert projects
+          const projectStmt = db.prepare('INSERT INTO projects VALUES (?, ?, ?, ?, ?, ?)');
+          data.projects.forEach(project => {
+            projectStmt.run([
+              project.id,
+              project.name,
+              project.client_id,
+              project.description,
+              project.status,
+              project.created_at
+            ]);
+          });
+          projectStmt.finalize();
+
+          // Insert tasks
+          const taskStmt = db.prepare('INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+          data.tasks.forEach(task => {
+            taskStmt.run([
+              task.id,
+              task.client_id,
+              task.project_id,
+              task.description,
+              task.type,
+              task.priority,
+              task.date,
+              task.hours,
+              task.cost,
+              task.finished,
+              task.completed_at,
+              task.created_at
+            ]);
+          });
+          taskStmt.finalize(() => {
+            console.log('✅ Database restored successfully');
+            res.json({
+              success: true,
+              restored: {
+                clients: data.clients.length,
+                projects: data.projects.length,
+                tasks: data.tasks.length
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   // Check database connectivity

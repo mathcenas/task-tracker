@@ -1,7 +1,75 @@
-import React from 'react';
-import { Clock, CheckSquare, BookTemplate as Template, Repeat, CalendarDays, Users, Folders, BarChart3, Download, Search, Moon, Sun, Smartphone, Globe, Shield, Zap, TrendingUp, FileText, Package, AlertTriangle, Calendar, DollarSign, Target, Plus, Pencil, Trash2, Copy, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, CheckSquare, BookTemplate as Template, Repeat, CalendarDays, Users, Folders, BarChart3, Download, Search, Moon, Sun, Smartphone, Globe, Shield, Zap, TrendingUp, FileText, Package, AlertTriangle, Calendar, DollarSign, Target, Plus, Pencil, Trash2, Copy, ExternalLink, Upload, Database } from 'lucide-react';
+import { api } from '../services/api';
 
 export function AboutPage() {
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleExportBackup = async () => {
+    setIsExporting(true);
+    setError('');
+    setExportSuccess(false);
+
+    try {
+      const backup = await api.exportBackup();
+
+      // Create a download link
+      const dataStr = JSON.stringify(backup, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `tasktracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 3000);
+    } catch (err) {
+      console.error('Export error:', err);
+      setError('Failed to export backup');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setError('');
+    setImportSuccess(false);
+
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+
+      if (!backup.data || !backup.data.clients || !backup.data.projects || !backup.data.tasks) {
+        throw new Error('Invalid backup file format');
+      }
+
+      await api.importBackup(backup);
+
+      setImportSuccess(true);
+      setTimeout(() => {
+        setImportSuccess(false);
+        window.location.reload(); // Reload to show imported data
+      }, 2000);
+    } catch (err) {
+      console.error('Import error:', err);
+      setError('Failed to import backup. Please check the file format.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const features = [
     {
       category: "Core Dashboard Features",
@@ -587,6 +655,122 @@ export function AboutPage() {
           </div>
         </div>
       ))}
+
+      {/* Backup & Restore */}
+      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+          <Database className="w-5 h-5 text-blue-500 mr-2" />
+          Backup & Restore
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Export Backup */}
+          <div className="border rounded-lg p-6 dark:border-gray-700">
+            <div className="flex items-start space-x-3 mb-4">
+              <Download className="w-6 h-6 text-green-500" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  Export Backup
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  Download all your data (clients, projects, tasks) as a JSON file for safekeeping or testing.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleExportBackup}
+              disabled={isExporting}
+              className="w-full inline-flex items-center justify-center px-4 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isExporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Backup
+                </>
+              )}
+            </button>
+
+            {exportSuccess && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
+                <p className="text-sm text-green-800 dark:text-green-300">
+                  Backup exported successfully!
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Import Backup */}
+          <div className="border rounded-lg p-6 dark:border-gray-700">
+            <div className="flex items-start space-x-3 mb-4">
+              <Upload className="w-6 h-6 text-blue-500" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  Import Backup
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  Restore data from a previously exported backup file. This will replace all current data.
+                </p>
+              </div>
+            </div>
+
+            <label className="w-full block">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportBackup}
+                disabled={isImporting}
+                className="hidden"
+                id="backup-upload"
+              />
+              <div
+                className="w-full inline-flex items-center justify-center px-4 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                onClick={() => document.getElementById('backup-upload')?.click()}
+              >
+                {isImporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Choose Backup File
+                  </>
+                )}
+              </div>
+            </label>
+
+            {importSuccess && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
+                <p className="text-sm text-green-800 dark:text-green-300">
+                  Backup imported successfully! Reloading...
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+              <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-800">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">
+            <strong>Note:</strong> Importing a backup will replace all existing data. Make sure to export your current data first if you want to keep it.
+          </p>
+        </div>
+      </div>
 
       {/* Footer */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 dark:from-blue-900/20 dark:to-purple-900/20">
