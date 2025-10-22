@@ -423,7 +423,7 @@ app.put('/api/users/:id/password', authenticateToken, (req, res) => {
 });
 
 // Backup - Export all data
-app.get('/api/backup', authenticate, (req, res) => {
+app.get('/api/backup', authenticateToken, (req, res) => {
   console.log('📦 Exporting database backup...');
 
   const backup = {
@@ -469,7 +469,7 @@ app.get('/api/backup', authenticate, (req, res) => {
 });
 
 // Restore - Import data
-app.post('/api/restore', authenticate, (req, res) => {
+app.post('/api/restore', authenticateToken, (req, res) => {
   const { data } = req.body;
 
   if (!data || !data.clients || !data.projects || !data.tasks) {
