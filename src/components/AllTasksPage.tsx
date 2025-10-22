@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Filter, Search, Plus, Pencil, Check, X } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Search, Plus, Pencil, Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
+import { TaskFilters } from './ui/TaskFilters';
 
 export function AllTasksPage() {
   const { tasks, getClient, getProject, updateTask } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
@@ -26,24 +27,53 @@ export function AllTasksPage() {
     .map(clientId => getClient(clientId))
     .filter(Boolean);
 
-  // Filter tasks based on all criteria
-  const filteredTasks = tasks.filter(task => {
+  // Categorize tasks
+  const allUnfinishedTasks = tasks.filter(task => !task.finished);
+  const overdueTasks = allUnfinishedTasks.filter(task => {
+    const taskDate = parseISO(task.date + 'T00:00:00');
+    taskDate.setHours(0, 0, 0, 0);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    return taskDate < todayDate;
+  });
+  const todayTasks = allUnfinishedTasks.filter(task => isToday(parseISO(task.date + 'T00:00:00')));
+  const upcomingTasks = allUnfinishedTasks.filter(task => {
+    const taskDate = parseISO(task.date + 'T00:00:00');
+    taskDate.setHours(0, 0, 0, 0);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    return taskDate > todayDate;
+  });
+  const completedTasks = tasks.filter(task => task.finished);
+
+  // Apply status filter
+  let filteredTasks = [...tasks];
+  if (taskFilter === 'overdue') {
+    filteredTasks = overdueTasks;
+  } else if (taskFilter === 'today') {
+    filteredTasks = todayTasks;
+  } else if (taskFilter === 'upcoming') {
+    filteredTasks = upcomingTasks;
+  } else if (taskFilter === 'completed') {
+    filteredTasks = completedTasks;
+  } else if (taskFilter === 'all') {
+    filteredTasks = allUnfinishedTasks;
+  }
+
+  // Apply other filters
+  filteredTasks = filteredTasks.filter(task => {
     const client = getClient(task.clientId);
     const project = getProject(task.projectId);
-    
+
     // Search filter
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         task.description.toLowerCase().includes(searchLower) ||
         client?.name.toLowerCase().includes(searchLower) ||
         project?.name.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
     }
-
-    // Status filter
-    if (statusFilter === 'pending' && task.finished) return false;
-    if (statusFilter === 'completed' && !task.finished) return false;
 
     // Type filter
     if (typeFilter !== 'all' && task.type !== typeFilter) return false;
@@ -121,15 +151,15 @@ export function AllTasksPage() {
 
   const clearFilters = () => {
     setSearchQuery('');
-    setStatusFilter('all');
+    setTaskFilter('all');
     setTypeFilter('all');
     setPriorityFilter('all');
     setClientFilter('all');
   };
 
-  const pendingCount = tasks.filter(t => !t.finished).length;
-  const completedCount = tasks.filter(t => t.finished).length;
-  const overdueCount = tasks.filter(t => !t.finished && new Date(t.date) < new Date()).length;
+  const pendingCount = allUnfinishedTasks.length;
+  const completedCount = completedTasks.length;
+  const overdueCount = overdueTasks.length;
 
   return (
     <div className="space-y-6">
@@ -190,83 +220,24 @@ export function AllTasksPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search Bar */}
       <div className="bg-white rounded-lg shadow p-6 dark:bg-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-            <Filter className="w-5 h-5 mr-2" />
-            Filters & Search
-          </h3>
-          <button
-            onClick={clearFilters}
-            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 transition-colors"
-          >
-            Clear All
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          {/* Search */}
-          <div className="lg:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search tasks, clients, projects..."
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search tasks, clients, projects..."
+              className="pl-10 pr-4 py-2.5 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-
-          {/* Status Filter */}
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'completed')}
-              className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-
-          {/* Type Filter */}
-          <div>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as 'all' | 'incident' | 'request' | 'insumos')}
-              className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="all">All Types</option>
-              <option value="incident">Incident</option>
-              <option value="request">Request</option>
-              <option value="insumos">Supplies</option>
-            </select>
-          </div>
-
-          {/* Priority Filter */}
-          <div>
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value as 'all' | 'high' | 'medium' | 'low')}
-              className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="all">All Priorities</option>
-              <option value="high">High Priority</option>
-              <option value="medium">Medium Priority</option>
-              <option value="low">Low Priority</option>
-            </select>
-          </div>
-
-          {/* Client Filter */}
-          <div>
+          <div className="min-w-[200px]">
             <select
               value={clientFilter}
               onChange={(e) => setClientFilter(e.target.value)}
-              className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full py-2.5 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="all">All Clients</option>
               {clients.map(client => (
@@ -275,14 +246,30 @@ export function AllTasksPage() {
             </select>
           </div>
         </div>
-
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-          <span>Showing {filteredTasks.length} of {tasks.length} tasks</span>
-          {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || priorityFilter !== 'all' || clientFilter !== 'all') && (
-            <span className="text-blue-600 dark:text-blue-400">Filters active</span>
-          )}
-        </div>
       </div>
+
+      {/* Task Filters */}
+      <TaskFilters
+        taskFilter={taskFilter}
+        priorityFilter={priorityFilter}
+        typeFilter={typeFilter}
+        onTaskFilterChange={setTaskFilter}
+        onPriorityFilterChange={setPriorityFilter}
+        onTypeFilterChange={setTypeFilter}
+        onClearFilters={() => {
+          setTaskFilter('all');
+          setPriorityFilter('all');
+          setTypeFilter('all');
+        }}
+        counts={{
+          allPending: allUnfinishedTasks.length,
+          overdue: overdueTasks.length,
+          today: todayTasks.length,
+          upcoming: upcomingTasks.length,
+          completed: completedTasks.length
+        }}
+        filteredCount={filteredTasks.length}
+      />
 
       {/* Tasks List */}
       <div className="bg-white rounded-lg shadow dark:bg-gray-800">

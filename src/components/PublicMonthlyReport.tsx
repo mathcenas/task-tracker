@@ -412,10 +412,10 @@ export function PublicMonthlyReport() {
                   <div className="flex items-center">
                     <DollarSign className="w-8 h-8 text-green-500 mr-3" />
                     <div>
-                      <p className="text-sm text-green-600 font-medium dark:text-green-400">Service Revenue</p>
+                      <p className="text-sm text-green-600 font-medium dark:text-green-400">Service Total</p>
                       <p className="text-3xl font-bold text-green-900 dark:text-green-300">${clientStats.serviceRevenue.toFixed(0)}</p>
                       <p className="text-xs text-green-600 dark:text-green-400">
-                        ${(clientStats.serviceRevenue / (clientStats.totalHours || 1)).toFixed(0)}/hour avg
+                        ${(clientStats.serviceRevenue / (clientStats.totalHours || 1)).toFixed(0)}/hour rate
                       </p>
                     </div>
                   </div>
@@ -500,7 +500,7 @@ export function PublicMonthlyReport() {
                   
                   <div className="mt-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
                     <span>6-month average: {(trendData.reduce((sum, d) => sum + d.hours, 0) / 6).toFixed(1)}h/month</span>
-                    <span>Total revenue: ${trendData.reduce((sum, d) => sum + d.revenue, 0).toFixed(0)}</span>
+                    <span>Total billed: ${trendData.reduce((sum, d) => sum + d.revenue, 0).toFixed(0)}</span>
                   </div>
                   <div className="mt-2 text-center">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
