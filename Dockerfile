@@ -35,9 +35,6 @@ COPY --from=builder /app/package*.json ./
 # Install production dependencies
 RUN npm ci --only=production
 
-# Initialize database
-RUN NODE_ENV=production node server/init-db.js
-
 # Create non-root user
 RUN addgroup -g 1001 -S appuser && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G appuser -g appuser appuser
@@ -52,4 +49,4 @@ USER appuser
 EXPOSE 3000
 
 # Start the application
-CMD ["node", "server/index.js"]
+CMD ["sh", "-c", "node server/init-db.js && node server/index.js"]
