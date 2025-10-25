@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format } from 'date-fns';
-import { Folder, AlertTriangle, FileText, Package, Clock, CheckCircle, PauseCircle, TrendingUp, DollarSign, Target } from 'lucide-react';
+import { Folder, AlertTriangle, FileText, Package, Clock, CheckCircle, PauseCircle, TrendingUp, DollarSign, Target, Repeat } from 'lucide-react';
+import { filterOutPendingRecurringReminders, getPendingRecurringReminders } from '../utils/taskFilters';
 
 export function ProjectsDashboard() {
   const { projects, clients, getClient, getProjectTasks } = useApp();
@@ -83,15 +84,22 @@ export function ProjectsDashboard() {
             if (clientProjects.length === 0) return null;
 
             const clientTotalTasks = clientProjects.reduce((sum, proj) => {
-              return sum + getProjectTasks(proj.id).length;
+              const tasks = filterOutPendingRecurringReminders(getProjectTasks(proj.id));
+              return sum + tasks.length;
             }, 0);
 
             const clientCompletedTasks = clientProjects.reduce((sum, proj) => {
-              return sum + getProjectTasks(proj.id).filter(t => t.finished).length;
+              const tasks = filterOutPendingRecurringReminders(getProjectTasks(proj.id));
+              return sum + tasks.filter(t => t.finished).length;
             }, 0);
 
             const clientTotalHours = clientProjects.reduce((sum, proj) => {
-              return sum + getProjectTasks(proj.id).reduce((s, t) => s + (t.hours || 0), 0);
+              const tasks = filterOutPendingRecurringReminders(getProjectTasks(proj.id));
+              return sum + tasks.reduce((s, t) => s + (t.hours || 0), 0);
+            }, 0);
+
+            const clientRecurringReminders = clientProjects.reduce((sum, proj) => {
+              return sum + getPendingRecurringReminders(getProjectTasks(proj.id)).length;
             }, 0);
 
             const clientTotalRevenue = clientTotalHours * (client.hourlyRate || 0);
@@ -110,7 +118,7 @@ export function ProjectsDashboard() {
                 </div>
 
                 {/* Client Summary */}
-                <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="grid grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-1">
                       <Target className="w-4 h-4 text-blue-500 mr-1" />
@@ -141,12 +149,28 @@ export function ProjectsDashboard() {
                       ${clientTotalRevenue.toFixed(0)}
                     </p>
                   </div>
+                  {clientRecurringReminders > 0 && (
+                    <div className="text-center">
+                      <div className="flex items-center justify-center mb-1">
+                        <Repeat className="w-4 h-4 text-blue-500 mr-1" />
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Reminders</p>
+                      </div>
+                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        {clientRecurringReminders}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        to complete
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Projects List */}
                 <div className="space-y-3">
                   {clientProjects.map(project => {
-                    const projectTasks = getProjectTasks(project.id);
+                    const allProjectTasks = getProjectTasks(project.id);
+                    const projectTasks = filterOutPendingRecurringReminders(allProjectTasks);
+                    const recurringReminders = getPendingRecurringReminders(allProjectTasks);
                     const completedTasks = projectTasks.filter(t => t.finished).length;
                     const totalHours = projectTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
                     const totalCost = projectTasks
@@ -216,6 +240,21 @@ export function ProjectsDashboard() {
                           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                             Started: {format(new Date(project.startDate), 'MMM d, yyyy')}
                           </p>
+                        )}
+
+                        {/* Recurring Reminders */}
+                        {recurringReminders.length > 0 && (
+                          <div className="mt-3 pt-3 border-t dark:border-gray-700">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Repeat className="w-4 h-4 text-blue-500" />
+                              <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                                {recurringReminders.length} Recurring Reminder{recurringReminders.length !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              These tasks need to be completed and will count toward progress once done
+                            </p>
+                          </div>
                         )}
                       </div>
                     );
