@@ -143,6 +143,37 @@ const initDB = async () => {
     });
   }
 
+  // Migration: Add new columns to existing tables
+  console.log('Running migrations...');
+
+  const migrations = [
+    // Add accepted and accepted_at to tasks table
+    `ALTER TABLE tasks ADD COLUMN accepted BOOLEAN DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN accepted_at DATETIME`,
+    // Add recurring_start_date to recurring_tasks table
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`
+  ];
+
+  for (const migration of migrations) {
+    await new Promise((resolve) => {
+      db.run(migration, (err) => {
+        if (err) {
+          // Column might already exist, that's okay
+          if (err.message.includes('duplicate column name')) {
+            console.log('Column already exists, skipping migration');
+          } else {
+            console.log('Migration note:', err.message);
+          }
+        } else {
+          console.log('Migration applied:', migration.substring(0, 50) + '...');
+        }
+        resolve();
+      });
+    });
+  }
+
+  console.log('Migrations complete');
+
   // Create default users with environment variable credentials
   const adminUsername = process.env.ADMIN_USERNAME || 'admin';
   const adminPasswordPlain = process.env.ADMIN_PASSWORD || 'TaskTracker2025!';
