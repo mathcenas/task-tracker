@@ -164,6 +164,12 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
 
     const processRecurringTasks = async () => {
       for (const recurringTask of tasksToGenerate) {
+        // Validate that we have required fields
+        if (!recurringTask.clientId || !recurringTask.projectId) {
+          console.error('❌ Cannot generate task: missing client or project ID', recurringTask);
+          continue;
+        }
+
         // Generate the actual task
         const taskData = {
           clientId: recurringTask.clientId,
@@ -184,6 +190,12 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
           notes: `Auto-generated from recurring task: ${recurringTask.name}`,
           createdAt: new Date().toISOString()
         };
+
+        console.log('✅ Generating task with IDs:', {
+          clientId: taskData.clientId,
+          projectId: taskData.projectId,
+          description: taskData.description
+        });
 
         await addTask(taskData);
 

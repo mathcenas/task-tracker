@@ -10,6 +10,7 @@
     "build": "vite build",
     "build:server": "node server/init-db.js",
     "migrate": "node server/migrate.js",
+    "clean:orphaned": "node server/clean-orphaned-tasks.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
