@@ -505,49 +505,69 @@ app.post('/api/restore', authenticateToken, (req, res) => {
           }
 
           // Insert clients
-          const clientStmt = db.prepare('INSERT INTO clients VALUES (?, ?, ?, ?, ?, ?, ?)');
+          const clientStmt = db.prepare(`INSERT INTO clients
+            (id, name, slug, hourly_rate, contact_person, email, phone, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
           data.clients.forEach(client => {
             clientStmt.run([
               client.id,
               client.name,
               client.slug,
-              client.hourly_rate,
-              client.contact_email,
-              client.created_at,
-              client.notes
+              client.hourly_rate || 0,
+              client.contact_person || null,
+              client.email || null,
+              client.phone || null,
+              client.created_at
             ]);
           });
           clientStmt.finalize();
 
           // Insert projects
-          const projectStmt = db.prepare('INSERT INTO projects VALUES (?, ?, ?, ?, ?, ?)');
+          const projectStmt = db.prepare(`INSERT INTO projects
+            (id, client_id, name, description, start_date, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`);
           data.projects.forEach(project => {
             projectStmt.run([
               project.id,
-              project.name,
               project.client_id,
-              project.description,
-              project.status,
+              project.name,
+              project.description || null,
+              project.start_date || null,
+              project.status || 'active',
               project.created_at
             ]);
           });
           projectStmt.finalize();
 
           // Insert tasks
-          const taskStmt = db.prepare('INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+          const taskStmt = db.prepare(`INSERT INTO tasks
+            (id, client_id, project_id, description, hours, cost, date, type,
+             status, priority, finished, notes, completed_at, assigned_to,
+             is_recurring, recurring_day, recurring_weekend, recurring_weekend_type,
+             recurring_weekend_day, recurring_end_date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
           data.tasks.forEach(task => {
             taskStmt.run([
               task.id,
-              task.client_id,
-              task.project_id,
+              task.client_id || '',
+              task.project_id || '',
               task.description,
-              task.type,
-              task.priority,
+              task.hours || null,
+              task.cost || null,
               task.date,
-              task.hours,
-              task.cost,
-              task.finished,
-              task.completed_at,
+              task.type || 'request',
+              task.status || 'pending',
+              task.priority || 'medium',
+              task.finished ? 1 : 0,
+              task.notes || null,
+              task.completed_at || null,
+              task.assigned_to || null,
+              task.is_recurring ? 1 : 0,
+              task.recurring_day || null,
+              task.recurring_weekend ? 1 : 0,
+              task.recurring_weekend_type || null,
+              task.recurring_weekend_day || null,
+              task.recurring_end_date || null,
               task.created_at
             ]);
           });
