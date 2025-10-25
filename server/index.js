@@ -312,7 +312,7 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
     id, clientId, projectId, description, hours, cost, date, type,
     status, priority, finished, notes, completedAt, assignedTo,
     isRecurring, recurringDay, recurringWeekend, recurringWeekendType,
-    recurringWeekendDay, recurringEndDate
+    recurringWeekendDay, recurringEndDate, accepted, acceptedAt
   } = req.body;
 
   console.log('📝 [API] Creating task with data:', { id, clientId, projectId, description });
@@ -321,13 +321,14 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
     id, client_id, project_id, description, hours, cost, date, type,
     status, priority, finished, notes, completed_at, assigned_to,
     is_recurring, recurring_day, recurring_weekend, recurring_weekend_type,
-    recurring_weekend_day, recurring_end_date
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    recurring_weekend_day, recurring_end_date, accepted, accepted_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, clientId, projectId, description, hours, cost, date, type,
       status, priority, finished ? 1 : 0, notes, completedAt, assignedTo,
       isRecurring ? 1 : 0, recurringDay, recurringWeekend ? 1 : 0,
-      recurringWeekendType, recurringWeekendDay, recurringEndDate
+      recurringWeekendType, recurringWeekendDay, recurringEndDate,
+      accepted ? 1 : 0, acceptedAt
     ],
     function(err) {
       if (err) {
@@ -354,17 +355,18 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
 
 app.put('/api/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
-  const { 
-    description, hours, cost, date, type, status, priority, 
-    finished, notes, completedAt
+  const {
+    description, hours, cost, date, type, status, priority,
+    finished, notes, completedAt, accepted, acceptedAt
   } = req.body;
-  
-  db.run(`UPDATE tasks SET 
+
+  db.run(`UPDATE tasks SET
     description = ?, hours = ?, cost = ?, date = ?, type = ?,
-    status = ?, priority = ?, finished = ?, notes = ?, completed_at = ?
+    status = ?, priority = ?, finished = ?, notes = ?, completed_at = ?,
+    accepted = ?, accepted_at = ?
     WHERE id = ?`,
-    [description, hours, cost, date, type, status, priority, 
-     finished ? 1 : 0, notes, completedAt, id],
+    [description, hours, cost, date, type, status, priority,
+     finished ? 1 : 0, notes, completedAt, accepted ? 1 : 0, acceptedAt, id],
     function(err) {
       if (err) {
         return res.status(500).json({ error: 'Database error' });

@@ -162,15 +162,28 @@ export function WeeklyDashboard() {
     }
   };
 
-  const handleTaskComplete = (hours: number) => {
+  const handleTaskComplete = (hours: number, accepted?: boolean) => {
     if (selectedTaskId) {
       const task = tasks.find(t => t.id === selectedTaskId);
       if (task) {
-        if (task.type === 'insumos') {
-          updateTask({ ...task, finished: true, completedAt: new Date().toISOString() });
-        } else {
-          updateTask({ ...task, hours, finished: true, completedAt: new Date().toISOString() });
+        const updateData: any = {
+          ...task,
+          finished: true,
+          completedAt: new Date().toISOString()
+        };
+
+        // Add hours for non-supply tasks
+        if (task.type !== 'insumos') {
+          updateData.hours = hours;
         }
+
+        // Update accepted status if provided
+        if (accepted !== undefined && task.isRecurring) {
+          updateData.accepted = accepted;
+          updateData.acceptedAt = new Date().toISOString();
+        }
+
+        updateTask(updateData);
       }
       setIsModalOpen(false);
       setSelectedTaskId(null);
@@ -988,6 +1001,8 @@ export function WeeklyDashboard() {
         onComplete={handleTaskComplete}
         taskType={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.type || 'request' : 'request'}
         taskDescription={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.description : undefined}
+        isRecurring={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.isRecurring : false}
+        isAccepted={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.accepted : false}
       />
 
       <BulkTaskOperations

@@ -188,6 +188,8 @@ class ApiService {
       recurringWeekendType: t.recurring_weekend_type,
       recurringWeekendDay: t.recurring_weekend_day,
       recurringEndDate: t.recurring_end_date,
+      accepted: Boolean(t.accepted),
+      acceptedAt: t.accepted_at,
       createdAt: t.created_at
     }));
   }
@@ -213,7 +215,9 @@ class ApiService {
       recurringWeekend: task.recurringWeekend,
       recurringWeekendType: task.recurringWeekendType,
       recurringWeekendDay: task.recurringWeekendDay,
-      recurringEndDate: task.recurringEndDate
+      recurringEndDate: task.recurringEndDate,
+      accepted: task.accepted,
+      acceptedAt: task.acceptedAt
     };
     console.log('📤 [ApiService] createTask payload:', payload);
     return this.request('/tasks', {
@@ -233,7 +237,9 @@ class ApiService {
       priority: task.priority,
       finished: task.finished,
       notes: task.notes,
-      completedAt: task.completedAt
+      completedAt: task.completedAt,
+      accepted: task.accepted,
+      acceptedAt: task.acceptedAt
     };
     return this.request(`/tasks/${id}`, {
       method: 'PUT',

@@ -180,6 +180,7 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
           recurringWeekend: recurringTask.recurringWeekend,
           recurringWeekendType: recurringTask.recurringWeekendType,
           recurringWeekendDay: recurringTask.recurringWeekendDay,
+          accepted: false,
           notes: `Auto-generated from recurring task: ${recurringTask.name}`,
           createdAt: new Date().toISOString()
         };

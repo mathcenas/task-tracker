@@ -4,20 +4,31 @@ import { X, Clock, CheckCircle } from 'lucide-react';
 interface CompletionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (hours: number) => void;
+  onComplete: (hours: number, accepted?: boolean) => void;
   taskType: string;
   taskDescription?: string;
+  isRecurring?: boolean;
+  isAccepted?: boolean;
 }
 
-export function CompletionModal({ isOpen, onClose, onComplete, taskType, taskDescription }: CompletionModalProps) {
+export function CompletionModal({ isOpen, onClose, onComplete, taskType, taskDescription, isRecurring, isAccepted }: CompletionModalProps) {
   const [hours, setHours] = useState('');
+  const [accepted, setAccepted] = useState(isAccepted || false);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onComplete(taskType === 'insumos' ? 0 : Number(hours));
+
+    // For recurring tasks, require acceptance
+    if (isRecurring && !accepted) {
+      alert('Please accept the recurring task before completing it.');
+      return;
+    }
+
+    onComplete(taskType === 'insumos' ? 0 : Number(hours), accepted);
     setHours('');
+    setAccepted(false);
     onClose();
   };
 
@@ -79,15 +90,21 @@ export function CompletionModal({ isOpen, onClose, onComplete, taskType, taskDes
               </div>
             )}
 
-            {taskType === 'insumos' && (
-              <div className="text-center py-4">
-                <Package className="w-12 h-12 text-purple-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Supply Item Completion
-                </p>
-                <p className="text-gray-600 dark:text-gray-300">
-                  This supply item will be marked as completed.
-                </p>
+            {isRecurring && !isAccepted && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-800">
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    id="acceptRecurring"
+                    checked={accepted}
+                    onChange={(e) => setAccepted(e.target.checked)}
+                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="acceptRecurring" className="ml-2 text-sm text-yellow-800 dark:text-yellow-300">
+                    <span className="font-semibold">Accept this recurring task</span>
+                    <p className="mt-1 text-xs">This task was auto-generated. Please verify the hours and accept it before marking as complete.</p>
+                  </label>
+                </div>
               </div>
             )}
 

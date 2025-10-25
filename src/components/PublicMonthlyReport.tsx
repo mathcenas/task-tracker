@@ -511,9 +511,9 @@ export function PublicMonthlyReport() {
 
               {/* Incident vs Request Breakdown */}
               {(clientStats.incidentCount > 0 || clientStats.requestCount > 0) && (
-                <div className="bg-gray-50 rounded-lg p-6 mb-8 dark:bg-gray-700">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Service Type Breakdown</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4 sm:p-6 mb-8 dark:bg-gray-700">
+                  <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Service Type Breakdown</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {/* Incidents */}
                     <div className="bg-red-50 p-4 rounded-lg dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">
                       <div className="flex items-start justify-between mb-3">
