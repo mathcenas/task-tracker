@@ -254,6 +254,73 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
     }
   }, [recurringTasks, addTask]);
 
+  // Backfill missed tasks from start date to today
+  const backfillMissedTasks = async (recurringTask: RecurringTask, startDate: Date, endDate: Date) => {
+    const tasksToCreate = [];
+    let currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+
+    console.log('🔄 Backfilling from', format(currentDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
+
+    while (currentDate < endDate) {
+      let taskDate: Date | null = null;
+
+      if (recurringTask.recurringWeekend) {
+        // Weekend-based recurring
+        taskDate = getNextWeekendDate(
+          recurringTask.recurringWeekendType || 'first',
+          recurringTask.recurringWeekendDay || 'saturday',
+          currentDate
+        );
+      } else {
+        // Day-of-month recurring
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const actualDay = Math.min(recurringTask.dayOfMonth, daysInMonth);
+        taskDate = new Date(year, month, actualDay);
+        taskDate.setHours(0, 0, 0, 0);
+      }
+
+      if (taskDate && taskDate < endDate) {
+        tasksToCreate.push({
+          clientId: recurringTask.clientId,
+          projectId: recurringTask.projectId,
+          description: `[Recurring] ${recurringTask.description}`,
+          hours: recurringTask.estimatedHours,
+          cost: recurringTask.estimatedCost,
+          date: format(taskDate, 'yyyy-MM-dd'),
+          type: recurringTask.type,
+          status: 'pending' as const,
+          priority: recurringTask.priority,
+          finished: false,
+          isRecurring: true,
+          recurringWeekend: recurringTask.recurringWeekend,
+          recurringWeekendType: recurringTask.recurringWeekendType,
+          recurringWeekendDay: recurringTask.recurringWeekendDay,
+          accepted: false,
+          notes: `Auto-generated from recurring task: ${recurringTask.name} (backfilled)`,
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      // Move to next month
+      currentDate = addMonths(currentDate, 1);
+    }
+
+    console.log(`📝 Creating ${tasksToCreate.length} backfilled tasks`);
+
+    // Create all tasks
+    for (const taskData of tasksToCreate) {
+      try {
+        await addTask(taskData);
+        console.log('✅ Created backfilled task for', taskData.date);
+      } catch (error) {
+        console.error('❌ Failed to create backfilled task:', error);
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSaveTask = async () => {
@@ -371,6 +438,19 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       } else {
         await apiService.createRecurringTask(task);
         setRecurringTasks(prev => [...prev, task]);
+
+        // Backfill missed tasks if start date is in the past
+        if (newTask.recurringStartDate) {
+          const startDate = new Date(newTask.recurringStartDate);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          startDate.setHours(0, 0, 0, 0);
+
+          if (startDate < today) {
+            console.log('🔄 Backfilling tasks from', newTask.recurringStartDate, 'to today');
+            await backfillMissedTasks(task, startDate, today);
+          }
+        }
       }
 
       setIsCreating(false);
@@ -596,6 +676,49 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">When to stop generating tasks</p>
                   </div>
+
+                  {(newTask.dayOfMonth || newTask.recurringWeekend) && newTask.clientId && (
+                    <div className="md:col-span-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                      <div className="flex items-center text-sm">
+                        <Calendar className="w-4 h-4 text-green-600 dark:text-green-400 mr-2" />
+                        <span className="font-medium text-green-900 dark:text-green-300">
+                          Next Task Due: {format(new Date(
+                            newTask.recurringWeekend
+                              ? (() => {
+                                  const today = new Date();
+                                  const targetMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                                  const weekendDate = getNextWeekendDate(
+                                    newTask.recurringWeekendType || 'first',
+                                    newTask.recurringWeekendDay || 'saturday',
+                                    targetMonth
+                                  );
+                                  return weekendDate || today;
+                                })()
+                              : (() => {
+                                  const today = new Date();
+                                  const targetDay = newTask.dayOfMonth!;
+                                  if (targetDay >= today.getDate()) {
+                                    return new Date(today.getFullYear(), today.getMonth(), targetDay);
+                                  } else {
+                                    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+                                    const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+                                    const actualDay = Math.min(targetDay, daysInNextMonth);
+                                    return new Date(nextMonth.getFullYear(), nextMonth.getMonth(), actualDay);
+                                  }
+                                })()
+                          ), 'MMMM d, yyyy')}
+                        </span>
+                      </div>
+                      {newTask.recurringStartDate && new Date(newTask.recurringStartDate) < new Date() && (
+                        <div className="flex items-center text-xs text-green-700 dark:text-green-400 mt-2">
+                          <Clock className="w-3 h-3 mr-1" />
+                          <span>
+                            Will backfill all missed tasks from {format(new Date(newTask.recurringStartDate), 'MMM d, yyyy')} to today on save
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
