@@ -108,6 +108,22 @@ const initDB = async () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS task_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'request',
+      priority TEXT NOT NULL DEFAULT 'medium',
+      client_id TEXT,
+      project_id TEXT,
+      estimated_hours REAL,
+      estimated_cost REAL,
+      tags TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients (id),
+      FOREIGN KEY (project_id) REFERENCES projects (id)
     )`
   ];
 

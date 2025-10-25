@@ -68,16 +68,26 @@ const createBackup = () => {
           }
           backup.data.recurringTasks = recurringTasks;
 
-          // Write backup to file
-          try {
-            fs.writeFileSync(backupPath, JSON.stringify(backup, null, 2));
-            console.log('✅ Backup created successfully:', {
-              file: backupFileName,
-              path: backupPath,
-              clients: clients.length,
-              projects: projects.length,
-              tasks: tasks.length,
-              recurringTasks: recurringTasks.length
+          // Export task templates
+          db.all('SELECT * FROM task_templates', (err, taskTemplates) => {
+            if (err) {
+              console.error('❌ Error exporting task templates:', err);
+              db.close();
+              process.exit(1);
+            }
+            backup.data.taskTemplates = taskTemplates;
+
+            // Write backup to file
+            try {
+              fs.writeFileSync(backupPath, JSON.stringify(backup, null, 2));
+              console.log('✅ Backup created successfully:', {
+                file: backupFileName,
+                path: backupPath,
+                clients: clients.length,
+                projects: projects.length,
+                tasks: tasks.length,
+                recurringTasks: recurringTasks.length,
+                taskTemplates: taskTemplates.length
             });
 
             // Clean old backups (keep last 30 days)
@@ -90,6 +100,7 @@ const createBackup = () => {
             db.close();
             process.exit(1);
           }
+          });
         });
       });
     });

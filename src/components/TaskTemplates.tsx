@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { BookTemplate as Template, Plus, X, Save, Trash2, Copy } from 'lucide-react';
+import { apiService } from '../services/api';
 
 interface TaskTemplate {
   id: string;
@@ -20,75 +21,8 @@ interface TaskTemplatesProps {
 }
 
 export function TaskTemplates({ isOpen, onClose, onUseTemplate }: TaskTemplatesProps) {
-  const [templates, setTemplates] = useState<TaskTemplate[]>(() => {
-    const saved = localStorage.getItem('taskTemplates');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: '1',
-        name: 'Server Monitoring Check',
-        description: 'Monthly server performance and security monitoring',
-        type: 'request',
-        priority: 'medium',
-        estimatedHours: 2,
-        category: 'Maintenance'
-      },
-      {
-        id: '2',
-        name: 'Security Updates',
-        description: 'Apply latest security patches and updates',
-        type: 'request',
-        priority: 'high',
-        estimatedHours: 1.5,
-        category: 'Security'
-      },
-      {
-        id: '3',
-        name: 'Backup Verification',
-        description: 'Verify backup integrity and test restore procedures',
-        type: 'request',
-        priority: 'medium',
-        estimatedHours: 1,
-        category: 'Maintenance'
-      },
-      {
-        id: '4',
-        name: 'Website Down - Critical',
-        description: 'Website is completely inaccessible - immediate investigation required',
-        type: 'incident',
-        priority: 'high',
-        estimatedHours: 3,
-        category: 'Critical Issues'
-      },
-      {
-        id: '5',
-        name: 'SSL Certificate Renewal',
-        description: 'Renew and install SSL certificates',
-        type: 'request',
-        priority: 'medium',
-        estimatedHours: 0.5,
-        category: 'Security'
-      },
-      {
-        id: '6',
-        name: 'Database Optimization',
-        description: 'Optimize database performance and clean up old data',
-        type: 'request',
-        priority: 'low',
-        estimatedHours: 2.5,
-        category: 'Performance'
-      },
-      {
-        id: '7',
-        name: 'Server Hardware',
-        description: 'Additional RAM or storage upgrade',
-        type: 'insumos',
-        priority: 'medium',
-        estimatedCost: 200,
-        category: 'Hardware'
-      }
-    ];
-  });
-
+  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [newTemplate, setNewTemplate] = useState<Partial<TaskTemplate>>({
@@ -99,15 +33,34 @@ export function TaskTemplates({ isOpen, onClose, onUseTemplate }: TaskTemplatesP
     category: 'General'
   });
 
-  React.useEffect(() => {
-    localStorage.setItem('taskTemplates', JSON.stringify(templates));
-  }, [templates]);
+  // Load templates from database
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const data = await apiService.getTaskTemplates();
+        // Convert tags string to category for backward compatibility
+        const templatesWithCategory = data.map((t: any) => ({
+          ...t,
+          category: t.tags || 'General'
+        }));
+        setTemplates(templatesWithCategory);
+      } catch (error) {
+        console.error('Error loading task templates:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      loadTemplates();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const categories = [...new Set(templates.map(t => t.category))];
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!newTemplate.name || !newTemplate.description) return;
 
     const template: TaskTemplate = {
@@ -121,21 +74,36 @@ export function TaskTemplates({ isOpen, onClose, onUseTemplate }: TaskTemplatesP
       category: newTemplate.category!
     };
 
-    if (editingTemplate) {
-      setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? template : t));
-    } else {
-      setTemplates(prev => [...prev, template]);
-    }
+    try {
+      // Convert category to tags for API
+      const apiTemplate = {
+        ...template,
+        tags: template.category,
+        clientId: null,
+        projectId: null
+      };
 
-    setIsCreating(false);
-    setEditingTemplate(null);
-    setNewTemplate({
-      name: '',
-      description: '',
-      type: 'request',
-      priority: 'medium',
-      category: 'General'
-    });
+      if (editingTemplate) {
+        await apiService.updateTaskTemplate(editingTemplate.id, apiTemplate);
+        setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? template : t));
+      } else {
+        await apiService.createTaskTemplate(apiTemplate);
+        setTemplates(prev => [...prev, template]);
+      }
+
+      setIsCreating(false);
+      setEditingTemplate(null);
+      setNewTemplate({
+        name: '',
+        description: '',
+        type: 'request',
+        priority: 'medium',
+        category: 'General'
+      });
+    } catch (error) {
+      console.error('Error saving task template:', error);
+      alert('Failed to save task template. Please try again.');
+    }
   };
 
   const handleEditTemplate = (template: TaskTemplate) => {
@@ -144,9 +112,15 @@ export function TaskTemplates({ isOpen, onClose, onUseTemplate }: TaskTemplatesP
     setIsCreating(true);
   };
 
-  const handleDeleteTemplate = (templateId: string) => {
+  const handleDeleteTemplate = async (templateId: string) => {
     if (window.confirm('Are you sure you want to delete this template?')) {
-      setTemplates(prev => prev.filter(t => t.id !== templateId));
+      try {
+        await apiService.deleteTaskTemplate(templateId);
+        setTemplates(prev => prev.filter(t => t.id !== templateId));
+      } catch (error) {
+        console.error('Error deleting task template:', error);
+        alert('Failed to delete task template. Please try again.');
+      }
     }
   };
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { format, addDays, addMonths, startOfMonth } from 'date-fns';
+import { apiService } from '../services/api';
 
 export function TaskForm() {
   const navigate = useNavigate();
@@ -193,20 +194,24 @@ export function TaskForm() {
         recurringEndDate: formData.recurringEndDate || undefined
       };
 
-      // Save to localStorage directly
-      const existingRecurringTasks = JSON.parse(localStorage.getItem('recurringTasks') || '[]');
-      const updatedRecurringTasks = [...existingRecurringTasks, recurringTask];
-      localStorage.setItem('recurringTasks', JSON.stringify(updatedRecurringTasks));
-      
-      // Show success message and redirect
-      alert(`✅ Recurring task created successfully!\n\n📋 Task: ${formData.description}\n📅 Schedule: ${
-        formData.recurringWeekend 
-          ? `${formData.recurringWeekendType} ${formData.recurringWeekendDay} of each month`
-          : `Day ${formData.recurringDay} of each month`
-      }\n🎯 Next due: ${format(new Date(nextDue), 'MMM d, yyyy')}\n\n💡 You can manage recurring tasks from the Weekly Dashboard > Quick Actions > Recurring.`);
-      
-      navigate('/');
-      return;
+      // Save to database via API
+      try {
+        await apiService.createRecurringTask(recurringTask);
+
+        // Show success message and redirect
+        alert(`✅ Recurring task created successfully!\n\n📋 Task: ${formData.description}\n📅 Schedule: ${
+          formData.recurringWeekend
+            ? `${formData.recurringWeekendType} ${formData.recurringWeekendDay} of each month`
+            : `Day ${formData.recurringDay} of each month`
+        }\n🎯 Next due: ${format(new Date(nextDue), 'MMM d, yyyy')}\n\n💡 You can manage recurring tasks from the Weekly Dashboard > Quick Actions > Recurring.`);
+
+        navigate('/');
+        return;
+      } catch (error) {
+        console.error('Error creating recurring task:', error);
+        alert('Failed to create recurring task. Please try again.');
+        return;
+      }
     }
 
     // Regular task creation

@@ -247,6 +247,148 @@ class ApiService {
     });
   }
 
+  // Recurring Tasks methods
+  async getRecurringTasks() {
+    const tasks = await this.request('/recurring-tasks');
+    return tasks.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      type: t.type,
+      priority: t.priority,
+      clientId: t.client_id,
+      projectId: t.project_id,
+      dayOfMonth: t.day_of_month,
+      estimatedHours: t.estimated_hours,
+      estimatedCost: t.estimated_cost,
+      isActive: Boolean(t.is_active),
+      lastGenerated: t.last_generated,
+      nextDue: t.next_due,
+      recurringWeekend: Boolean(t.recurring_weekend),
+      recurringWeekendType: t.recurring_weekend_type,
+      recurringWeekendDay: t.recurring_weekend_day,
+      recurringEndDate: t.recurring_end_date,
+      createdAt: t.created_at
+    }));
+  }
+
+  async createRecurringTask(task: any) {
+    const payload = {
+      id: task.id,
+      name: task.name,
+      description: task.description,
+      type: task.type,
+      priority: task.priority,
+      clientId: task.clientId,
+      projectId: task.projectId,
+      dayOfMonth: task.dayOfMonth,
+      estimatedHours: task.estimatedHours,
+      estimatedCost: task.estimatedCost,
+      isActive: task.isActive,
+      nextDue: task.nextDue,
+      recurringWeekend: task.recurringWeekend,
+      recurringWeekendType: task.recurringWeekendType,
+      recurringWeekendDay: task.recurringWeekendDay,
+      recurringEndDate: task.recurringEndDate
+    };
+    return this.request('/recurring-tasks', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateRecurringTask(id: string, task: any) {
+    const payload = {
+      name: task.name,
+      description: task.description,
+      type: task.type,
+      priority: task.priority,
+      clientId: task.clientId,
+      projectId: task.projectId,
+      dayOfMonth: task.dayOfMonth,
+      estimatedHours: task.estimatedHours,
+      estimatedCost: task.estimatedCost,
+      isActive: task.isActive,
+      lastGenerated: task.lastGenerated,
+      nextDue: task.nextDue,
+      recurringWeekend: task.recurringWeekend,
+      recurringWeekendType: task.recurringWeekendType,
+      recurringWeekendDay: task.recurringWeekendDay,
+      recurringEndDate: task.recurringEndDate
+    };
+    return this.request(`/recurring-tasks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteRecurringTask(id: string) {
+    return this.request(`/recurring-tasks/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Task Templates methods
+  async getTaskTemplates() {
+    const templates = await this.request('/task-templates');
+    return templates.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      type: t.type,
+      priority: t.priority,
+      clientId: t.client_id,
+      projectId: t.project_id,
+      estimatedHours: t.estimated_hours,
+      estimatedCost: t.estimated_cost,
+      tags: t.tags,
+      createdAt: t.created_at
+    }));
+  }
+
+  async createTaskTemplate(template: any) {
+    const payload = {
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      type: template.type,
+      priority: template.priority,
+      clientId: template.clientId,
+      projectId: template.projectId,
+      estimatedHours: template.estimatedHours,
+      estimatedCost: template.estimatedCost,
+      tags: template.tags
+    };
+    return this.request('/task-templates', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateTaskTemplate(id: string, template: any) {
+    const payload = {
+      name: template.name,
+      description: template.description,
+      type: template.type,
+      priority: template.priority,
+      clientId: template.clientId,
+      projectId: template.projectId,
+      estimatedHours: template.estimatedHours,
+      estimatedCost: template.estimatedCost,
+      tags: template.tags
+    };
+    return this.request(`/task-templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteTaskTemplate(id: string) {
+    return this.request(`/task-templates/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Backup & Restore
   async exportBackup() {
     console.log('📦 [ApiService] Exporting database backup...');

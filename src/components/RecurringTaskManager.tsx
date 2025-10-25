@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Repeat, Plus, X, Save, Trash2, Calendar, Clock, AlertTriangle } from 'lucide-react';
 import { format, addMonths, startOfMonth, isBefore, isAfter } from 'date-fns';
+import { apiService } from '../services/api';
 
 interface RecurringTask {
   id: string;
@@ -30,51 +31,8 @@ interface RecurringTaskManagerProps {
 
 export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerProps) {
   const { clients, projects, getClientProjects, addTask } = useApp();
-  const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>(() => {
-    const saved = localStorage.getItem('recurringTasks');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: '1',
-        name: 'Monthly Server Monitoring',
-        description: 'Comprehensive server performance and security check',
-        type: 'request',
-        priority: 'medium',
-        clientId: clients[0]?.id || '',
-        projectId: '',
-        dayOfMonth: 1,
-        estimatedHours: 2,
-        isActive: true,
-        nextDue: format(addMonths(startOfMonth(new Date()), 1), 'yyyy-MM-dd')
-      },
-      {
-        id: '2',
-        name: 'Security Updates',
-        description: 'Apply latest security patches and system updates',
-        type: 'request',
-        priority: 'high',
-        clientId: clients[0]?.id || '',
-        projectId: '',
-        dayOfMonth: 15,
-        estimatedHours: 1.5,
-        isActive: true,
-        nextDue: format(new Date(new Date().getFullYear(), new Date().getMonth(), 15), 'yyyy-MM-dd')
-      },
-      {
-        id: '3',
-        name: 'Backup Verification',
-        description: 'Verify backup integrity and test restore procedures',
-        type: 'request',
-        priority: 'medium',
-        clientId: clients[0]?.id || '',
-        projectId: '',
-        dayOfMonth: 28,
-        estimatedHours: 1,
-        isActive: true,
-        nextDue: format(new Date(new Date().getFullYear(), new Date().getMonth(), 28), 'yyyy-MM-dd'),
-        recurringWeekend: false
-      }
-    ];
-  });
+  const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
@@ -93,9 +51,23 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
     recurringEndDate: ''
   });
 
+  // Load recurring tasks from database
   useEffect(() => {
-    localStorage.setItem('recurringTasks', JSON.stringify(recurringTasks));
-  }, [recurringTasks]);
+    const loadRecurringTasks = async () => {
+      try {
+        const tasks = await apiService.getRecurringTasks();
+        setRecurringTasks(tasks);
+      } catch (error) {
+        console.error('Error loading recurring tasks:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      loadRecurringTasks();
+    }
+  }, [isOpen]);
 
   // Auto-generate overdue recurring tasks
   useEffect(() => {
@@ -180,75 +152,88 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       }))
     });
 
-    tasksToGenerate.forEach(recurringTask => {
-      // Generate the actual task
-      const taskData = {
-        clientId: recurringTask.clientId,
-        projectId: recurringTask.projectId,
-        description: `[Recurring] ${recurringTask.description}`,
-        hours: recurringTask.estimatedHours,
-        cost: recurringTask.estimatedCost,
-        date: recurringTask.nextDue,
-        type: recurringTask.type,
-        status: 'pending' as const,
-        priority: recurringTask.priority,
-        finished: false,
-        isRecurring: true,
-        recurringWeekend: recurringTask.recurringWeekend,
-        recurringWeekendType: recurringTask.recurringWeekendType,
-        recurringWeekendDay: recurringTask.recurringWeekendDay,
-        notes: `Auto-generated from recurring task: ${recurringTask.name}`,
-        createdAt: new Date().toISOString()
-      };
+    const processRecurringTasks = async () => {
+      for (const recurringTask of tasksToGenerate) {
+        // Generate the actual task
+        const taskData = {
+          clientId: recurringTask.clientId,
+          projectId: recurringTask.projectId,
+          description: `[Recurring] ${recurringTask.description}`,
+          hours: recurringTask.estimatedHours,
+          cost: recurringTask.estimatedCost,
+          date: recurringTask.nextDue,
+          type: recurringTask.type,
+          status: 'pending' as const,
+          priority: recurringTask.priority,
+          finished: false,
+          isRecurring: true,
+          recurringWeekend: recurringTask.recurringWeekend,
+          recurringWeekendType: recurringTask.recurringWeekendType,
+          recurringWeekendDay: recurringTask.recurringWeekendDay,
+          notes: `Auto-generated from recurring task: ${recurringTask.name}`,
+          createdAt: new Date().toISOString()
+        };
 
-      addTask(taskData);
+        await addTask(taskData);
 
-      // Update the recurring task's next due date
-      const currentDate = new Date(recurringTask.nextDue);
-      const nextMonth = addMonths(currentDate, 1);
-      
-      let nextDue;
-      if (recurringTask.recurringWeekend) {
-        const nextWeekendDate = getNextWeekendDate(
-          recurringTask.recurringWeekendType || 'first',
-          recurringTask.recurringWeekendDay || 'saturday',
-          nextMonth
-        );
-        if (nextWeekendDate) {
-          nextDue = format(nextWeekendDate, 'yyyy-MM-dd');
-        } else {
-          // If no weekend found, try next month
-          const nextNextMonth = addMonths(nextMonth, 1);
-          const fallbackWeekendDate = getNextWeekendDate(
+        // Update the recurring task's next due date
+        const currentDate = new Date(recurringTask.nextDue);
+        const nextMonth = addMonths(currentDate, 1);
+
+        let nextDue;
+        if (recurringTask.recurringWeekend) {
+          const nextWeekendDate = getNextWeekendDate(
             recurringTask.recurringWeekendType || 'first',
             recurringTask.recurringWeekendDay || 'saturday',
-            nextNextMonth
+            nextMonth
           );
-          nextDue = fallbackWeekendDate ? format(fallbackWeekendDate, 'yyyy-MM-dd') : format(nextNextMonth, 'yyyy-MM-dd');
+          if (nextWeekendDate) {
+            nextDue = format(nextWeekendDate, 'yyyy-MM-dd');
+          } else {
+            // If no weekend found, try next month
+            const nextNextMonth = addMonths(nextMonth, 1);
+            const fallbackWeekendDate = getNextWeekendDate(
+              recurringTask.recurringWeekendType || 'first',
+              recurringTask.recurringWeekendDay || 'saturday',
+              nextNextMonth
+            );
+            nextDue = fallbackWeekendDate ? format(fallbackWeekendDate, 'yyyy-MM-dd') : format(nextNextMonth, 'yyyy-MM-dd');
+          }
+        } else {
+          const targetDay = Math.min(recurringTask.dayOfMonth, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
+          nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), targetDay), 'yyyy-MM-dd');
         }
-      } else {
-        const targetDay = Math.min(recurringTask.dayOfMonth, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
-        nextDue = format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), targetDay), 'yyyy-MM-dd');
+
+        console.log('Updating recurring task:', {
+          name: recurringTask.name,
+          oldNextDue: recurringTask.nextDue,
+          newNextDue: nextDue,
+          recurringWeekend: recurringTask.recurringWeekend
+        });
+
+        const updatedTask = {
+          ...recurringTask,
+          lastGenerated: recurringTask.nextDue,
+          nextDue
+        };
+
+        setRecurringTasks(prev => prev.map(task =>
+          task.id === recurringTask.id ? updatedTask : task
+        ));
+
+        // Update in database
+        await apiService.updateRecurringTask(recurringTask.id, updatedTask);
       }
+    };
 
-      console.log('Updating recurring task:', {
-        name: recurringTask.name,
-        oldNextDue: recurringTask.nextDue,
-        newNextDue: nextDue,
-        recurringWeekend: recurringTask.recurringWeekend
-      });
-
-      setRecurringTasks(prev => prev.map(task => 
-        task.id === recurringTask.id 
-          ? { ...task, lastGenerated: recurringTask.nextDue, nextDue }
-          : task
-      ));
-    });
+    if (tasksToGenerate.length > 0) {
+      processRecurringTasks();
+    }
   }, [recurringTasks, addTask]);
 
   if (!isOpen) return null;
 
-  const handleSaveTask = () => {
+  const handleSaveTask = async () => {
     if (!newTask.name || !newTask.description || !newTask.clientId) return;
 
     const today = new Date();
@@ -354,24 +339,31 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       recurringWeekendDay: newTask.recurringWeekendDay
     };
 
-    if (editingTask) {
-      setRecurringTasks(prev => prev.map(t => t.id === editingTask.id ? task : t));
-    } else {
-      setRecurringTasks(prev => [...prev, task]);
-    }
+    try {
+      if (editingTask) {
+        await apiService.updateRecurringTask(editingTask.id, task);
+        setRecurringTasks(prev => prev.map(t => t.id === editingTask.id ? task : t));
+      } else {
+        await apiService.createRecurringTask(task);
+        setRecurringTasks(prev => [...prev, task]);
+      }
 
-    setIsCreating(false);
-    setEditingTask(null);
-    setNewTask({
-      name: '',
-      description: '',
-      type: 'request',
-      priority: 'medium',
-      clientId: '',
-      projectId: '',
-      dayOfMonth: 1,
-      isActive: true
-    });
+      setIsCreating(false);
+      setEditingTask(null);
+      setNewTask({
+        name: '',
+        description: '',
+        type: 'request',
+        priority: 'medium',
+        clientId: '',
+        projectId: '',
+        dayOfMonth: 1,
+        isActive: true
+      });
+    } catch (error) {
+      console.error('Error saving recurring task:', error);
+      alert('Failed to save recurring task. Please try again.');
+    }
   };
 
   const handleEditTask = (task: RecurringTask) => {
@@ -380,16 +372,33 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
     setIsCreating(true);
   };
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
     if (window.confirm('Are you sure you want to delete this recurring task?')) {
-      setRecurringTasks(prev => prev.filter(t => t.id !== taskId));
+      try {
+        await apiService.deleteRecurringTask(taskId);
+        setRecurringTasks(prev => prev.filter(t => t.id !== taskId));
+      } catch (error) {
+        console.error('Error deleting recurring task:', error);
+        alert('Failed to delete recurring task. Please try again.');
+      }
     }
   };
 
-  const handleToggleActive = (taskId: string) => {
-    setRecurringTasks(prev => prev.map(task => 
-      task.id === taskId ? { ...task, isActive: !task.isActive } : task
-    ));
+  const handleToggleActive = async (taskId: string) => {
+    const task = recurringTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedTask = { ...task, isActive: !task.isActive };
+
+    try {
+      await apiService.updateRecurringTask(taskId, updatedTask);
+      setRecurringTasks(prev => prev.map(t =>
+        t.id === taskId ? updatedTask : t
+      ));
+    } catch (error) {
+      console.error('Error toggling recurring task:', error);
+      alert('Failed to update recurring task. Please try again.');
+    }
   };
 
   const clientProjects = newTask.clientId ? getClientProjects(newTask.clientId) : [];

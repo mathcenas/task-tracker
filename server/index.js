@@ -376,8 +376,151 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
 
 app.delete('/api/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
-  
+
   db.run('DELETE FROM tasks WHERE id = ?', [id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Recurring Tasks routes
+app.get('/api/recurring-tasks', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM recurring_tasks ORDER BY next_due ASC', (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(rows);
+  });
+});
+
+app.post('/api/recurring-tasks', authenticateToken, (req, res) => {
+  const {
+    id, name, description, type, priority, clientId, projectId,
+    dayOfMonth, estimatedHours, estimatedCost, isActive, nextDue,
+    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
+  } = req.body;
+
+  db.run(
+    `INSERT INTO recurring_tasks
+    (id, name, description, type, priority, client_id, project_id, day_of_month,
+     estimated_hours, estimated_cost, is_active, next_due, recurring_weekend,
+     recurring_weekend_type, recurring_weekend_day, recurring_end_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, description, type, priority, clientId, projectId, dayOfMonth,
+     estimatedHours, estimatedCost, isActive ? 1 : 0, nextDue, recurringWeekend ? 1 : 0,
+     recurringWeekendType, recurringWeekendDay, recurringEndDate],
+    function(err) {
+      if (err) {
+        console.error('Error creating recurring task:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true, id });
+    }
+  );
+});
+
+app.put('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const {
+    name, description, type, priority, clientId, projectId, dayOfMonth,
+    estimatedHours, estimatedCost, isActive, lastGenerated, nextDue,
+    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
+  } = req.body;
+
+  db.run(
+    `UPDATE recurring_tasks SET
+    name = ?, description = ?, type = ?, priority = ?, client_id = ?,
+    project_id = ?, day_of_month = ?, estimated_hours = ?, estimated_cost = ?,
+    is_active = ?, last_generated = ?, next_due = ?, recurring_weekend = ?,
+    recurring_weekend_type = ?, recurring_weekend_day = ?, recurring_end_date = ?
+    WHERE id = ?`,
+    [name, description, type, priority, clientId, projectId, dayOfMonth,
+     estimatedHours, estimatedCost, isActive ? 1 : 0, lastGenerated, nextDue,
+     recurringWeekend ? 1 : 0, recurringWeekendType, recurringWeekendDay, recurringEndDate, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating recurring task:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+app.delete('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.run('DELETE FROM recurring_tasks WHERE id = ?', [id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Task Templates routes
+app.get('/api/task-templates', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM task_templates ORDER BY name ASC', (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(rows);
+  });
+});
+
+app.post('/api/task-templates', authenticateToken, (req, res) => {
+  const {
+    id, name, description, type, priority, clientId, projectId,
+    estimatedHours, estimatedCost, tags
+  } = req.body;
+
+  db.run(
+    `INSERT INTO task_templates
+    (id, name, description, type, priority, client_id, project_id,
+     estimated_hours, estimated_cost, tags)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, description, type, priority, clientId, projectId,
+     estimatedHours, estimatedCost, tags],
+    function(err) {
+      if (err) {
+        console.error('Error creating task template:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true, id });
+    }
+  );
+});
+
+app.put('/api/task-templates/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const {
+    name, description, type, priority, clientId, projectId,
+    estimatedHours, estimatedCost, tags
+  } = req.body;
+
+  db.run(
+    `UPDATE task_templates SET
+    name = ?, description = ?, type = ?, priority = ?, client_id = ?,
+    project_id = ?, estimated_hours = ?, estimated_cost = ?, tags = ?
+    WHERE id = ?`,
+    [name, description, type, priority, clientId, projectId,
+     estimatedHours, estimatedCost, tags, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating task template:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+app.delete('/api/task-templates/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.run('DELETE FROM task_templates WHERE id = ?', [id], function(err) {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -456,13 +599,33 @@ app.get('/api/backup', authenticateToken, (req, res) => {
         }
         backup.data.tasks = tasks;
 
-        console.log('✅ Backup created:', {
-          clients: clients.length,
-          projects: projects.length,
-          tasks: tasks.length
-        });
+        // Export recurring tasks
+        db.all('SELECT * FROM recurring_tasks', (err, recurringTasks) => {
+          if (err) {
+            console.error('Error exporting recurring_tasks:', err);
+            return res.status(500).json({ error: 'Failed to export recurring tasks' });
+          }
+          backup.data.recurringTasks = recurringTasks || [];
 
-        res.json(backup);
+          // Export task templates
+          db.all('SELECT * FROM task_templates', (err, taskTemplates) => {
+            if (err) {
+              console.error('Error exporting task_templates:', err);
+              return res.status(500).json({ error: 'Failed to export task templates' });
+            }
+            backup.data.taskTemplates = taskTemplates || [];
+
+            console.log('✅ Backup created:', {
+              clients: clients.length,
+              projects: projects.length,
+              tasks: tasks.length,
+              recurringTasks: recurringTasks?.length || 0,
+              taskTemplates: taskTemplates?.length || 0
+            });
+
+            res.json(backup);
+          });
+        });
       });
     });
   });
@@ -572,13 +735,73 @@ app.post('/api/restore', authenticateToken, (req, res) => {
             ]);
           });
           taskStmt.finalize(() => {
+            // Insert recurring tasks (if present in backup)
+            if (data.recurringTasks && data.recurringTasks.length > 0) {
+              const recurringStmt = db.prepare(`INSERT INTO recurring_tasks
+                (id, name, description, type, priority, client_id, project_id, day_of_month,
+                 estimated_hours, estimated_cost, is_active, last_generated, next_due,
+                 recurring_weekend, recurring_weekend_type, recurring_weekend_day, recurring_end_date, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+              data.recurringTasks.forEach(rt => {
+                recurringStmt.run([
+                  rt.id,
+                  rt.name,
+                  rt.description,
+                  rt.type || 'request',
+                  rt.priority || 'medium',
+                  rt.client_id,
+                  rt.project_id,
+                  rt.day_of_month,
+                  rt.estimated_hours || null,
+                  rt.estimated_cost || null,
+                  rt.is_active !== undefined ? rt.is_active : 1,
+                  rt.last_generated || null,
+                  rt.next_due,
+                  rt.recurring_weekend ? 1 : 0,
+                  rt.recurring_weekend_type || null,
+                  rt.recurring_weekend_day || null,
+                  rt.recurring_end_date || null,
+                  rt.created_at || new Date().toISOString()
+                ]);
+              });
+              recurringStmt.finalize();
+            }
+
+            // Insert task templates (if present in backup)
+            if (data.taskTemplates && data.taskTemplates.length > 0) {
+              const templateStmt = db.prepare(`INSERT INTO task_templates
+                (id, name, description, type, priority, client_id, project_id,
+                 estimated_hours, estimated_cost, tags, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+              data.taskTemplates.forEach(tt => {
+                templateStmt.run([
+                  tt.id,
+                  tt.name,
+                  tt.description,
+                  tt.type || 'request',
+                  tt.priority || 'medium',
+                  tt.client_id || null,
+                  tt.project_id || null,
+                  tt.estimated_hours || null,
+                  tt.estimated_cost || null,
+                  tt.tags || null,
+                  tt.created_at || new Date().toISOString()
+                ]);
+              });
+              templateStmt.finalize();
+            }
+
             console.log('✅ Database restored successfully');
             res.json({
               success: true,
               restored: {
                 clients: data.clients.length,
                 projects: data.projects.length,
-                tasks: data.tasks.length
+                tasks: data.tasks.length,
+                recurringTasks: data.recurringTasks?.length || 0,
+                taskTemplates: data.taskTemplates?.length || 0
               }
             });
           });
