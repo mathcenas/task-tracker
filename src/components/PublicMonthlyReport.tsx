@@ -129,12 +129,30 @@ export function PublicMonthlyReport() {
   const clientStats = monthlyTasks.reduce((stats, task) => {
     if (task.type === 'insumos') {
       stats.suppliesCost += task.cost || 0;
+      stats.suppliesCount += 1;
     } else {
       stats.totalHours += task.hours || 0;
       stats.serviceRevenue += (task.hours || 0) * client.hourlyRate;
+
+      if (task.type === 'incident') {
+        stats.incidentHours += task.hours || 0;
+        stats.incidentCount += 1;
+      } else {
+        stats.requestHours += task.hours || 0;
+        stats.requestCount += 1;
+      }
     }
     return stats;
-  }, { totalHours: 0, serviceRevenue: 0, suppliesCost: 0 });
+  }, {
+    totalHours: 0,
+    serviceRevenue: 0,
+    suppliesCost: 0,
+    suppliesCount: 0,
+    incidentHours: 0,
+    incidentCount: 0,
+    requestHours: 0,
+    requestCount: 0
+  });
 
   const exportPDF = () => {
     const doc = new jsPDF();
@@ -239,11 +257,68 @@ export function PublicMonthlyReport() {
       yPos = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    const servicesTotal = servicesTasks.reduce((sum, task) => 
+    // Calculate totals and breakdown
+    const incidentTasks = servicesTasks.filter(task => task.type === 'incident');
+    const requestTasks = servicesTasks.filter(task => task.type === 'request');
+
+    const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+    const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+    const incidentTotal = incidentHours * hourlyRate;
+    const requestTotal = requestHours * hourlyRate;
+
+    const servicesTotal = servicesTasks.reduce((sum, task) =>
       sum + ((task.hours || 0) * hourlyRate), 0);
-    const suppliesTotal = suppliesTasks.reduce((sum, task) => 
+    const suppliesTotal = suppliesTasks.reduce((sum, task) =>
       sum + (task.cost || 0), 0);
     const totalAmount = servicesTotal + suppliesTotal;
+
+    // Add Service Type Breakdown (if there are incidents and requests)
+    if (incidentTasks.length > 0 || requestTasks.length > 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Service Type Breakdown', 20, yPos + 10);
+
+      const breakdownData = [];
+      if (incidentTasks.length > 0) {
+        breakdownData.push([
+          '🚨 Incidents',
+          incidentTasks.length.toString(),
+          `${incidentHours.toFixed(1)}h`,
+          `$${incidentTotal.toFixed(2)}`,
+          servicesTotal > 0 ? `${((incidentTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
+        ]);
+      }
+      if (requestTasks.length > 0) {
+        breakdownData.push([
+          '📋 Requests',
+          requestTasks.length.toString(),
+          `${requestHours.toFixed(1)}h`,
+          `$${requestTotal.toFixed(2)}`,
+          servicesTotal > 0 ? `${((requestTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
+        ]);
+      }
+
+      (doc as any).autoTable({
+        startY: yPos + 15,
+        head: [['Type', 'Tasks', 'Hours', 'Amount', '% of Services']],
+        body: breakdownData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [100, 100, 100],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          0: { cellWidth: 40, fontStyle: 'bold' },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 30, halign: 'center' },
+          3: { cellWidth: 35, halign: 'right' },
+          4: { cellWidth: 35, halign: 'center' }
+        }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
 
     doc.setFontSize(12);
     const summary = [
@@ -427,12 +502,90 @@ export function PublicMonthlyReport() {
                       <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supplies Cost</p>
                       <p className="text-3xl font-bold text-purple-900 dark:text-purple-300">${clientStats.suppliesCost.toFixed(0)}</p>
                       <p className="text-xs text-purple-600 dark:text-purple-400">
-                        {monthlyTasks.filter(t => t.type === 'insumos').length} supply items
+                        {clientStats.suppliesCount} supply items
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Incident vs Request Breakdown */}
+              {(clientStats.incidentCount > 0 || clientStats.requestCount > 0) && (
+                <div className="bg-gray-50 rounded-lg p-6 mb-8 dark:bg-gray-700">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Service Type Breakdown</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Incidents */}
+                    <div className="bg-red-50 p-4 rounded-lg dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-700 dark:text-red-400">Incidents</p>
+                            <p className="text-xs text-red-600 dark:text-red-500">Issues & Problems</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-red-900 dark:text-red-300">{clientStats.incidentCount}</p>
+                          <p className="text-xs text-red-600 dark:text-red-400">tasks</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-red-700 dark:text-red-400">Hours:</span>
+                          <span className="font-semibold text-red-900 dark:text-red-300">{clientStats.incidentHours.toFixed(1)}h</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-red-700 dark:text-red-400">Cost:</span>
+                          <span className="font-semibold text-red-900 dark:text-red-300">
+                            ${(clientStats.incidentHours * client.hourlyRate).toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm pt-2 border-t border-red-200 dark:border-red-700">
+                          <span className="text-red-700 dark:text-red-400">% of Services:</span>
+                          <span className="font-semibold text-red-900 dark:text-red-300">
+                            {clientStats.totalHours > 0 ? ((clientStats.incidentHours / clientStats.totalHours) * 100).toFixed(0) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Requests */}
+                    <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <FileText className="w-6 h-6 text-blue-500 mr-2" />
+                          <div>
+                            <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Requests</p>
+                            <p className="text-xs text-blue-600 dark:text-blue-500">Planned Work</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{clientStats.requestCount}</p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400">tasks</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-blue-700 dark:text-blue-400">Hours:</span>
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">{clientStats.requestHours.toFixed(1)}h</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-blue-700 dark:text-blue-400">Cost:</span>
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            ${(clientStats.requestHours * client.hourlyRate).toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm pt-2 border-t border-blue-200 dark:border-blue-700">
+                          <span className="text-blue-700 dark:text-blue-400">% of Services:</span>
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {clientStats.totalHours > 0 ? ((clientStats.requestHours / clientStats.totalHours) * 100).toFixed(0) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 6-Month Trend Chart */}
               {trendData.some(d => d.hours > 0) && (
