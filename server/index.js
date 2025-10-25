@@ -398,18 +398,18 @@ app.get('/api/recurring-tasks', authenticateToken, (req, res) => {
 app.post('/api/recurring-tasks', authenticateToken, (req, res) => {
   const {
     id, name, description, type, priority, clientId, projectId,
-    dayOfMonth, estimatedHours, estimatedCost, isActive, nextDue,
+    dayOfMonth, estimatedHours, estimatedCost, isActive, nextDue, recurringStartDate,
     recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
   } = req.body;
 
   db.run(
     `INSERT INTO recurring_tasks
     (id, name, description, type, priority, client_id, project_id, day_of_month,
-     estimated_hours, estimated_cost, is_active, next_due, recurring_weekend,
+     estimated_hours, estimated_cost, is_active, next_due, recurring_start_date, recurring_weekend,
      recurring_weekend_type, recurring_weekend_day, recurring_end_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, name, description, type, priority, clientId, projectId, dayOfMonth,
-     estimatedHours, estimatedCost, isActive ? 1 : 0, nextDue, recurringWeekend ? 1 : 0,
+     estimatedHours, estimatedCost, isActive ? 1 : 0, nextDue, recurringStartDate, recurringWeekend ? 1 : 0,
      recurringWeekendType, recurringWeekendDay, recurringEndDate],
     function(err) {
       if (err) {
@@ -425,7 +425,7 @@ app.put('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const {
     name, description, type, priority, clientId, projectId, dayOfMonth,
-    estimatedHours, estimatedCost, isActive, lastGenerated, nextDue,
+    estimatedHours, estimatedCost, isActive, lastGenerated, nextDue, recurringStartDate,
     recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
   } = req.body;
 
@@ -433,11 +433,11 @@ app.put('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
     `UPDATE recurring_tasks SET
     name = ?, description = ?, type = ?, priority = ?, client_id = ?,
     project_id = ?, day_of_month = ?, estimated_hours = ?, estimated_cost = ?,
-    is_active = ?, last_generated = ?, next_due = ?, recurring_weekend = ?,
+    is_active = ?, last_generated = ?, next_due = ?, recurring_start_date = ?, recurring_weekend = ?,
     recurring_weekend_type = ?, recurring_weekend_day = ?, recurring_end_date = ?
     WHERE id = ?`,
     [name, description, type, priority, clientId, projectId, dayOfMonth,
-     estimatedHours, estimatedCost, isActive ? 1 : 0, lastGenerated, nextDue,
+     estimatedHours, estimatedCost, isActive ? 1 : 0, lastGenerated, nextDue, recurringStartDate,
      recurringWeekend ? 1 : 0, recurringWeekendType, recurringWeekendDay, recurringEndDate, id],
     function(err) {
       if (err) {

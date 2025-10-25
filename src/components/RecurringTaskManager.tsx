@@ -18,6 +18,7 @@ interface RecurringTask {
   isActive: boolean;
   lastGenerated?: string;
   nextDue: string;
+  recurringStartDate?: string;
   recurringWeekend?: boolean;
   recurringWeekendType?: 'first' | 'second' | 'third' | 'fourth' | 'last';
   recurringWeekendDay?: 'saturday' | 'sunday';
@@ -119,13 +120,22 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
     
     const tasksToGenerate = recurringTasks.filter(task => {
       if (!task.isActive) return false;
-      
+
+      // Check if task hasn't started yet (before start date)
+      if (task.recurringStartDate) {
+        const startDate = new Date(task.recurringStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        if (isBefore(today, startDate)) {
+          return false;
+        }
+      }
+
       const nextDueDate = new Date(task.nextDue);
       nextDueDate.setHours(0, 0, 0, 0);
-      
+
       // Check if task is overdue
       const isOverdue = isBefore(nextDueDate, today) || nextDueDate.getTime() === today.getTime();
-      
+
       // Check if task has expired (past end date)
       if (task.recurringEndDate) {
         const endDate = new Date(task.recurringEndDate);
@@ -134,7 +144,7 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
           return false;
         }
       }
-      
+
       return isOverdue;
     });
 
@@ -334,9 +344,11 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
       estimatedCost: newTask.estimatedCost,
       isActive: newTask.isActive!,
       nextDue: editingTask?.nextDue || nextDue,
+      recurringStartDate: newTask.recurringStartDate,
       recurringWeekend: newTask.recurringWeekend,
       recurringWeekendType: newTask.recurringWeekendType,
-      recurringWeekendDay: newTask.recurringWeekendDay
+      recurringWeekendDay: newTask.recurringWeekendDay,
+      recurringEndDate: newTask.recurringEndDate
     };
 
     try {
@@ -545,7 +557,33 @@ export function RecurringTaskManager({ isOpen, onClose }: RecurringTaskManagerPr
                       )}
                     </div>
                   </div>
-                  
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Start Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={newTask.recurringStartDate || ''}
+                      onChange={(e) => setNewTask(prev => ({ ...prev, recurringStartDate: e.target.value }))}
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">When to start generating tasks</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={newTask.recurringEndDate || ''}
+                      onChange={(e) => setNewTask(prev => ({ ...prev, recurringEndDate: e.target.value }))}
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">When to stop generating tasks</p>
+                  </div>
+
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Description

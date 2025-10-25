@@ -101,6 +101,7 @@ const initDB = async () => {
       is_active BOOLEAN DEFAULT 1,
       last_generated DATE,
       next_due DATE NOT NULL,
+      recurring_start_date DATE,
       recurring_weekend BOOLEAN DEFAULT 0,
       recurring_weekend_type TEXT,
       recurring_weekend_day TEXT,
