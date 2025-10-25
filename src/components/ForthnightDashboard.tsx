@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { parseISO, format, isWithinInterval, addDays } from 'date-fns';
+import { parseISO, format, isWithinInterval, subDays } from 'date-fns';
 import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
@@ -21,11 +21,11 @@ export function ForthnightDashboard() {
   const [showCalendarSync, setShowCalendarSync] = useState(false);
 
   const today = new Date();
-  const forthnightEnd = addDays(today, 15);
+  const forthnightStart = subDays(today, 15);
 
   const forthnightTasks = tasks.filter(task => {
     const taskDate = parseISO(task.date + 'T00:00:00');
-    return isWithinInterval(taskDate, { start: today, end: forthnightEnd });
+    return isWithinInterval(taskDate, { start: forthnightStart, end: today });
   });
 
   const completedForthnightTasks = forthnightTasks.filter(t => t.finished);
@@ -61,7 +61,7 @@ export function ForthnightDashboard() {
     .map(project => {
       const projectTasks = getProjectTasks(project.id).filter(t => {
         const taskDate = parseISO(t.date + 'T00:00:00');
-        return isWithinInterval(taskDate, { start: today, end: forthnightEnd });
+        return isWithinInterval(taskDate, { start: forthnightStart, end: today });
       });
       const completedTasks = projectTasks.filter(t => t.finished).length;
       const pendingTasks = projectTasks.filter(t => !t.finished).length;
@@ -249,7 +249,7 @@ export function ForthnightDashboard() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Next 15 Days</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Last 15 Days</h1>
           <div className="flex gap-2">
             <button
               onClick={() => setShowCalendarSync(true)}
@@ -260,7 +260,7 @@ export function ForthnightDashboard() {
             </button>
             <button
               onClick={() => setShowRecurringTasks(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
             >
               <Repeat className="w-4 h-4" />
               Recurring Tasks
@@ -281,7 +281,7 @@ export function ForthnightDashboard() {
           </div>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
-          {format(today, 'MMM d')} - {format(forthnightEnd, 'MMM d, yyyy')}
+          {format(forthnightStart, 'MMM d')} - {format(today, 'MMM d, yyyy')}
         </p>
       </div>
 
@@ -479,50 +479,48 @@ export function ForthnightDashboard() {
       )}
 
       {/* Pending Tasks by Priority */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Overdue */}
-        {overdueTasks.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
-              Overdue ({overdueTasks.length})
-            </h2>
-            <div className="space-y-3">
-              {overdueTasks.map(task => renderTaskCard(task))}
+      {unfinishedTasks.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Overdue */}
+          {overdueTasks.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                Overdue ({overdueTasks.length})
+              </h2>
+              <div className="space-y-3">
+                {overdueTasks.map(task => renderTaskCard(task))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Today */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Today ({todayTasks.length})
-          </h2>
-          <div className="space-y-3">
-            {todayTasks.length > 0 ? (
-              todayTasks.map(task => renderTaskCard(task))
-            ) : (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">No tasks for today</p>
-            )}
-          </div>
-        </div>
+          {/* Today */}
+          {todayTasks.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Today ({todayTasks.length})
+              </h2>
+              <div className="space-y-3">
+                {todayTasks.map(task => renderTaskCard(task))}
+              </div>
+            </div>
+          )}
 
-        {/* Upcoming */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-green-700 dark:text-green-400 mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Upcoming ({upcomingTasks.length})
-          </h2>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {upcomingTasks.length > 0 ? (
-              upcomingTasks.slice(0, 10).map(task => renderTaskCard(task))
-            ) : (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">No upcoming tasks</p>
-            )}
-          </div>
+          {/* Recent */}
+          {upcomingTasks.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-400 mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Recent ({upcomingTasks.length})
+              </h2>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {upcomingTasks.slice(0, 10).map(task => renderTaskCard(task))}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Modals */}
       {isModalOpen && selectedTaskId && (
