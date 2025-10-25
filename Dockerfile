@@ -20,12 +20,12 @@ RUN npm run build
 # Production stage with Node.js
 FROM node:20-alpine
 
-# Install security updates
-RUN apk update && apk upgrade && apk add --no-cache ca-certificates sqlite
+# Install security updates and tools
+RUN apk update && apk upgrade && apk add --no-cache ca-certificates sqlite dcron
 
 # Create app directory and data directory
 WORKDIR /app
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data /app/data/backups /var/log
 
 # Copy built application and server files
 COPY --from=builder /app/dist ./dist
@@ -39,8 +39,12 @@ RUN npm ci --only=production
 RUN addgroup -g 1001 -S appuser && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G appuser -g appuser appuser
 
+# Make start script executable
+RUN chmod +x /app/server/start-with-cron.sh
+
 # Set proper permissions
-RUN chown -R appuser:appuser /app
+RUN chown -R appuser:appuser /app && \
+    chown appuser:appuser /var/log
 
 # Switch to non-root user
 USER appuser
@@ -48,5 +52,5 @@ USER appuser
 # Expose port 3000
 EXPOSE 3000
 
-# Start the application
-CMD ["sh", "-c", "node server/init-db.js && node server/index.js"]
+# Start the application with cron
+CMD ["/app/server/start-with-cron.sh"]
