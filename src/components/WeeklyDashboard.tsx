@@ -439,15 +439,15 @@ export function WeeklyDashboard() {
                   <div className="space-y-3">
                     {content.data.map((task, index) => (
                       <div key={task.id} className={`flex items-center justify-between p-4 rounded-lg border-l-4 ${
-                        task.daysOverdue > 0 
+                        task.daysOverdue > 0
                           ? 'bg-red-50 border-red-500 dark:bg-red-900/10'
                           : isToday(new Date(task.date))
                           ? 'bg-yellow-50 border-yellow-500 dark:bg-yellow-900/10'
                           : 'bg-blue-50 border-blue-500 dark:bg-blue-900/10'
                       }`}>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 flex-1">
                           <div className={`flex items-center justify-center w-8 h-8 rounded-full font-medium text-sm ${
-                            task.priority === 'high' 
+                            task.priority === 'high'
                               ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300'
                               : task.priority === 'medium'
                               ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300'
@@ -455,26 +455,47 @@ export function WeeklyDashboard() {
                           }`}>
                             #{index + 1}
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium text-gray-900 dark:text-white">{task.clientName}</p>
                             <p className="text-sm text-gray-600 dark:text-gray-300">{task.projectName}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          }`}>
-                            {task.priority}
-                          </span>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {task.daysOverdue > 0 
-                              ? `${task.daysOverdue} days overdue`
-                              : format(new Date(task.date), 'MMM d')
-                            }
-                          </p>
+                        <div className="flex items-center space-x-3">
+                          <div className="text-right">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                              task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                              'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            }`}>
+                              {task.priority}
+                            </span>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {task.daysOverdue > 0
+                                ? `${task.daysOverdue} days overdue`
+                                : format(new Date(task.date), 'MMM d')
+                              }
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Link
+                              to={`/edit-task/${task.id}`}
+                              className="p-2 text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                              title="Edit Task"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Link>
+                            <button
+                              onClick={() => {
+                                setSelectedTaskId(task.id);
+                                setIsModalOpen(true);
+                              }}
+                              className="p-2 text-green-600 hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                              title="Complete Task"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}

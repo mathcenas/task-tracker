@@ -14,6 +14,7 @@ import { EditTask } from './components/EditTask';
 import { PublicMonthlyReport } from './components/PublicMonthlyReport';
 import { AboutPage } from './components/AboutPage';
 import { AllTasksPage } from './components/AllTasksPage';
+import { RecurringTasksPage } from './components/RecurringTasksPage';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
                   <Route path="/fortnight" element={<ForthnightDashboard />} />
                   <Route path="/monthly" element={<MonthlyDashboard />} />
                   <Route path="/tasks" element={<AllTasksPage />} />
+                  <Route path="/recurring-tasks" element={<RecurringTasksPage />} />
                   <Route path="/clients" element={<ClientDashboard />} />
                   <Route path="/projects" element={<ProjectsDashboard />} />
                   <Route path="/add-client" element={<ClientForm />} />

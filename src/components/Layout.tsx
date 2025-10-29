@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { useState, useEffect } from 'react';
@@ -116,8 +116,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Folders className="w-4 h-4" />
                   <span>Projects</span>
                 </Link>
-                <Link 
-                  to="/about" 
+                <Link
+                  to="/recurring-tasks"
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/recurring-tasks')}`}
+                >
+                  <Repeat className="w-4 h-4" />
+                  <span>Recurring</span>
+                </Link>
+                <Link
+                  to="/about"
                   className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/about')}`}
                 >
                   <BarChart3 className="w-4 h-4" />
@@ -307,8 +314,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Folders className="w-4 h-4" />
                   <span>Projects</span>
                 </Link>
-                <Link 
-                  to="/about" 
+                <Link
+                  to="/recurring-tasks"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/recurring-tasks')}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Repeat className="w-4 h-4" />
+                  <span>Recurring Tasks</span>
+                </Link>
+                <Link
+                  to="/about"
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/about')}`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
