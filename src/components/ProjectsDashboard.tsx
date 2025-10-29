@@ -1,36 +1,52 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { format } from 'date-fns';
-import { Folder, AlertTriangle, FileText, Package, Clock, CheckCircle, PauseCircle, TrendingUp, DollarSign, Target, Repeat } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { Folder, AlertTriangle, FileText, Package, Clock, CheckCircle, DollarSign, Repeat, ChevronDown, ChevronUp } from 'lucide-react';
 import { filterOutPendingRecurringReminders, getPendingRecurringReminders } from '../utils/taskFilters';
+import { Link } from 'react-router-dom';
 
 export function ProjectsDashboard() {
-  const { projects, clients, getClient, getProjectTasks } = useApp();
+  const { projects, clients, tasks, getClient, getProjectTasks } = useApp();
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Force refresh when data changes
   React.useEffect(() => {
     setRefreshKey(prev => prev + 1);
-  }, [projects.length, clients.length]);
+  }, [projects.length, clients.length, tasks.length]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Clock className="w-5 h-5 text-blue-500" />;
-      case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'on-hold':
-        return <PauseCircle className="w-5 h-5 text-yellow-500" />;
+  const toggleProject = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
+
+  const getTaskIcon = (type: string) => {
+    switch (type) {
+      case 'incident':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'insumos':
+        return <Package className="w-4 h-4 text-purple-500" />;
       default:
-        return <Folder className="w-5 h-5 text-gray-500" />;
+        return <FileText className="w-4 h-4 text-blue-500" />;
     }
   };
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return 'bg-green-500';
-    if (percentage >= 50) return 'bg-blue-500';
-    if (percentage >= 25) return 'bg-yellow-500';
-    return 'bg-red-500';
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'border-l-4 border-red-500';
+      case 'medium':
+        return 'border-l-4 border-yellow-500';
+      default:
+        return 'border-l-4 border-green-500';
+    }
   };
 
   // Calculate overall statistics
@@ -73,7 +89,7 @@ export function ProjectsDashboard() {
         </div>
       </div>
 
-      {/* Projects by Client */}
+      {/* Projects by Client with Kanban View */}
       <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Projects Overview</h2>
 
@@ -98,10 +114,6 @@ export function ProjectsDashboard() {
               return sum + tasks.reduce((s, t) => s + (t.hours || 0), 0);
             }, 0);
 
-            const clientRecurringReminders = clientProjects.reduce((sum, proj) => {
-              return sum + getPendingRecurringReminders(getProjectTasks(proj.id)).length;
-            }, 0);
-
             const clientTotalRevenue = clientTotalHours * (client.hourlyRate || 0);
 
             return (
@@ -117,18 +129,15 @@ export function ProjectsDashboard() {
                   </div>
                 </div>
 
-                {/* Client Summary */}
-                <div className="grid grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                {/* Client Summary - Keep Hours and Revenue */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-1">
-                      <Target className="w-4 h-4 text-blue-500 mr-1" />
+                      <FileText className="w-4 h-4 text-blue-500 mr-1" />
                       <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Tasks</p>
                     </div>
                     <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {clientCompletedTasks}/{clientTotalTasks}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {clientTotalTasks > 0 ? Math.round((clientCompletedTasks / clientTotalTasks) * 100) : 0}% done
                     </p>
                   </div>
                   <div className="text-center">
@@ -149,111 +158,226 @@ export function ProjectsDashboard() {
                       ${clientTotalRevenue.toFixed(0)}
                     </p>
                   </div>
-                  {clientRecurringReminders > 0 && (
-                    <div className="text-center">
-                      <div className="flex items-center justify-center mb-1">
-                        <Repeat className="w-4 h-4 text-blue-500 mr-1" />
-                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Reminders</p>
-                      </div>
-                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        {clientRecurringReminders}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        to complete
-                      </p>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <DollarSign className="w-4 h-4 text-blue-500 mr-1" />
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Rate</p>
                     </div>
-                  )}
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                      ${client.hourlyRate || 0}/h
+                    </p>
+                  </div>
                 </div>
 
-                {/* Projects List */}
-                <div className="space-y-3">
+                {/* Projects List with Kanban */}
+                <div className="space-y-4">
                   {clientProjects.map(project => {
                     const allProjectTasks = getProjectTasks(project.id);
                     const projectTasks = filterOutPendingRecurringReminders(allProjectTasks);
                     const recurringReminders = getPendingRecurringReminders(allProjectTasks);
-                    const completedTasks = projectTasks.filter(t => t.finished).length;
+
+                    const pendingTasks = projectTasks.filter(t => !t.finished && t.status === 'pending');
+                    const inProgressTasks = projectTasks.filter(t => !t.finished && t.status === 'in-progress');
+                    const completedTasks = projectTasks.filter(t => t.finished);
+
                     const totalHours = projectTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+                    const revenue = totalHours * (client.hourlyRate || 0);
                     const totalCost = projectTasks
                       .filter(t => t.type === 'insumos')
                       .reduce((sum, task) => sum + (task.cost || 0), 0);
-                    const progress = projectTasks.length > 0 ? (completedTasks / projectTasks.length) * 100 : 0;
-                    const revenue = totalHours * (client.hourlyRate || 0);
+
+                    const isExpanded = expandedProjects.has(project.id);
 
                     return (
-                      <div key={project.id} className="bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center space-x-3 flex-1">
-                            {getStatusIcon(project.status)}
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900 dark:text-white">{project.name}</h4>
-                              {project.description && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{project.description}</p>
-                              )}
+                      <div key={project.id} className="bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-lg overflow-hidden">
+                        {/* Project Header - Always Visible */}
+                        <div
+                          className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          onClick={() => toggleProject(project.id)}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center space-x-3 flex-1">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                  {project.name}
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </h4>
+                                {project.description && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{project.description}</p>
+                                )}
+                              </div>
                             </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                              project.status === 'active' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                              project.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            }`}>
+                              {project.status}
+                            </span>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                            project.status === 'active' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                            project.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                          }`}>
-                            {project.status}
-                          </span>
-                        </div>
 
-                        {/* Progress Bar */}
-                        {projectTasks.length > 0 && (
-                          <div className="mb-3">
-                            <div className="flex items-center justify-between text-sm mb-1">
-                              <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                              <span className="font-medium text-gray-900 dark:text-white">
-                                {completedTasks}/{projectTasks.length} tasks ({Math.round(progress)}%)
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                              <div
-                                className={`h-2 rounded-full transition-all duration-500 ${getProgressColor(progress)}`}
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Metrics */}
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-600 dark:text-gray-400 text-xs">Hours</p>
-                            <p className="font-semibold text-gray-900 dark:text-white">{totalHours.toFixed(1)}h</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600 dark:text-gray-400 text-xs">Revenue</p>
-                            <p className="font-semibold text-gray-900 dark:text-white">${revenue.toFixed(0)}</p>
-                          </div>
-                          {totalCost > 0 && (
+                          {/* Metrics */}
+                          <div className="grid grid-cols-3 gap-4 text-sm">
                             <div>
-                              <p className="text-gray-600 dark:text-gray-400 text-xs">Supplies</p>
-                              <p className="font-semibold text-gray-900 dark:text-white">${totalCost.toFixed(0)}</p>
+                              <p className="text-gray-600 dark:text-gray-400 text-xs">Hours</p>
+                              <p className="font-semibold text-gray-900 dark:text-white">{totalHours.toFixed(1)}h</p>
                             </div>
-                          )}
+                            <div>
+                              <p className="text-gray-600 dark:text-gray-400 text-xs">Revenue</p>
+                              <p className="font-semibold text-gray-900 dark:text-white">${revenue.toFixed(0)}</p>
+                            </div>
+                            {totalCost > 0 && (
+                              <div>
+                                <p className="text-gray-600 dark:text-gray-400 text-xs">Supplies</p>
+                                <p className="font-semibold text-gray-900 dark:text-white">${totalCost.toFixed(0)}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        {project.startDate && (
-                          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                            Started: {format(new Date(project.startDate), 'MMM d, yyyy')}
-                          </p>
+                        {/* Kanban Board - Expandable */}
+                        {isExpanded && projectTasks.length > 0 && (
+                          <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {/* Pending Column */}
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h5 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Pending</h5>
+                                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium px-2 py-1 rounded-full">
+                                    {pendingTasks.length}
+                                  </span>
+                                </div>
+                                <div className="space-y-2 max-h-96 overflow-y-auto">
+                                  {pendingTasks.map(task => (
+                                    <Link
+                                      key={task.id}
+                                      to={`/edit-task/${task.id}`}
+                                      className={`block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition-all ${getPriorityColor(task.priority)}`}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        {getTaskIcon(task.type)}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {task.description}
+                                          </p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            {format(parseISO(task.date), 'MMM d')}
+                                          </p>
+                                          {task.isRecurring && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                              <Repeat className="w-3 h-3 text-blue-500" />
+                                              <span className="text-xs text-blue-600 dark:text-blue-400">Recurring</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </Link>
+                                  ))}
+                                  {pendingTasks.length === 0 && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">
+                                      No pending tasks
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* In Progress Column */}
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h5 className="font-semibold text-sm text-blue-700 dark:text-blue-300">In Progress</h5>
+                                  <span className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium px-2 py-1 rounded-full">
+                                    {inProgressTasks.length}
+                                  </span>
+                                </div>
+                                <div className="space-y-2 max-h-96 overflow-y-auto">
+                                  {inProgressTasks.map(task => (
+                                    <Link
+                                      key={task.id}
+                                      to={`/edit-task/${task.id}`}
+                                      className={`block p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:shadow-md transition-all ${getPriorityColor(task.priority)}`}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        {getTaskIcon(task.type)}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {task.description}
+                                          </p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            {format(parseISO(task.date), 'MMM d')}
+                                          </p>
+                                          {task.isRecurring && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                              <Repeat className="w-3 h-3 text-blue-500" />
+                                              <span className="text-xs text-blue-600 dark:text-blue-400">Recurring</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </Link>
+                                  ))}
+                                  {inProgressTasks.length === 0 && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">
+                                      No tasks in progress
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Completed Column */}
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h5 className="font-semibold text-sm text-green-700 dark:text-green-300">Completed</h5>
+                                  <span className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs font-medium px-2 py-1 rounded-full">
+                                    {completedTasks.length}
+                                  </span>
+                                </div>
+                                <div className="space-y-2 max-h-96 overflow-y-auto">
+                                  {completedTasks.slice(0, 10).map(task => (
+                                    <Link
+                                      key={task.id}
+                                      to={`/edit-task/${task.id}`}
+                                      className="block p-3 bg-green-50 dark:bg-green-900/20 rounded-lg hover:shadow-md transition-all opacity-75"
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        {getTaskIcon(task.type)}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate line-through">
+                                            {task.description}
+                                          </p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            {task.hours && `${task.hours}h • `}
+                                            {format(parseISO(task.date), 'MMM d')}
+                                          </p>
+                                        </div>
+                                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                      </div>
+                                    </Link>
+                                  ))}
+                                  {completedTasks.length === 0 && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">
+                                      No completed tasks
+                                    </p>
+                                  )}
+                                  {completedTasks.length > 10 && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
+                                      +{completedTasks.length - 10} more
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         )}
 
                         {/* Recurring Reminders */}
                         {recurringReminders.length > 0 && (
-                          <div className="mt-3 pt-3 border-t dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-2">
+                          <div className="border-t dark:border-gray-700 p-4 bg-blue-50 dark:bg-blue-900/20">
+                            <div className="flex items-center gap-2">
                               <Repeat className="w-4 h-4 text-blue-500" />
                               <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                                {recurringReminders.length} Recurring Reminder{recurringReminders.length !== 1 ? 's' : ''}
+                                {recurringReminders.length} Recurring Reminder{recurringReminders.length !== 1 ? 's' : ''} pending completion
                               </p>
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              These tasks need to be completed and will count toward progress once done
-                            </p>
                           </div>
                         )}
                       </div>
