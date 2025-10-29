@@ -164,6 +164,47 @@ class ApiService {
     });
   }
 
+  async updateClient(id: string, client: any) {
+    const payload = {
+      name: client.name,
+      slug: client.slug,
+      hourlyRate: client.hourlyRate,
+      contactPerson: client.contactPerson,
+      email: client.email,
+      phone: client.phone
+    };
+    return this.request(`/clients/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteClient(id: string) {
+    return this.request(`/clients/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateProject(id: string, project: any) {
+    const payload = {
+      clientId: project.clientId,
+      name: project.name,
+      description: project.description,
+      startDate: project.startDate,
+      status: project.status
+    };
+    return this.request(`/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteProject(id: string) {
+    return this.request(`/projects/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Task methods
   async getTasks() {
     const tasks = await this.request('/tasks');

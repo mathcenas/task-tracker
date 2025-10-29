@@ -16,8 +16,8 @@ interface AppContextType {
   deleteTask: (taskId: string) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
-  updateClient: (client: Client) => void;
-  updateProject: (project: Project) => void;
+  updateClient: (client: Client) => Promise<void>;
+  updateProject: (project: Project) => Promise<void>;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   getClientProjects: (clientId: string) => Project[];
   getClientTasks: (clientId: string) => Task[];
@@ -200,8 +200,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteClient = async (clientId: string) => {
     try {
-      // Note: Backend should handle cascading deletes
-      // For now, we'll just delete the client and update local state
+      await apiService.deleteClient(clientId);
+      // Backend handles cascading deletes, but we update local state too
       setProjects(prev => prev.filter(project => project.clientId !== clientId));
       setTasks(prev => prev.filter(task => task.clientId !== clientId));
       setClients(prev => prev.filter(client => client.id !== clientId));
@@ -214,7 +214,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteProject = async (projectId: string) => {
     try {
-      // Note: Backend should handle cascading deletes
+      await apiService.deleteProject(projectId);
+      // Backend handles cascading deletes, but we update local state too
       setTasks(prev => prev.filter(task => task.projectId !== projectId));
       setProjects(prev => prev.filter(project => project.id !== projectId));
       console.log('✅ Project deleted successfully:', projectId);
@@ -224,12 +225,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateClient = (client: Client) => {
-    setClients(prev => prev.map(c => c.id === client.id ? client : c));
+  const updateClient = async (client: Client) => {
+    try {
+      await apiService.updateClient(client.id, client);
+      setClients(prev => prev.map(c => c.id === client.id ? client : c));
+      console.log('✅ Client updated successfully:', client.id);
+    } catch (error) {
+      console.error('❌ Error updating client:', error);
+      throw error;
+    }
   };
 
-  const updateProject = (project: Project) => {
-    setProjects(prev => prev.map(p => p.id === project.id ? project : p));
+  const updateProject = async (project: Project) => {
+    try {
+      await apiService.updateProject(project.id, project);
+      setProjects(prev => prev.map(p => p.id === project.id ? project : p));
+      console.log('✅ Project updated successfully:', project.id);
+    } catch (error) {
+      console.error('❌ Error updating project:', error);
+      throw error;
+    }
   };
 
   return (

@@ -267,6 +267,54 @@ app.post('/api/clients', authenticateToken, (req, res) => {
   );
 });
 
+app.put('/api/clients/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { name, slug, hourlyRate, contactPerson, email, phone } = req.body;
+
+  db.run(
+    `UPDATE clients SET name = ?, slug = ?, hourly_rate = ?, contact_person = ?, email = ?, phone = ?
+     WHERE id = ?`,
+    [name, slug, hourlyRate, contactPerson, email, phone, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating client:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+app.delete('/api/clients/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  // Delete in correct order: tasks first, then projects, then client
+  db.serialize(() => {
+    db.run('DELETE FROM tasks WHERE client_id = ?', [id], function(err) {
+      if (err) {
+        console.error('Error deleting client tasks:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      db.run('DELETE FROM projects WHERE client_id = ?', [id], function(err) {
+        if (err) {
+          console.error('Error deleting client projects:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        db.run('DELETE FROM clients WHERE id = ?', [id], function(err) {
+          if (err) {
+            console.error('Error deleting client:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          console.log('✅ Client and related data deleted successfully:', id);
+          res.json({ success: true });
+        });
+      });
+    });
+  });
+});
+
 // Project routes
 app.get('/api/projects', authenticateToken, (req, res) => {
   db.all('SELECT * FROM projects ORDER BY name', (err, projects) => {
@@ -279,8 +327,8 @@ app.get('/api/projects', authenticateToken, (req, res) => {
 
 app.post('/api/projects', authenticateToken, (req, res) => {
   const { id, clientId, name, description, startDate, status } = req.body;
-  
-  db.run(`INSERT INTO projects (id, client_id, name, description, start_date, status) 
+
+  db.run(`INSERT INTO projects (id, client_id, name, description, start_date, status)
           VALUES (?, ?, ?, ?, ?, ?)`,
     [id, clientId, name, description, startDate, status],
     function(err) {
@@ -290,6 +338,47 @@ app.post('/api/projects', authenticateToken, (req, res) => {
       res.json({ success: true, id });
     }
   );
+});
+
+app.put('/api/projects/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { clientId, name, description, startDate, status } = req.body;
+
+  db.run(
+    `UPDATE projects SET client_id = ?, name = ?, description = ?, start_date = ?, status = ?
+     WHERE id = ?`,
+    [clientId, name, description, startDate, status, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating project:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+app.delete('/api/projects/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  // Delete tasks first, then project
+  db.serialize(() => {
+    db.run('DELETE FROM tasks WHERE project_id = ?', [id], function(err) {
+      if (err) {
+        console.error('Error deleting project tasks:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      db.run('DELETE FROM projects WHERE id = ?', [id], function(err) {
+        if (err) {
+          console.error('Error deleting project:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        console.log('✅ Project and related tasks deleted successfully:', id);
+        res.json({ success: true });
+      });
+    });
+  });
 });
 
 // Task routes
