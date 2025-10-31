@@ -801,6 +801,12 @@ app.post('/api/restore', authenticateToken, (req, res) => {
              recurring_weekend_day, recurring_end_date, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
           data.tasks.forEach(task => {
+            // Backward compatibility: convert old status values to new workflow statuses
+            let taskStatus = task.status || 'in_progress';
+            if (taskStatus === 'pending') taskStatus = 'not_started';
+            if (taskStatus === 'in-progress') taskStatus = 'in_progress';
+            if (taskStatus === 'cancelled') taskStatus = 'completed';
+
             taskStmt.run([
               task.id,
               task.client_id || '',
@@ -810,7 +816,7 @@ app.post('/api/restore', authenticateToken, (req, res) => {
               task.cost || null,
               task.date,
               task.type || 'request',
-              task.status || 'pending',
+              taskStatus,
               task.priority || 'medium',
               task.finished ? 1 : 0,
               task.notes || null,

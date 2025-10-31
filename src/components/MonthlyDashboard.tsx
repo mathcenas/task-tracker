@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfMonth, endOfMonth, format, isWithinInterval, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp, Clock, DollarSign, CheckCircle, Plus } from 'lucide-react';
+import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp, Clock, DollarSign, CheckCircle, Plus, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { exportTasksToCSV } from '../utils/csvExport';
 
 export function MonthlyDashboard() {
   const { tasks, getClient, getProject } = useApp();
@@ -82,6 +83,13 @@ export function MonthlyDashboard() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Monthly Overview</h2>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => exportTasksToCSV(monthlyTasks, getClient, getProject, `monthly-tasks-${format(currentDate, 'yyyy-MM')}.csv`)}
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </button>
             <button
               onClick={previousMonth}
               className="p-2 hover:bg-gray-100 rounded-full dark:hover:bg-gray-700"

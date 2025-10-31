@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfWeek, endOfWeek, parseISO, format, isToday, isTomorrow, isYesterday, isThisWeek } from 'date-fns';
-import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays } from 'lucide-react';
+import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays, Download } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
 import { TaskTemplates } from './TaskTemplates';
 import { RecurringTaskManager } from './RecurringTaskManager';
 import { CalendarSync } from './CalendarSync';
 import { TaskFilters } from './ui/TaskFilters';
+import { TaskStatusBadge } from './TaskStatusBadge';
 import { Link } from 'react-router-dom';
+import { exportTasksToCSV } from '../utils/csvExport';
 
 export function WeeklyDashboard() {
   const { tasks, projects, getClient, getProject, finishTask, updateTask, getProjectTasks } = useApp();
@@ -463,6 +465,7 @@ export function WeeklyDashboard() {
                         </div>
                         <div className="flex items-center space-x-3">
                           <div className="text-right">
+                            <TaskStatusBadge status={task.status} size="sm" />
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                               task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
@@ -546,6 +549,14 @@ export function WeeklyDashboard() {
             >
               <CalendarDays className="w-4 h-4 mr-1" />
               Calendar
+            </button>
+
+            <button
+              onClick={() => exportTasksToCSV(filteredTasks, getClient, getProject, `weekly-tasks-${format(today, 'yyyy-MM-dd')}.csv`)}
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 transition-colors"
+            >
+              <Download className="w-4 h-4 mr-1" />
+              Export CSV
             </button>
             
             {unfinishedTasks.length > 0 && (
@@ -785,6 +796,7 @@ export function WeeklyDashboard() {
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{task.description}</p>
                         <div className="flex items-center space-x-3">
+                          <TaskStatusBadge status={task.status} size="sm" />
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                             task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Search, Plus, Pencil, Check, X } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Search, Plus, Pencil, Check, X, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
+import { TaskStatusBadge } from './TaskStatusBadge';
+import { exportTasksToCSV } from '../utils/csvExport';
 
 export function AllTasksPage() {
   const { tasks, getClient, getProject, updateTask } = useApp();
@@ -171,13 +173,22 @@ export function AllTasksPage() {
             Complete task management and to-do list
           </p>
         </div>
-        <Link
-          to="/add-task"
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Task
-        </Link>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => exportTasksToCSV(sortedTasks, getClient, getProject, `all-tasks-${format(new Date(), 'yyyy-MM-dd')}.csv`)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </button>
+          <Link
+            to="/add-task"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Task
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -316,6 +327,7 @@ export function AllTasksPage() {
                           }`}>
                             {task.type}
                           </span>
+                          <TaskStatusBadge status={task.status} size="sm" />
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                             task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :

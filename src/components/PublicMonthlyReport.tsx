@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, isAfter, endOfDay, 
 import { Clock, AlertTriangle, FileText, Package, DollarSign, Calendar, Download, ChevronLeft, ChevronRight, BarChart3, TrendingUp } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { exportMonthlyReportToCSV } from '../utils/csvExport';
 
 export function PublicMonthlyReport() {
   const { clientSlug, year, month } = useParams<{ clientSlug: string; year: string; month: string }>();
@@ -402,13 +403,25 @@ export function PublicMonthlyReport() {
                 About
               </a>
               {monthlyTasks.length > 0 && (
-                <button
-                  onClick={exportPDF}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export PDF
-                </button>
+                <>
+                  <button
+                    onClick={exportPDF}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      const getClientById = () => client;
+                      exportMonthlyReportToCSV(monthTasks, getClientById, getProject, client.name, format(reportDate, 'MMMM-yyyy'));
+                    }}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export CSV
+                  </button>
+                </>
               )}
             </div>
           </div>
