@@ -82,7 +82,8 @@ export function KanbanBoard() {
     if (!draggedTask) return;
 
     if (draggedTask.status !== status) {
-      await updateTask(draggedTask.id, { ...draggedTask, status });
+      const updatedTask = { ...draggedTask, status };
+      await updateTask(updatedTask);
     }
 
     setDraggedTask(null);
@@ -120,11 +121,22 @@ export function KanbanBoard() {
     const taskDate = parseISO(task.date + 'T00:00:00');
     const isOverdue = isPast(taskDate) && !isToday(taskDate);
 
+    const handleCardDragStart = (e: React.DragEvent) => {
+      e.stopPropagation();
+      handleDragStart(task);
+    };
+
+    const handleCardClick = (e: React.MouseEvent) => {
+      if (draggedTask) {
+        e.preventDefault();
+      }
+    };
+
     return (
-      <Link to={`/edit-task/${task.id}`}>
+      <Link to={`/edit-task/${task.id}`} onClick={handleCardClick}>
         <div
           draggable
-          onDragStart={() => handleDragStart(task)}
+          onDragStart={handleCardDragStart}
           className={`p-4 rounded-lg border-l-4 ${getPriorityColor(task.priority)} cursor-move hover:shadow-md transition-all duration-200`}
         >
           <div className="flex items-start justify-between mb-2">
