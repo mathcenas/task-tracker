@@ -16,7 +16,7 @@ export function EditTask() {
     cost: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     type: 'request' as 'incident' | 'request' | 'insumos',
-    status: 'pending' as 'pending' | 'in-progress' | 'completed' | 'cancelled',
+    status: 'in_progress' as 'not_started' | 'in_progress' | 'review' | 'completed',
     priority: 'medium' as 'low' | 'medium' | 'high',
     notes: '',
     finished: false
@@ -287,12 +287,12 @@ export function EditTask() {
               required
               className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
               value={formData.status}
-              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'pending' | 'in-progress' | 'completed' | 'cancelled' }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'not_started' | 'in_progress' | 'review' | 'completed' }))}
             >
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
+              <option value="not_started">Not Started</option>
+              <option value="in_progress">In Progress</option>
+              <option value="review">Review</option>
               <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
             </select>
           </div>
 

@@ -70,7 +70,7 @@ const initDB = async () => {
       cost REAL,
       date DATE NOT NULL,
       type TEXT NOT NULL DEFAULT 'request',
-      status TEXT NOT NULL DEFAULT 'pending',
+      status TEXT NOT NULL DEFAULT 'in_progress',
       priority TEXT NOT NULL DEFAULT 'medium',
       finished BOOLEAN DEFAULT 0,
       notes TEXT,
@@ -151,7 +151,11 @@ const initDB = async () => {
     `ALTER TABLE tasks ADD COLUMN accepted BOOLEAN DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN accepted_at DATETIME`,
     // Add recurring_start_date to recurring_tasks table
-    `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`,
+    // Update old status values to new workflow statuses
+    `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`,
+    `UPDATE tasks SET status = 'in_progress' WHERE status = 'in-progress'`,
+    `UPDATE tasks SET status = 'completed' WHERE status = 'cancelled'`
   ];
 
   for (const migration of migrations) {

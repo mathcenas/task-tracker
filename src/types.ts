@@ -26,7 +26,7 @@ export interface Task {
   cost?: number;
   date: string;
   type: 'incident' | 'request' | 'insumos';
-  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+  status: 'not_started' | 'in_progress' | 'review' | 'completed';
   priority: 'low' | 'medium' | 'high';
   finished: boolean;
   notes?: string;

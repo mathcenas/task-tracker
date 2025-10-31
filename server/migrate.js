@@ -45,6 +45,18 @@ const runMigrations = async () => {
     {
       name: 'Add recurring_start_date to recurring_tasks',
       sql: `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`
+    },
+    {
+      name: 'Update status: pending to not_started',
+      sql: `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`
+    },
+    {
+      name: 'Update status: in-progress to in_progress',
+      sql: `UPDATE tasks SET status = 'in_progress' WHERE status = 'in-progress'`
+    },
+    {
+      name: 'Update status: cancelled to completed',
+      sql: `UPDATE tasks SET status = 'completed' WHERE status = 'cancelled'`
     }
   ];
 

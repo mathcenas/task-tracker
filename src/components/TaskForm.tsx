@@ -17,7 +17,7 @@ export function TaskForm() {
     hours: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     type: 'request' as 'incident' | 'request' | 'insumos',
-    status: 'pending' as 'pending' | 'in-progress' | 'completed' | 'cancelled',
+    status: 'in_progress' as 'not_started' | 'in_progress' | 'review' | 'completed',
     priority: 'medium' as 'low' | 'medium' | 'high',
     cost: '',
     isRecurring: false,

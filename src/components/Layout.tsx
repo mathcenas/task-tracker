@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
+import { QuickTaskEntry } from './QuickTaskEntry';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
@@ -95,12 +96,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Calendar className="w-4 h-4" />
                   <span>Monthly</span>
                 </Link>
-                <Link 
-                  to="/tasks" 
+                <Link
+                  to="/tasks"
                   className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/tasks')}`}
                 >
                   <CheckSquare className="w-4 h-4" />
                   <span>All Tasks</span>
+                </Link>
+                <Link
+                  to="/kanban"
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/kanban')}`}
+                >
+                  <Columns className="w-4 h-4" />
+                  <span>Kanban</span>
                 </Link>
                 <Link 
                   to="/clients" 
@@ -290,13 +298,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Calendar className="w-4 h-4" />
                   <span>Monthly Dashboard</span>
                 </Link>
-                <Link 
-                  to="/tasks" 
+                <Link
+                  to="/tasks"
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/tasks')}`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <CheckSquare className="w-4 h-4" />
                   <span>All Tasks</span>
+                </Link>
+                <Link
+                  to="/kanban"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/kanban')}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Columns className="w-4 h-4" />
+                  <span>Kanban Board</span>
                 </Link>
                 <Link 
                   to="/clients" 
@@ -348,6 +364,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {showUserProfile && (
         <UserProfile onClose={() => setShowUserProfile(false)} />
       )}
+
+      {/* Quick Task Entry */}
+      <QuickTaskEntry />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
