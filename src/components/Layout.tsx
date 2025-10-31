@@ -67,10 +67,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between h-16">
             <div className="flex space-x-8">
-              <Link to="/" className="flex items-center space-x-2 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
-                <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
-                  <Clock className="w-5 h-5 text-white" />
-                </div>
+              <Link to="/" className="flex items-center space-x-3 text-gray-900 dark:text-white hover:opacity-80 transition-opacity">
+                <img
+                  src="/logo - Copy.png"
+                  alt="Company Logo"
+                  className="h-10 w-auto"
+                />
                 <span className="font-bold text-lg">TaskTracker Pro</span>
               </Link>
               
