@@ -78,7 +78,7 @@ const initDB = () => {
       cost REAL,
       date DATE NOT NULL,
       type TEXT NOT NULL DEFAULT 'request',
-      status TEXT NOT NULL DEFAULT 'pending',
+      status TEXT NOT NULL DEFAULT 'in_progress',
       priority TEXT NOT NULL DEFAULT 'medium',
       finished BOOLEAN DEFAULT 0,
       notes TEXT,
