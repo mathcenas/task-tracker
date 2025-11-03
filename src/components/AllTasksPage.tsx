@@ -13,7 +13,7 @@ export function AllTasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed'>('all');
+  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
@@ -58,6 +58,10 @@ export function AllTasksPage() {
     filteredTasks = upcomingTasks;
   } else if (taskFilter === 'completed') {
     filteredTasks = completedTasks;
+  } else if (taskFilter === 'in_progress') {
+    filteredTasks = tasks.filter(task => !task.finished && task.status === 'in_progress');
+  } else if (taskFilter === 'not_started') {
+    filteredTasks = tasks.filter(task => !task.finished && task.status === 'not_started');
   } else if (taskFilter === 'all') {
     filteredTasks = allUnfinishedTasks;
   }
@@ -191,42 +195,89 @@ export function AllTasksPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Task Status Filter Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-          <div className="flex items-center">
-            <Clock className="w-8 h-8 text-blue-500 mr-3" />
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'all'
+              ? 'border-blue-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('all')}
+        >
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white">{tasks.length}</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Click to view all
+              </p>
             </div>
+            <FileText className="w-8 h-8 text-blue-500" />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-          <div className="flex items-center">
-            <AlertTriangle className="w-8 h-8 text-yellow-500 mr-3" />
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'in_progress'
+              ? 'border-yellow-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('in_progress')}
+        >
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-              <p className="text-xl font-semibold text-yellow-600 dark:text-yellow-400">{pendingCount}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                {tasks.filter(t => !t.finished && t.status === 'in_progress').length}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Active tasks
+              </p>
             </div>
+            <Clock className="w-8 h-8 text-yellow-500" />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-          <div className="flex items-center">
-            <CheckCircle className="w-8 h-8 text-green-500 mr-3" />
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'not_started'
+              ? 'border-orange-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('not_started')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Not Started</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                {tasks.filter(t => !t.finished && t.status === 'not_started').length}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Pending tasks
+              </p>
+            </div>
+            <AlertTriangle className="w-8 h-8 text-orange-500" />
+          </div>
+        </div>
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'completed'
+              ? 'border-green-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('completed')}
+        >
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
-              <p className="text-xl font-semibold text-green-600 dark:text-green-400">{completedCount}</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{completedTasks.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Finished tasks
+              </p>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-          <div className="flex items-center">
-            <Calendar className="w-8 h-8 text-red-500 mr-3" />
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
-              <p className="text-xl font-semibold text-red-600 dark:text-red-400">{overdueCount}</p>
-            </div>
+            <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
         </div>
       </div>
