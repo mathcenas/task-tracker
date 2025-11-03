@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
@@ -20,6 +20,7 @@ const getSession = () => {
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { tasks, clients, projects, getClient, getProject } = useApp();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -56,311 +57,287 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isActive = (path: string) => {
-    return location.pathname === path 
-      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' 
+    return location.pathname === path
+      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-600'
       : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700';
   };
 
+  const menuItems = [
+    { path: '/', icon: LayoutDashboard, label: 'Weekly', group: 'Dashboards' },
+    { path: '/fortnight', icon: Calendar, label: '15 Days', group: 'Dashboards' },
+    { path: '/monthly', icon: Calendar, label: 'Monthly', group: 'Dashboards' },
+    { path: '/tasks', icon: CheckSquare, label: 'All Tasks', group: 'Tasks' },
+    { path: '/kanban', icon: Columns, label: 'Kanban', group: 'Tasks' },
+    { path: '/recurring-tasks', icon: Repeat, label: 'Recurring', group: 'Tasks' },
+    { path: '/clients', icon: Users, label: 'Clients', group: 'Management' },
+    { path: '/projects', icon: Folders, label: 'Projects', group: 'Management' },
+    { path: '/about', icon: BarChart3, label: 'About', group: 'Other' },
+  ];
+
+  const groupedItems = menuItems.reduce((acc, item) => {
+    if (!acc[item.group]) acc[item.group] = [];
+    acc[item.group].push(item);
+    return acc;
+  }, {} as Record<string, typeof menuItems>);
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <nav className="bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between h-14">
-            <div className="flex space-x-8">
-              <Link to="/" className="flex items-center space-x-3 text-gray-900 dark:text-white hover:opacity-80 transition-opacity">
-                <img
-                  src="/logo - Copy.png"
-                  alt="Company Logo"
-                  className="h-10 w-auto"
-                />
-                <span className="font-semibold text-base">TaskTracker Pro</span>
-              </Link>
-              
-              <div className="hidden md:flex items-center space-x-1">
-                <Link 
-                  to="/" 
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/')}`}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>Weekly</span>
-                </Link>
-                <Link
-                  to="/fortnight"
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/fortnight')}`}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>15 Days</span>
-                </Link>
-                <Link
-                  to="/monthly"
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/monthly')}`}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Monthly</span>
-                </Link>
-                <Link
-                  to="/tasks"
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/tasks')}`}
-                >
-                  <CheckSquare className="w-4 h-4" />
-                  <span>All Tasks</span>
-                </Link>
-                <Link
-                  to="/kanban"
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/kanban')}`}
-                >
-                  <Columns className="w-4 h-4" />
-                  <span>Kanban</span>
-                </Link>
-                <Link 
-                  to="/clients" 
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/clients')}`}
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Clients</span>
-                </Link>
-                <Link 
-                  to="/projects" 
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/projects')}`}
-                >
-                  <Folders className="w-4 h-4" />
-                  <span>Projects</span>
-                </Link>
-                <Link
-                  to="/recurring-tasks"
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/recurring-tasks')}`}
-                >
-                  <Repeat className="w-4 h-4" />
-                  <span>Recurring</span>
-                </Link>
-                <Link
-                  to="/about"
-                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/about')}`}
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  <span>About</span>
-                </Link>
-                <Link 
-                  to="/add-task" 
-                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600`}
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>New Task</span>
-                </Link>
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Left Sidebar */}
+      <aside className={`${isSidebarOpen ? 'w-64' : 'w-16'} bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col fixed h-full z-30`}>
+        {/* Logo & Toggle */}
+        <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
+          {isSidebarOpen && (
+            <Link to="/" className="flex items-center space-x-2">
+              <img src="/logo - Copy.png" alt="Logo" className="h-8 w-auto" />
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
+            </Link>
+          )}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            {isSidebarOpen ? (
+              <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          {Object.entries(groupedItems).map(([group, items]) => (
+            <div key={group} className="mb-4">
+              {isSidebarOpen && (
+                <h3 className="px-3 mb-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {group}
+                </h3>
+              )}
+              <div className="space-y-1">
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`flex items-center ${isSidebarOpen ? 'px-3' : 'px-2 justify-center'} py-2 rounded-md text-sm font-medium transition-colors ${isActive(item.path)}`}
+                      title={!isSidebarOpen ? item.label : undefined}
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      {isSidebarOpen && <span className="ml-3">{item.label}</span>}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              {/* Search Bar */}
-              <div className="relative hidden md:block">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search tasks, clients..."
-                    className="pl-10 pr-4 py-1.5 w-56 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setShowSearchResults(e.target.value.length > 2);
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (searchQuery.length > 2) setShowSearchResults(true);
-                    }}
-                  />
-                </div>
-                
-                {/* Search Results Dropdown */}
-                {showSearchResults && (searchResults.tasks.length > 0 || searchResults.clients.length > 0 || searchResults.projects.length > 0) && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md z-50 max-h-96 overflow-y-auto">
-                    {searchResults.tasks.length > 0 && (
-                      <div className="p-2">
-                        <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">TASKS</h4>
-                        {searchResults.tasks.map(task => {
-                          const client = getClient(task.clientId);
-                          const project = getProject(task.projectId);
-                          return (
-                            <Link
-                              key={task.id}
-                              to={`/edit-task/${task.id}`}
-                              className="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm"
-                              onClick={() => {
-                                setShowSearchResults(false);
-                                setSearchQuery('');
-                              }}
-                            >
-                              <div className="font-medium text-gray-900 dark:text-white truncate">{task.description}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{client?.name} • {project?.name}</div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    {searchResults.clients.length > 0 && (
-                      <div className="p-2 border-t dark:border-gray-700">
-                        <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">CLIENTS</h4>
-                        {searchResults.clients.map(client => (
-                          <Link
-                            key={client.id}
-                            to="/clients"
-                            className="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm"
-                            onClick={() => {
-                              setShowSearchResults(false);
-                              setSearchQuery('');
-                            }}
-                          >
-                            <div className="font-medium text-gray-900 dark:text-white">{client.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">${client.hourlyRate}/hour</div>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {searchResults.projects.length > 0 && (
-                      <div className="p-2 border-t dark:border-gray-700">
-                        <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">PROJECTS</h4>
-                        {searchResults.projects.map(project => {
-                          const client = getClient(project.clientId);
-                          return (
-                            <Link
-                              key={project.id}
-                              to="/projects"
-                              className="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm"
-                              onClick={() => {
-                                setShowSearchResults(false);
-                                setSearchQuery('');
-                              }}
-                            >
-                              <div className="font-medium text-gray-900 dark:text-white">{project.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{client?.name}</div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
+          ))}
+        </nav>
+
+        {/* New Task Button */}
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+          <Link
+            to="/add-task"
+            className={`flex items-center ${isSidebarOpen ? 'justify-center px-4' : 'justify-center px-2'} py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors`}
+          >
+            <PlusCircle className="w-5 h-5 flex-shrink-0" />
+            {isSidebarOpen && <span className="ml-2">New Task</span>}
+          </Link>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className={`flex-1 flex flex-col ${isSidebarOpen ? 'ml-64' : 'ml-16'} transition-all duration-300`}>
+        {/* Top Header */}
+        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search tasks, clients..."
+              className="pl-10 pr-4 py-1.5 w-full text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearchResults(e.target.value.length > 2);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (searchQuery.length > 2) setShowSearchResults(true);
+              }}
+            />
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && (searchResults.tasks.length > 0 || searchResults.clients.length > 0 || searchResults.projects.length > 0) && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md z-50 max-h-96 overflow-y-auto">
+                {searchResults.tasks.length > 0 && (
+                  <div className="p-2">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">TASKS</h4>
+                    {searchResults.tasks.map(task => {
+                      const client = getClient(task.clientId);
+                      const project = getProject(task.projectId);
+                      return (
+                        <Link
+                          key={task.id}
+                          to={`/edit-task/${task.id}`}
+                          className="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm"
+                          onClick={() => {
+                            setShowSearchResults(false);
+                            setSearchQuery('');
+                          }}
+                        >
+                          <div className="font-medium text-gray-900 dark:text-white truncate">{task.description}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{client?.name} • {project?.name}</div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {searchResults.clients.length > 0 && (
+                  <div className="p-2 border-t dark:border-gray-700">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">CLIENTS</h4>
+                    {searchResults.clients.map(client => (
+                      <Link
+                        key={client.id}
+                        to="/clients"
+                        className="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm"
+                        onClick={() => {
+                          setShowSearchResults(false);
+                          setSearchQuery('');
+                        }}
+                      >
+                        <div className="font-medium text-gray-900 dark:text-white">{client.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">${client.hourlyRate}/hour</div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {searchResults.projects.length > 0 && (
+                  <div className="p-2 border-t dark:border-gray-700">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">PROJECTS</h4>
+                    {searchResults.projects.map(project => {
+                      const client = getClient(project.clientId);
+                      return (
+                        <Link
+                          key={project.id}
+                          to="/projects"
+                          className="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm"
+                          onClick={() => {
+                            setShowSearchResults(false);
+                            setSearchQuery('');
+                          }}
+                        >
+                          <div className="font-medium text-gray-900 dark:text-white">{project.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{client?.name}</div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-              
-              <ThemeToggle />
-              
-              {/* User Profile Button */}
+            )}
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <ThemeToggle />
+
+            {/* User Profile Button */}
+            <button
+              onClick={() => setShowUserProfile(true)}
+              className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="User Profile"
+            >
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-medium ${
+                currentUser?.role === 'admin' ? 'bg-red-500' : 'bg-blue-500'
+              }`}>
+                {currentUser?.username?.charAt(0).toUpperCase()}
+              </div>
+            </button>
+
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              ) : (
+                <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              )}
+            </button>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div className="fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 md:hidden overflow-y-auto">
+            <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
+              <Link to="/" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
+                <img src="/logo - Copy.png" alt="Logo" className="h-8 w-auto" />
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
+              </Link>
               <button
-                onClick={() => setShowUserProfile(true)}
-                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="User Profile"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-                  currentUser?.role === 'admin' ? 'bg-red-500' : 'bg-blue-500'
-                }`}>
-                  {currentUser?.username?.charAt(0).toUpperCase()}
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <nav className="py-4 px-2">
+              {Object.entries(groupedItems).map(([group, items]) => (
+                <div key={group} className="mb-4">
+                  <h3 className="px-3 mb-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {group}
+                  </h3>
+                  <div className="space-y-1">
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${isActive(item.path)}`}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <Icon className="w-5 h-5 flex-shrink-0" />
+                          <span className="ml-3">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              </button>
-              
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              ))}
+            </nav>
+
+            <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+              <Link
+                to="/add-task"
+                className="flex items-center justify-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
-                {isMobileMenuOpen ? (
-                  <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                ) : (
-                  <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                )}
-              </button>
+                <PlusCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="ml-2">New Task</span>
+              </Link>
             </div>
           </div>
-          
-          {/* Mobile menu */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden border-t dark:border-gray-700">
-              <div className="px-2 pt-2 pb-3 space-y-1">
-                <Link 
-                  to="/" 
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>Weekly Dashboard</span>
-                </Link>
-                <Link
-                  to="/fortnight"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/fortnight')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>15-Day Dashboard</span>
-                </Link>
-                <Link
-                  to="/monthly"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/monthly')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Monthly Dashboard</span>
-                </Link>
-                <Link
-                  to="/tasks"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/tasks')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <CheckSquare className="w-4 h-4" />
-                  <span>All Tasks</span>
-                </Link>
-                <Link
-                  to="/kanban"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/kanban')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Columns className="w-4 h-4" />
-                  <span>Kanban Board</span>
-                </Link>
-                <Link 
-                  to="/clients" 
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/clients')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Clients</span>
-                </Link>
-                <Link 
-                  to="/projects" 
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/projects')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Folders className="w-4 h-4" />
-                  <span>Projects</span>
-                </Link>
-                <Link
-                  to="/recurring-tasks"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/recurring-tasks')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Repeat className="w-4 h-4" />
-                  <span>Recurring Tasks</span>
-                </Link>
-                <Link
-                  to="/about"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/about')}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  <span>About</span>
-                </Link>
-                <Link 
-                  to="/add-task" 
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>New Task</span>
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </nav>
+        </>
+      )}
 
       {/* User Profile Modal */}
       {showUserProfile && (
@@ -369,10 +346,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Quick Task Entry */}
       <QuickTaskEntry />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {children}
-      </main>
     </div>
   );
 }
