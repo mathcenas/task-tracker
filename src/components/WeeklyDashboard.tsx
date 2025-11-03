@@ -676,23 +676,13 @@ export function WeeklyDashboard() {
       </div>
 
       <TaskFilters
-        taskFilter={taskFilter}
         priorityFilter={priorityFilter}
         typeFilter={typeFilter}
-        onTaskFilterChange={setTaskFilter}
         onPriorityFilterChange={setPriorityFilter}
         onTypeFilterChange={setTypeFilter}
         onClearFilters={() => {
-          setTaskFilter('all');
           setPriorityFilter('all');
           setTypeFilter('all');
-        }}
-        counts={{
-          allPending: allUnfinishedTasks.length,
-          overdue: overdueTasks.length,
-          today: todayTasks.length,
-          upcoming: upcomingTasks.length,
-          completed: completedTasks.length
         }}
         filteredCount={filteredTasks.length}
       />

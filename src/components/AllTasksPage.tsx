@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Search, Plus, Pencil, Check, X, Download } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
@@ -12,11 +12,9 @@ export function AllTasksPage() {
   const { tasks, getClient, getProject, updateTask } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [clientFilter, setClientFilter] = useState<string>('all');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Force refresh when tasks change
@@ -24,10 +22,6 @@ export function AllTasksPage() {
     setRefreshKey(prev => prev + 1);
   }, [tasks.length]);
 
-  // Get unique clients for filter
-  const clients = [...new Set(tasks.map(task => task.clientId))]
-    .map(clientId => getClient(clientId))
-    .filter(Boolean);
 
   // Categorize tasks
   const allUnfinishedTasks = tasks.filter(task => !task.finished);
@@ -68,27 +62,11 @@ export function AllTasksPage() {
 
   // Apply other filters
   filteredTasks = filteredTasks.filter(task => {
-    const client = getClient(task.clientId);
-    const project = getProject(task.projectId);
-
-    // Search filter
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearch =
-        task.description.toLowerCase().includes(searchLower) ||
-        client?.name.toLowerCase().includes(searchLower) ||
-        project?.name.toLowerCase().includes(searchLower);
-      if (!matchesSearch) return false;
-    }
-
     // Type filter
     if (typeFilter !== 'all' && task.type !== typeFilter) return false;
 
     // Priority filter
     if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
-
-    // Client filter
-    if (clientFilter !== 'all' && task.clientId !== clientFilter) return false;
 
     return true;
   });
@@ -156,11 +134,9 @@ export function AllTasksPage() {
   };
 
   const clearFilters = () => {
-    setSearchQuery('');
     setTaskFilter('all');
     setTypeFilter('all');
     setPriorityFilter('all');
-    setClientFilter('all');
   };
 
   const pendingCount = allUnfinishedTasks.length;
@@ -282,53 +258,16 @@ export function AllTasksPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-lg shadow p-6 dark:bg-gray-800">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search tasks, clients, projects..."
-              className="pl-10 pr-4 py-2.5 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="min-w-[200px]">
-            <select
-              value={clientFilter}
-              onChange={(e) => setClientFilter(e.target.value)}
-              className="w-full py-2.5 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="all">All Clients</option>
-              {clients.map(client => (
-                <option key={client!.id} value={client!.id}>{client!.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
 
-      {/* Task Filters */}
+      {/* Additional Filters */}
       <TaskFilters
-        taskFilter={taskFilter}
         priorityFilter={priorityFilter}
         typeFilter={typeFilter}
-        onTaskFilterChange={setTaskFilter}
         onPriorityFilterChange={setPriorityFilter}
         onTypeFilterChange={setTypeFilter}
         onClearFilters={() => {
-          setTaskFilter('all');
           setPriorityFilter('all');
           setTypeFilter('all');
-        }}
-        counts={{
-          allPending: allUnfinishedTasks.length,
-          overdue: overdueTasks.length,
-          today: todayTasks.length,
-          upcoming: upcomingTasks.length,
-          completed: completedTasks.length
         }}
         filteredCount={filteredTasks.length}
       />
