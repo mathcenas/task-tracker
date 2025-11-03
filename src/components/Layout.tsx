@@ -63,9 +63,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <nav className="bg-white shadow-lg dark:bg-gray-800 dark:border-b dark:border-gray-700">
+      <nav className="bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between h-16">
+          <div className="flex justify-between h-14">
             <div className="flex space-x-8">
               <Link to="/" className="flex items-center space-x-3 text-gray-900 dark:text-white hover:opacity-80 transition-opacity">
                 <img
@@ -73,76 +73,76 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   alt="Company Logo"
                   className="h-10 w-auto"
                 />
-                <span className="font-bold text-lg">TaskTracker Pro</span>
+                <span className="font-semibold text-base">TaskTracker Pro</span>
               </Link>
               
-              <div className="hidden md:flex items-center space-x-4">
+              <div className="hidden md:flex items-center space-x-1">
                 <Link 
                   to="/" 
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/')}`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   <span>Weekly</span>
                 </Link>
                 <Link
                   to="/fortnight"
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/fortnight')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/fortnight')}`}
                 >
                   <Calendar className="w-4 h-4" />
                   <span>15 Days</span>
                 </Link>
                 <Link
                   to="/monthly"
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/monthly')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/monthly')}`}
                 >
                   <Calendar className="w-4 h-4" />
                   <span>Monthly</span>
                 </Link>
                 <Link
                   to="/tasks"
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/tasks')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/tasks')}`}
                 >
                   <CheckSquare className="w-4 h-4" />
                   <span>All Tasks</span>
                 </Link>
                 <Link
                   to="/kanban"
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/kanban')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/kanban')}`}
                 >
                   <Columns className="w-4 h-4" />
                   <span>Kanban</span>
                 </Link>
                 <Link 
                   to="/clients" 
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/clients')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/clients')}`}
                 >
                   <Users className="w-4 h-4" />
                   <span>Clients</span>
                 </Link>
                 <Link 
                   to="/projects" 
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/projects')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/projects')}`}
                 >
                   <Folders className="w-4 h-4" />
                   <span>Projects</span>
                 </Link>
                 <Link
                   to="/recurring-tasks"
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/recurring-tasks')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/recurring-tasks')}`}
                 >
                   <Repeat className="w-4 h-4" />
                   <span>Recurring</span>
                 </Link>
                 <Link
                   to="/about"
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/about')}`}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-sm font-medium ${isActive('/about')}`}
                 >
                   <BarChart3 className="w-4 h-4" />
                   <span>About</span>
                 </Link>
                 <Link 
                   to="/add-task" 
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200`}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600`}
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>New Task</span>
@@ -158,7 +158,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <input
                     type="text"
                     placeholder="Search tasks, clients..."
-                    className="pl-10 pr-4 py-2 w-64 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    className="pl-10 pr-4 py-1.5 w-56 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
@@ -173,7 +173,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 
                 {/* Search Results Dropdown */}
                 {showSearchResults && (searchResults.tasks.length > 0 || searchResults.clients.length > 0 || searchResults.projects.length > 0) && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md z-50 max-h-96 overflow-y-auto">
                     {searchResults.tasks.length > 0 && (
                       <div className="p-2">
                         <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">TASKS</h4>
@@ -370,7 +370,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Quick Task Entry */}
       <QuickTaskEntry />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
     </div>

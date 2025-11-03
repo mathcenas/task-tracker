@@ -116,7 +116,7 @@ export function CalendarSync({ isOpen, onClose }: CalendarSyncProps) {
         <div className="w-[90vw] max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-              <Calendar className="w-6 h-6 text-blue-500 mr-2" />
+              <Calendar className="w-5 h-5 text-blue-500 mr-2" />
               Calendar Sync
             </h3>
             <button

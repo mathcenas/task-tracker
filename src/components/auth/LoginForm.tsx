@@ -68,7 +68,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-md w-full space-y-5">
         <div>
           <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mx-auto mb-6">
             <Clock className="w-8 h-8 text-white" />
@@ -81,7 +81,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">

@@ -41,7 +41,7 @@ export function EditTask() {
   if (!task) {
     return (
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           <p className="text-gray-500 dark:text-gray-400">Task not found</p>
           <button
             onClick={() => navigate('/')}
@@ -101,7 +101,7 @@ export function EditTask() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <button
@@ -110,7 +110,7 @@ export function EditTask() {
             >
               <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Task</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Task</h2>
           </div>
           <button
             onClick={handleDelete}
@@ -130,7 +130,7 @@ export function EditTask() {
           </p>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Task Type

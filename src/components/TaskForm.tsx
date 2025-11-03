@@ -245,8 +245,8 @@ export function TaskForm() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Add New Task</h2>
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Add New Task</h2>
         
         {/* Quick Actions */}
         <div className="mb-6 p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
@@ -288,7 +288,7 @@ export function TaskForm() {
           )}
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Task Type

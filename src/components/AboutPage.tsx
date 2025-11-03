@@ -73,7 +73,7 @@ export function AboutPage() {
   const features = [
     {
       category: "Core Dashboard Features",
-      icon: <BarChart3 className="w-6 h-6 text-blue-500" />,
+      icon: <BarChart3 className="w-5 h-5 text-blue-500" />,
       items: [
         {
           name: "Weekly Dashboard",
@@ -109,7 +109,7 @@ export function AboutPage() {
     },
     {
       category: "Advanced Workflow Features",
-      icon: <Zap className="w-6 h-6 text-yellow-500" />,
+      icon: <Zap className="w-5 h-5 text-yellow-500" />,
       items: [
         {
           name: "Bulk Task Operations",
@@ -173,7 +173,7 @@ export function AboutPage() {
     },
     {
       category: "Task Management System",
-      icon: <Target className="w-6 h-6 text-red-500" />,
+      icon: <Target className="w-5 h-5 text-red-500" />,
       items: [
         {
           name: "Task Types & Categories",
@@ -218,7 +218,7 @@ export function AboutPage() {
     },
     {
       category: "Client Experience & Reporting",
-      icon: <Globe className="w-6 h-6 text-green-500" />,
+      icon: <Globe className="w-5 h-5 text-green-500" />,
       items: [
         {
           name: "Public Client Dashboard",
@@ -264,7 +264,7 @@ export function AboutPage() {
     },
     {
       category: "User Interface & Experience",
-      icon: <Smartphone className="w-6 h-6 text-purple-500" />,
+      icon: <Smartphone className="w-5 h-5 text-purple-500" />,
       items: [
         {
           name: "Modern Design System",
@@ -309,7 +309,7 @@ export function AboutPage() {
     },
     {
       category: "Data Management & Security",
-      icon: <Shield className="w-6 h-6 text-green-500" />,
+      icon: <Shield className="w-5 h-5 text-green-500" />,
       items: [
         {
           name: "Local Data Storage",
@@ -353,29 +353,29 @@ export function AboutPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-5">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-lg p-8 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-8 dark:bg-gray-800">
         <div className="text-center">
           <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mx-auto mb-6">
             <Clock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">TaskTracker Pro</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">TaskTracker Pro</h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
             Professional task management and client reporting system
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalFeatures}</p>
+              <p className="text-xl font-semibold text-blue-600 dark:text-blue-400">{stats.totalFeatures}</p>
               <p className="text-sm text-blue-600 dark:text-blue-400">Features Implemented</p>
             </div>
             <div className="bg-green-50 p-4 rounded-lg dark:bg-green-900/20">
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.categories}</p>
+              <p className="text-xl font-semibold text-green-600 dark:text-green-400">{stats.categories}</p>
               <p className="text-sm text-green-600 dark:text-green-400">Feature Categories</p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20">
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">Enhanced</p>
+              <p className="text-xl font-semibold text-purple-600 dark:text-purple-400">Enhanced</p>
               <p className="text-sm text-purple-600 dark:text-purple-400">Interactive Experience</p>
             </div>
           </div>
@@ -383,7 +383,7 @@ export function AboutPage() {
       </div>
 
       {/* Technology Stack */}
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
           <Zap className="w-5 h-5 text-yellow-500 mr-2" />
           Technology Stack
@@ -400,7 +400,7 @@ export function AboutPage() {
 
       {/* Feature Categories */}
       {features.map((category, categoryIndex) => (
-        <div key={categoryIndex} className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div key={categoryIndex} className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           <div className="flex items-center space-x-3 mb-6">
             {category.icon}
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -446,7 +446,7 @@ export function AboutPage() {
       ))}
 
       {/* Implementation Timeline */}
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
           <Calendar className="w-5 h-5 text-blue-500 mr-2" />
           Development Timeline
@@ -511,7 +511,7 @@ export function AboutPage() {
       </div>
 
       {/* Usage Statistics */}
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
           <BarChart3 className="w-5 h-5 text-purple-500 mr-2" />
           System Capabilities
@@ -542,7 +542,7 @@ export function AboutPage() {
       </div>
 
       {/* Quick Start Guide */}
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
           <Target className="w-5 h-5 text-green-500 mr-2" />
           Quick Start Guide
@@ -617,7 +617,7 @@ export function AboutPage() {
 
       {/* Detailed Features */}
       {features.map((category, categoryIndex) => (
-        <div key={categoryIndex} className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div key={categoryIndex} className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           <div className="flex items-center space-x-3 mb-6">
             {category.icon}
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -625,7 +625,7 @@ export function AboutPage() {
             </h2>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-4">
             {category.items.map((feature, featureIndex) => (
               <div key={featureIndex} className="border-l-4 border-blue-500 pl-4 py-2">
                 <div className="flex items-start space-x-3 mb-3">
@@ -657,7 +657,7 @@ export function AboutPage() {
       ))}
 
       {/* Backup & Restore */}
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
           <Database className="w-5 h-5 text-blue-500 mr-2" />
           Backup & Restore
@@ -667,7 +667,7 @@ export function AboutPage() {
           {/* Export Backup */}
           <div className="border rounded-lg p-6 dark:border-gray-700">
             <div className="flex items-start space-x-3 mb-4">
-              <Download className="w-6 h-6 text-green-500" />
+              <Download className="w-5 h-5 text-green-500" />
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
                   Export Backup
@@ -708,7 +708,7 @@ export function AboutPage() {
           {/* Import Backup */}
           <div className="border rounded-lg p-6 dark:border-gray-700">
             <div className="flex items-start space-x-3 mb-4">
-              <Upload className="w-6 h-6 text-blue-500" />
+              <Upload className="w-5 h-5 text-blue-500" />
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
                   Import Backup

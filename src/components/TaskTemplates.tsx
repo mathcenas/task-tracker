@@ -136,7 +136,7 @@ export function TaskTemplates({ isOpen, onClose, onUseTemplate }: TaskTemplatesP
         <div className="w-[90vw] max-w-4xl max-h-[80vh] rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800 overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-              <Template className="w-6 h-6 text-blue-500 mr-2" />
+              <Template className="w-5 h-5 text-blue-500 mr-2" />
               Task Templates
             </h3>
             <div className="flex items-center space-x-2">

@@ -249,7 +249,7 @@ export function ForthnightDashboard() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Last 15 Days</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Last 15 Days</h1>
           <div className="flex gap-2">
             <button
               onClick={() => setShowCalendarSync(true)}
@@ -292,14 +292,14 @@ export function ForthnightDashboard() {
           className={`text-left p-6 rounded-lg shadow transition-all ${
             selectedCard === 'hours'
               ? 'bg-blue-600 text-white transform scale-105'
-              : 'bg-white dark:bg-gray-800 hover:shadow-lg'
+              : 'bg-white dark:bg-gray-800 hover:border border-gray-200 dark:border-gray-700'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
             <div className={`p-3 rounded-lg ${
               selectedCard === 'hours' ? 'bg-blue-500' : 'bg-blue-100 dark:bg-blue-900/30'
             }`}>
-              <Clock className={`w-6 h-6 ${
+              <Clock className={`w-5 h-5 ${
                 selectedCard === 'hours' ? 'text-white' : 'text-blue-600 dark:text-blue-400'
               }`} />
             </div>
@@ -312,7 +312,7 @@ export function ForthnightDashboard() {
           }`}>
             Total Hours (Completed)
           </h3>
-          <p className={`text-3xl font-bold ${
+          <p className={`text-2xl font-semibold ${
             selectedCard === 'hours' ? 'text-white' : 'text-gray-900 dark:text-white'
           }`}>
             {totalHours.toFixed(1)}
@@ -324,14 +324,14 @@ export function ForthnightDashboard() {
           className={`text-left p-6 rounded-lg shadow transition-all ${
             selectedCard === 'revenue'
               ? 'bg-green-600 text-white transform scale-105'
-              : 'bg-white dark:bg-gray-800 hover:shadow-lg'
+              : 'bg-white dark:bg-gray-800 hover:border border-gray-200 dark:border-gray-700'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
             <div className={`p-3 rounded-lg ${
               selectedCard === 'revenue' ? 'bg-green-500' : 'bg-green-100 dark:bg-green-900/30'
             }`}>
-              <DollarSign className={`w-6 h-6 ${
+              <DollarSign className={`w-5 h-5 ${
                 selectedCard === 'revenue' ? 'text-white' : 'text-green-600 dark:text-green-400'
               }`} />
             </div>
@@ -344,7 +344,7 @@ export function ForthnightDashboard() {
           }`}>
             Total Revenue (Completed)
           </h3>
-          <p className={`text-3xl font-bold ${
+          <p className={`text-2xl font-semibold ${
             selectedCard === 'revenue' ? 'text-white' : 'text-gray-900 dark:text-white'
           }`}>
             ${totalRevenue.toFixed(2)}
@@ -356,14 +356,14 @@ export function ForthnightDashboard() {
           className={`text-left p-6 rounded-lg shadow transition-all ${
             selectedCard === 'pending'
               ? 'bg-orange-600 text-white transform scale-105'
-              : 'bg-white dark:bg-gray-800 hover:shadow-lg'
+              : 'bg-white dark:bg-gray-800 hover:border border-gray-200 dark:border-gray-700'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
             <div className={`p-3 rounded-lg ${
               selectedCard === 'pending' ? 'bg-orange-500' : 'bg-orange-100 dark:bg-orange-900/30'
             }`}>
-              <AlertTriangle className={`w-6 h-6 ${
+              <AlertTriangle className={`w-5 h-5 ${
                 selectedCard === 'pending' ? 'text-white' : 'text-orange-600 dark:text-orange-400'
               }`} />
             </div>
@@ -376,7 +376,7 @@ export function ForthnightDashboard() {
           }`}>
             Pending Tasks
           </h3>
-          <p className={`text-3xl font-bold ${
+          <p className={`text-2xl font-semibold ${
             selectedCard === 'pending' ? 'text-white' : 'text-gray-900 dark:text-white'
           }`}>
             {unfinishedTasks.length}

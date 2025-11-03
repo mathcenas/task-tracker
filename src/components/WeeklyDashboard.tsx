@@ -240,7 +240,7 @@ export function WeeklyDashboard() {
     const modalContent = {
       hours: {
         title: 'Weekly Hours Breakdown',
-        icon: <Clock className="w-6 h-6 text-blue-500" />,
+        icon: <Clock className="w-5 h-5 text-blue-500" />,
         data: weeklyTasks.filter(t => t.type !== 'insumos').map(task => {
           const client = getClient(task.clientId);
           const project = getProject(task.projectId);
@@ -254,7 +254,7 @@ export function WeeklyDashboard() {
       },
       revenue: {
         title: 'Weekly Revenue Breakdown',
-        icon: <DollarSign className="w-6 h-6 text-green-500" />,
+        icon: <DollarSign className="w-5 h-5 text-green-500" />,
         data: weeklyTasks.map(task => {
           const client = getClient(task.clientId);
           const project = getProject(task.projectId);
@@ -271,7 +271,7 @@ export function WeeklyDashboard() {
       },
       pending: {
         title: 'Pending Tasks Analysis',
-        icon: <Target className="w-6 h-6 text-purple-500" />,
+        icon: <Target className="w-5 h-5 text-purple-500" />,
         data: unfinishedTasks.map(task => {
           const client = getClient(task.clientId);
           const project = getProject(task.projectId);
@@ -326,17 +326,17 @@ export function WeeklyDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
                       <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Total Hours</p>
-                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{totalHours.toFixed(1)}h</p>
+                      <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{totalHours.toFixed(1)}h</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg dark:bg-green-900/20">
                       <p className="text-sm text-green-600 font-medium dark:text-green-400">Avg per Task</p>
-                      <p className="text-2xl font-bold text-green-900 dark:text-green-300">
+                      <p className="text-xl font-semibold text-green-900 dark:text-green-300">
                         {content.data.length > 0 ? (totalHours / content.data.length).toFixed(1) : '0'}h
                       </p>
                     </div>
                     <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20">
                       <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Tasks Completed</p>
-                      <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">{content.data.length}</p>
+                      <p className="text-xl font-semibold text-purple-900 dark:text-purple-300">{content.data.length}</p>
                     </div>
                   </div>
                   
@@ -369,17 +369,17 @@ export function WeeklyDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-green-50 p-4 rounded-lg dark:bg-green-900/20">
                       <p className="text-sm text-green-600 font-medium dark:text-green-400">Total Revenue</p>
-                      <p className="text-2xl font-bold text-green-900 dark:text-green-300">${totalRevenue.toFixed(2)}</p>
+                      <p className="text-xl font-semibold text-green-900 dark:text-green-300">${totalRevenue.toFixed(2)}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
                       <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Service Revenue</p>
-                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">
+                      <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">
                         ${content.data.filter(t => t.revenue > 0).reduce((sum, t) => sum + t.revenue, 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20">
                       <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supply Costs</p>
-                      <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">
+                      <p className="text-xl font-semibold text-purple-900 dark:text-purple-300">
                         ${Math.abs(content.data.filter(t => t.revenue < 0).reduce((sum, t) => sum + t.revenue, 0)).toFixed(2)}
                       </p>
                     </div>
@@ -426,15 +426,15 @@ export function WeeklyDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-red-50 p-4 rounded-lg dark:bg-red-900/20">
                       <p className="text-sm text-red-600 font-medium dark:text-red-400">Overdue</p>
-                      <p className="text-2xl font-bold text-red-900 dark:text-red-300">{overdueTasks.length}</p>
+                      <p className="text-xl font-semibold text-red-900 dark:text-red-300">{overdueTasks.length}</p>
                     </div>
                     <div className="bg-yellow-50 p-4 rounded-lg dark:bg-yellow-900/20">
                       <p className="text-sm text-yellow-600 font-medium dark:text-yellow-400">Due Today</p>
-                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-300">{todayTasks.length}</p>
+                      <p className="text-xl font-semibold text-yellow-900 dark:text-yellow-300">{todayTasks.length}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
                       <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Upcoming</p>
-                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{upcomingTasks.length}</p>
+                      <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{upcomingTasks.length}</p>
                     </div>
                   </div>
                   
@@ -513,9 +513,9 @@ export function WeeklyDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Quick Actions Bar */}
-      <div className="bg-white rounded-lg shadow-lg p-4 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-4 dark:bg-gray-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <h3 className="font-medium text-gray-900 dark:text-white">Quick Actions</h3>
@@ -587,14 +587,14 @@ export function WeeklyDashboard() {
       {/* Weekly Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div 
-          className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
           onClick={() => setSelectedCard('hours')}
         >
           <div className="flex items-center">
             <Clock className="w-8 h-8 text-blue-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">This Week</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalHours.toFixed(1)}h</p>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white">{totalHours.toFixed(1)}h</p>
               <p className="text-xs text-blue-600 dark:text-blue-400">
                 Click for breakdown • {completionRate.toFixed(0)}% completion
               </p>
@@ -602,14 +602,14 @@ export function WeeklyDashboard() {
           </div>
         </div>
         <div 
-          className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
           onClick={() => setSelectedCard('revenue')}
         >
           <div className="flex items-center">
             <TrendingUp className="w-8 h-8 text-green-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Revenue</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalRevenue.toFixed(0)}</p>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white">${totalRevenue.toFixed(0)}</p>
               <p className="text-xs text-green-600 dark:text-green-400">
                 Click for breakdown • ${(totalRevenue / (totalHours || 1)).toFixed(0)}/hour avg
               </p>
@@ -617,14 +617,14 @@ export function WeeklyDashboard() {
           </div>
         </div>
         <div 
-          className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
           onClick={() => setSelectedCard('pending')}
         >
           <div className="flex items-center">
             <Target className="w-8 h-8 text-purple-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
               <p className="text-xs text-purple-600 dark:text-purple-400">
                 Click for analysis • {overdueTasks.length} overdue, {todayTasks.length} today
               </p>
@@ -657,7 +657,7 @@ export function WeeklyDashboard() {
 
       {/* Priority Tasks Section */}
       {(overdueTasks.length > 0 || todayTasks.length > 0) && taskFilter === 'all' && (
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
               <Zap className="w-5 h-5 text-yellow-500 mr-2" />
@@ -749,7 +749,7 @@ export function WeeklyDashboard() {
       )}
 
       {unfinishedTasks.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
               <AlertTriangle className="w-5 h-5 text-yellow-500 mr-2" />
@@ -843,7 +843,7 @@ export function WeeklyDashboard() {
 
       {/* Active Projects Dashboard */}
       {activeProjects.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
               <Folder className="w-5 h-5 text-blue-500 mr-2" />
@@ -922,9 +922,9 @@ export function WeeklyDashboard() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             This Week's Completed Tasks
           </h2>
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -937,11 +937,11 @@ export function WeeklyDashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{totalHours.toFixed(1)}</p>
+                  <p className="text-xl font-semibold text-green-600 dark:text-green-400">{totalHours.toFixed(1)}</p>
                   <p className="text-xs text-green-600 dark:text-green-400">Hours</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">${totalRevenue.toFixed(0)}</p>
+                  <p className="text-xl font-semibold text-green-600 dark:text-green-400">${totalRevenue.toFixed(0)}</p>
                   <p className="text-xs text-green-600 dark:text-green-400">Revenue</p>
                 </div>
               </div>

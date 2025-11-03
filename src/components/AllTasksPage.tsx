@@ -164,11 +164,11 @@ export function AllTasksPage() {
   const overdueCount = overdueTasks.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Tasks</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">All Tasks</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Complete task management and to-do list
           </p>
@@ -198,7 +198,7 @@ export function AllTasksPage() {
             <Clock className="w-8 h-8 text-blue-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{tasks.length}</p>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white">{tasks.length}</p>
             </div>
           </div>
         </div>
@@ -207,7 +207,7 @@ export function AllTasksPage() {
             <AlertTriangle className="w-8 h-8 text-yellow-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{pendingCount}</p>
+              <p className="text-xl font-semibold text-yellow-600 dark:text-yellow-400">{pendingCount}</p>
             </div>
           </div>
         </div>
@@ -216,7 +216,7 @@ export function AllTasksPage() {
             <CheckCircle className="w-8 h-8 text-green-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{completedCount}</p>
+              <p className="text-xl font-semibold text-green-600 dark:text-green-400">{completedCount}</p>
             </div>
           </div>
         </div>
@@ -225,7 +225,7 @@ export function AllTasksPage() {
             <Calendar className="w-8 h-8 text-red-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{overdueCount}</p>
+              <p className="text-xl font-semibold text-red-600 dark:text-red-400">{overdueCount}</p>
             </div>
           </div>
         </div>

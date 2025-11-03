@@ -25,36 +25,35 @@
 
 @layer components {
   .input-base {
-    @apply mt-1 block w-full rounded-lg border-gray-300 shadow-sm 
-           focus:border-primary-500 focus:ring-primary-500 
+    @apply mt-1 block w-full rounded-md border-gray-300
+           focus:border-blue-500 focus:ring-1 focus:ring-blue-500
            dark:border-gray-600 dark:bg-gray-700 dark:text-white;
   }
 
   .btn-primary {
-    @apply inline-flex items-center px-4 py-2 border border-transparent 
-           rounded-lg shadow-sm text-sm font-medium text-white 
-           bg-primary-600 hover:bg-primary-700 
-           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 
-           dark:bg-primary-500 dark:hover:bg-primary-600;
+    @apply inline-flex items-center px-3 py-1.5 border border-transparent
+           rounded-md text-sm font-medium text-white
+           bg-blue-600 hover:bg-blue-700
+           focus:outline-none focus:ring-2 focus:ring-blue-500
+           dark:bg-blue-500 dark:hover:bg-blue-600;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center px-4 py-2 border border-gray-300 
-           rounded-lg shadow-sm text-sm font-medium text-gray-700 
-           bg-white hover:bg-gray-50 
-           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 
+    @apply inline-flex items-center px-3 py-1.5 border border-gray-300
+           rounded-md text-sm font-medium text-gray-700
+           bg-white hover:bg-gray-50
+           focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600;
   }
 
   .card {
-    @apply bg-white rounded-lg shadow-soft p-6 
-           transition-all duration-200 ease-in-out 
-           dark:bg-gray-800 dark:shadow-none;
+    @apply bg-white rounded-lg border border-gray-200 p-4
+           dark:bg-gray-800 dark:border-gray-700;
   }
 
   .card-hover {
-    @apply hover:shadow-lg hover:scale-[1.01] 
-           dark:hover:bg-gray-750;
+    @apply hover:border-gray-300
+           dark:hover:border-gray-600;
   }
 }
 

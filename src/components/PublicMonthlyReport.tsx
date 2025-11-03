@@ -20,7 +20,7 @@ export function PublicMonthlyReport() {
           <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-lg mx-auto mb-6 dark:bg-red-900/20">
             <AlertTriangle className="w-8 h-8 text-red-500" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Invalid Report URL</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Invalid Report URL</h1>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             The URL format should be: <br />
             <code className="bg-gray-100 px-2 py-1 rounded text-sm dark:bg-gray-800">
@@ -47,12 +47,12 @@ export function PublicMonthlyReport() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg shadow-lg p-8 dark:bg-gray-800">
+          <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-8 dark:bg-gray-800">
             <div className="text-center mb-8">
               <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mx-auto mb-6">
                 <Clock className="w-8 h-8 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">TaskTracker Pro</h1>
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">TaskTracker Pro</h1>
               <p className="text-gray-600 dark:text-gray-400 mb-2">
                 Access Denied
               </p>
@@ -71,7 +71,7 @@ export function PublicMonthlyReport() {
               <div className="mt-8">
                 <a
                   href="/about"
-                  className="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Learn About TaskTracker Pro
@@ -387,10 +387,10 @@ export function PublicMonthlyReport() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                <Clock className="w-6 h-6 text-white" />
+                <Clock className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">TaskTracker Pro</h1>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">TaskTracker Pro</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Client Dashboard</p>
               </div>
             </div>
@@ -430,7 +430,7 @@ export function PublicMonthlyReport() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+        <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           {/* Client Info & Month Navigation */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 space-y-4 lg:space-y-0">
             <div>
@@ -489,7 +489,7 @@ export function PublicMonthlyReport() {
                     <Clock className="w-8 h-8 text-blue-500 mr-3" />
                     <div>
                       <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Service Hours</p>
-                      <p className="text-3xl font-bold text-blue-900 dark:text-blue-300">{clientStats.totalHours.toFixed(1)}</p>
+                      <p className="text-2xl font-semibold text-blue-900 dark:text-blue-300">{clientStats.totalHours.toFixed(1)}</p>
                       <p className="text-xs text-blue-600 dark:text-blue-400">
                         {monthlyTasks.filter(t => t.type !== 'insumos').length} service tasks
                       </p>
@@ -501,7 +501,7 @@ export function PublicMonthlyReport() {
                     <DollarSign className="w-8 h-8 text-green-500 mr-3" />
                     <div>
                       <p className="text-sm text-green-600 font-medium dark:text-green-400">Service Total</p>
-                      <p className="text-3xl font-bold text-green-900 dark:text-green-300">${clientStats.serviceRevenue.toFixed(0)}</p>
+                      <p className="text-2xl font-semibold text-green-900 dark:text-green-300">${clientStats.serviceRevenue.toFixed(0)}</p>
                       <p className="text-xs text-green-600 dark:text-green-400">
                         ${(clientStats.serviceRevenue / (clientStats.totalHours || 1)).toFixed(0)}/hour rate
                       </p>
@@ -513,7 +513,7 @@ export function PublicMonthlyReport() {
                     <Package className="w-8 h-8 text-purple-500 mr-3" />
                     <div>
                       <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supplies Cost</p>
-                      <p className="text-3xl font-bold text-purple-900 dark:text-purple-300">${clientStats.suppliesCost.toFixed(0)}</p>
+                      <p className="text-2xl font-semibold text-purple-900 dark:text-purple-300">${clientStats.suppliesCost.toFixed(0)}</p>
                       <p className="text-xs text-purple-600 dark:text-purple-400">
                         {clientStats.suppliesCount} supply items
                       </p>
@@ -531,14 +531,14 @@ export function PublicMonthlyReport() {
                     <div className="bg-red-50 p-4 rounded-lg dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
-                          <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+                          <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
                           <div>
                             <p className="text-sm font-semibold text-red-700 dark:text-red-400">Incidents</p>
                             <p className="text-xs text-red-600 dark:text-red-500">Issues & Problems</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-red-900 dark:text-red-300">{clientStats.incidentCount}</p>
+                          <p className="text-xl font-semibold text-red-900 dark:text-red-300">{clientStats.incidentCount}</p>
                           <p className="text-xs text-red-600 dark:text-red-400">tasks</p>
                         </div>
                       </div>
@@ -566,14 +566,14 @@ export function PublicMonthlyReport() {
                     <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
-                          <FileText className="w-6 h-6 text-blue-500 mr-2" />
+                          <FileText className="w-5 h-5 text-blue-500 mr-2" />
                           <div>
                             <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Requests</p>
                             <p className="text-xs text-blue-600 dark:text-blue-500">Planned Work</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{clientStats.requestCount}</p>
+                          <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{clientStats.requestCount}</p>
                           <p className="text-xs text-blue-600 dark:text-blue-400">tasks</p>
                         </div>
                       </div>

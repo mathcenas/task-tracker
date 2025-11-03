@@ -78,10 +78,10 @@ export function MonthlyDashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+    <div className="space-y-4">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Monthly Overview</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Monthly Overview</h2>
           <div className="flex items-center space-x-4">
             <button
               onClick={() => exportTasksToCSV(monthlyTasks, getClient, getProject, `monthly-tasks-${format(currentDate, 'yyyy-MM')}.csv`)}
@@ -114,7 +114,7 @@ export function MonthlyDashboard() {
               <Clock className="w-8 h-8 text-blue-500 mr-3" />
               <div>
                 <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Service Hours</p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{totalHours.toFixed(1)}</p>
+                <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{totalHours.toFixed(1)}</p>
               </div>
             </div>
           </div>
@@ -123,7 +123,7 @@ export function MonthlyDashboard() {
               <TrendingUp className="w-8 h-8 text-green-500 mr-3" />
               <div>
                 <p className="text-sm text-green-600 font-medium dark:text-green-400">Revenue</p>
-                <p className="text-2xl font-bold text-green-900 dark:text-green-300">${serviceRevenue.toFixed(0)}</p>
+                <p className="text-xl font-semibold text-green-900 dark:text-green-300">${serviceRevenue.toFixed(0)}</p>
               </div>
             </div>
           </div>
@@ -132,7 +132,7 @@ export function MonthlyDashboard() {
               <Package className="w-8 h-8 text-purple-500 mr-3" />
               <div>
                 <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supplies</p>
-                <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${suppliesCost.toFixed(0)}</p>
+                <p className="text-xl font-semibold text-purple-900 dark:text-purple-300">${suppliesCost.toFixed(0)}</p>
               </div>
             </div>
           </div>

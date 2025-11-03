@@ -137,7 +137,7 @@ export function KanbanBoard() {
         <div
           draggable
           onDragStart={handleCardDragStart}
-          className={`p-4 rounded-lg border-l-4 ${getPriorityColor(task.priority)} cursor-move hover:shadow-md transition-all duration-200`}
+          className={`p-3 rounded-md border-l-4 ${getPriorityColor(task.priority)} cursor-move hover:border-gray-300 dark:hover:border-gray-600`}
         >
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1">
@@ -183,19 +183,16 @@ export function KanbanBoard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Kanban Board</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Drag and drop tasks to update their status
-          </p>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Kanban Board</h1>
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
         >
-          <Filter className="w-5 h-5 mr-2" />
+          <Filter className="w-4 h-4 mr-1.5" />
           Filters
           {(filterClient !== 'all' || filterProject !== 'all') && (
             <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
@@ -206,7 +203,7 @@ export function KanbanBoard() {
       </div>
 
       {showFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium text-gray-900 dark:text-white">Filters</h3>
             <button
@@ -227,7 +224,7 @@ export function KanbanBoard() {
                   setFilterClient(e.target.value);
                   setFilterProject('all');
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
               >
                 <option value="all">All Clients</option>
                 {clients.map(client => (
@@ -243,7 +240,7 @@ export function KanbanBoard() {
               <select
                 value={filterProject}
                 onChange={(e) => setFilterProject(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                 disabled={filterClient === 'all'}
               >
                 <option value="all">All Projects</option>
@@ -256,29 +253,29 @@ export function KanbanBoard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {columns.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
           return (
             <div
               key={column.id}
-              className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4"
+              className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md p-3"
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(column.id)}
             >
-              <div className={`flex items-center space-x-2 mb-4 pb-3 border-b-2 ${column.bgColor} rounded-lg p-3`}>
+              <div className={`flex items-center space-x-2 mb-3 pb-2 border-b ${column.color}`}>
                 <div className={column.color}>
                   {column.icon}
                 </div>
-                <h3 className={`font-semibold ${column.color}`}>
+                <h3 className={`font-medium text-sm ${column.color}`}>
                   {column.title}
                 </h3>
-                <span className={`ml-auto px-2 py-1 ${column.bgColor} ${column.color} rounded-full text-xs font-medium`}>
+                <span className={`ml-auto px-1.5 py-0.5 ${column.bgColor} ${column.color} rounded text-xs`}>
                   {columnTasks.length}
                 </span>
               </div>
 
-              <div className="space-y-3 min-h-[200px]">
+              <div className="space-y-2 min-h-[200px]">
                 {columnTasks.length === 0 ? (
                   <p className="text-center text-gray-400 dark:text-gray-500 text-sm py-8">
                     No tasks

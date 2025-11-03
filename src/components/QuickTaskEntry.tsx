@@ -63,10 +63,10 @@ export function QuickTaskEntry() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center z-40 transition-all duration-200 hover:scale-110"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center z-40 transition-all duration-200 hover:scale-110"
         title="Quick Add Task (Ctrl/Cmd + K)"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-5 h-5" />
       </button>
 
       {isOpen && (
@@ -75,8 +75,8 @@ export function QuickTaskEntry() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
-                  <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Quick Add Task</h2>
+                  <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick Add Task</h2>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}

@@ -81,7 +81,7 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
         <div className="w-[90vw] max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-              <CheckSquare className="w-6 h-6 text-blue-500 mr-2" />
+              <CheckSquare className="w-5 h-5 text-blue-500 mr-2" />
               Bulk Operations ({selectedTasks.length} tasks)
             </h3>
             <button
@@ -97,15 +97,15 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Selected</p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{selectedTasks.length}</p>
+                <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{selectedTasks.length}</p>
               </div>
               <div>
                 <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Pending</p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{pendingTasks.length}</p>
+                <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{pendingTasks.length}</p>
               </div>
               <div>
                 <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Est. Revenue</p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">${totalEstimatedRevenue.toFixed(0)}</p>
+                <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">${totalEstimatedRevenue.toFixed(0)}</p>
               </div>
               <div>
                 <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Types</p>

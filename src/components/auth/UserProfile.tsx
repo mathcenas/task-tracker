@@ -62,7 +62,7 @@ export function UserProfile({ onClose }: UserProfileProps) {
         <div className="w-[90vw] max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-              <User className="w-6 h-6 text-blue-500 mr-2" />
+              <User className="w-5 h-5 text-blue-500 mr-2" />
               User Profile
             </h3>
             <button

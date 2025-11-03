@@ -284,10 +284,10 @@ export function RecurringTasksPage() {
   const newTaskProjects = isCreating ? projects.filter(p => p.clientId === newTask.clientId) : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center">
             <Repeat className="w-8 h-8 mr-3 text-purple-600 dark:text-purple-400" />
             Recurring Tasks
           </h1>
@@ -305,7 +305,7 @@ export function RecurringTasksPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -358,9 +358,9 @@ export function RecurringTasksPage() {
 
       {/* Create New Form */}
       {isCreating && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Recurring Task</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create New Recurring Task</h2>
             <button onClick={() => setIsCreating(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
               <X className="w-5 h-5" />
             </button>
@@ -553,7 +553,7 @@ export function RecurringTasksPage() {
       )}
 
       {/* Tasks Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-gray-500 dark:text-gray-400">
             Loading recurring tasks...
@@ -567,22 +567,22 @@ export function RecurringTasksPage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Task
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Client / Project
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Schedule
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Next Due
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -680,7 +680,7 @@ export function RecurringTasksPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Recurring Task</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Recurring Task</h2>
                 <button onClick={() => setEditingTask(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                   <X className="w-5 h-5" />
                 </button>

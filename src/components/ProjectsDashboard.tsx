@@ -55,34 +55,34 @@ export function ProjectsDashboard() {
   const completedProjects = projects.filter(p => p.status === 'completed').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Projects</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{totalProjects}</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-2">{totalProjects}</p>
             </div>
             <Folder className="w-12 h-12 text-blue-500 opacity-20" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Projects</p>
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">{activeProjects}</p>
+              <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400 mt-2">{activeProjects}</p>
             </div>
             <Clock className="w-12 h-12 text-blue-500 opacity-20" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed</p>
-              <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-2">{completedProjects}</p>
+              <p className="text-2xl font-semibold text-green-600 dark:text-green-400 mt-2">{completedProjects}</p>
             </div>
             <CheckCircle className="w-12 h-12 text-green-500 opacity-20" />
           </div>
@@ -90,10 +90,10 @@ export function ProjectsDashboard() {
       </div>
 
       {/* Projects by Client with Kanban View */}
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Projects Overview</h2>
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Projects Overview</h2>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {clients.map(client => {
             const clientProjects = projects.filter(p => p.clientId === client.id);
 
@@ -119,7 +119,7 @@ export function ProjectsDashboard() {
             return (
               <div key={client.id} className="border-b pb-6 last:border-b-0 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {client.name}
                   </h3>
                   <div className="text-right">

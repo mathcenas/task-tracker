@@ -354,9 +354,9 @@ export function ClientDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Client Dashboard</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Client Dashboard</h2>
         <Link
           to="/add-client"
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
@@ -366,7 +366,7 @@ export function ClientDashboard() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
+      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
         <div className="mb-6">
           <label htmlFor="clientSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Select Client
@@ -492,7 +492,7 @@ export function ClientDashboard() {
                   <Clock className="w-8 h-8 text-blue-500 mr-3" />
                   <div>
                     <p className="text-sm text-blue-600 font-medium dark:text-blue-400">This Month</p>
-                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{clientStats.totalHours.toFixed(1)}h</p>
+                    <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{clientStats.totalHours.toFixed(1)}h</p>
                     <p className="text-xs text-blue-600 dark:text-blue-400">
                       {monthlyTasks.filter(t => t.type !== 'insumos').length} service tasks
                     </p>
@@ -504,7 +504,7 @@ export function ClientDashboard() {
                   <DollarSign className="w-8 h-8 text-green-500 mr-3" />
                   <div>
                     <p className="text-sm text-green-600 font-medium dark:text-green-400">Service Revenue</p>
-                    <p className="text-2xl font-bold text-green-900 dark:text-green-300">${clientStats.serviceRevenue.toFixed(0)}</p>
+                    <p className="text-xl font-semibold text-green-900 dark:text-green-300">${clientStats.serviceRevenue.toFixed(0)}</p>
                     <p className="text-xs text-green-600 dark:text-green-400">
                       ${(clientStats.serviceRevenue / (clientStats.totalHours || 1)).toFixed(0)}/hour
                     </p>
@@ -516,7 +516,7 @@ export function ClientDashboard() {
                   <Package className="w-8 h-8 text-purple-500 mr-3" />
                   <div>
                     <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supplies Cost</p>
-                    <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${clientStats.suppliesCost.toFixed(0)}</p>
+                    <p className="text-xl font-semibold text-purple-900 dark:text-purple-300">${clientStats.suppliesCost.toFixed(0)}</p>
                     <p className="text-xs text-purple-600 dark:text-purple-400">
                       {clientStats.suppliesCount} supply items
                     </p>
@@ -527,21 +527,21 @@ export function ClientDashboard() {
 
             {/* Incident vs Request Breakdown */}
             {(clientStats.incidentCount > 0 || clientStats.requestCount > 0) && (
-              <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 mb-6 dark:bg-gray-800">
+              <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-6 dark:bg-gray-800">
                 <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Service Type Breakdown</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {/* Incidents */}
                   <div className="bg-red-50 p-4 rounded-lg dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center">
-                        <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+                        <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
                         <div>
                           <p className="text-sm font-semibold text-red-700 dark:text-red-400">Incidents</p>
                           <p className="text-xs text-red-600 dark:text-red-500">Issues & Problems</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-red-900 dark:text-red-300">{clientStats.incidentCount}</p>
+                        <p className="text-xl font-semibold text-red-900 dark:text-red-300">{clientStats.incidentCount}</p>
                         <p className="text-xs text-red-600 dark:text-red-400">tasks</p>
                       </div>
                     </div>
@@ -569,14 +569,14 @@ export function ClientDashboard() {
                   <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center">
-                        <FileText className="w-6 h-6 text-blue-500 mr-2" />
+                        <FileText className="w-5 h-5 text-blue-500 mr-2" />
                         <div>
                           <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Requests</p>
                           <p className="text-xs text-blue-600 dark:text-blue-500">Planned Work</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{clientStats.requestCount}</p>
+                        <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{clientStats.requestCount}</p>
                         <p className="text-xs text-blue-600 dark:text-blue-400">tasks</p>
                       </div>
                     </div>
@@ -605,7 +605,7 @@ export function ClientDashboard() {
             
             {/* 6-Month Trend Chart */}
             {selectedClientData && trendData.some(d => d.hours > 0) && (
-              <div className="bg-white rounded-lg shadow-lg p-6 mb-6 dark:bg-gray-800">
+              <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 mb-6 dark:bg-gray-800">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                     <BarChart3 className="w-5 h-5 text-blue-500 mr-2" />
