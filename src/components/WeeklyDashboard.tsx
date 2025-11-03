@@ -23,7 +23,7 @@ export function WeeklyDashboard() {
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed'>('all');
+  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
 
@@ -82,6 +82,10 @@ export function WeeklyDashboard() {
     filteredTasks = upcomingTasks;
   } else if (taskFilter === 'completed') {
     filteredTasks = completedTasks;
+  } else if (taskFilter === 'in_progress') {
+    filteredTasks = tasks.filter(task => !task.finished && task.status === 'in_progress');
+  } else if (taskFilter === 'not_started') {
+    filteredTasks = tasks.filter(task => !task.finished && task.status === 'not_started');
   } else if (taskFilter === 'all') {
     filteredTasks = allUnfinishedTasks;
   }
@@ -584,51 +588,89 @@ export function WeeklyDashboard() {
         </div>
       </div>
 
-      {/* Weekly Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div 
-          className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
-          onClick={() => setSelectedCard('hours')}
+      {/* Task Status Filter Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'all'
+              ? 'border-blue-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('all')}
         >
-          <div className="flex items-center">
-            <Clock className="w-8 h-8 text-blue-500 mr-3" />
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">This Week</p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white">{totalHours.toFixed(1)}h</p>
-              <p className="text-xs text-blue-600 dark:text-blue-400">
-                Click for breakdown • {completionRate.toFixed(0)}% completion
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Click to view all
               </p>
             </div>
+            <FileText className="w-8 h-8 text-blue-500" />
           </div>
         </div>
-        <div 
-          className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
-          onClick={() => setSelectedCard('revenue')}
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'in_progress'
+              ? 'border-yellow-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('in_progress')}
         >
-          <div className="flex items-center">
-            <TrendingUp className="w-8 h-8 text-green-500 mr-3" />
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Revenue</p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white">${totalRevenue.toFixed(0)}</p>
-              <p className="text-xs text-green-600 dark:text-green-400">
-                Click for breakdown • ${(totalRevenue / (totalHours || 1)).toFixed(0)}/hour avg
+              <p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                {tasks.filter(t => !t.finished && t.status === 'in_progress').length}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Active tasks
               </p>
             </div>
+            <Clock className="w-8 h-8 text-yellow-500" />
           </div>
         </div>
-        <div 
-          className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
-          onClick={() => setSelectedCard('pending')}
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'not_started'
+              ? 'border-orange-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('not_started')}
         >
-          <div className="flex items-center">
-            <Target className="w-8 h-8 text-purple-500 mr-3" />
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
-              <p className="text-xs text-purple-600 dark:text-purple-400">
-                Click for analysis • {overdueTasks.length} overdue, {todayTasks.length} today
+              <p className="text-sm text-gray-500 dark:text-gray-400">Not Started</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                {tasks.filter(t => !t.finished && t.status === 'not_started').length}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Pending tasks
               </p>
             </div>
+            <AlertTriangle className="w-8 h-8 text-orange-500" />
+          </div>
+        </div>
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'completed'
+              ? 'border-green-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('completed')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{completedTasks.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Finished tasks
+              </p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
         </div>
       </div>
