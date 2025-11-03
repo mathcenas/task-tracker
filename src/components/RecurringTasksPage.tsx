@@ -629,10 +629,10 @@ export function RecurringTasksPage() {
                         {task.estimatedCost && <div className="text-gray-500 dark:text-gray-400">${task.estimatedCost}</div>}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                        {format(new Date(task.nextDue), 'MMM d, yyyy')}
+                        {format(new Date(task.nextDue + 'T00:00:00'), 'MMM d, yyyy')}
                         {task.lastGenerated && (
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Last: {format(new Date(task.lastGenerated), 'MMM d')}
+                            Last: {format(new Date(task.lastGenerated + 'T00:00:00'), 'MMM d')}
                           </div>
                         )}
                       </td>
