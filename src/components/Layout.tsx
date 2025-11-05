@@ -86,22 +86,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid backup file format');
       }
 
-      const meta = backup.metadata;
-      if (meta) {
-        const confirmMsg = `Import backup with:\n\n` +
-          `📊 Total Records: ${meta.totalRecords}\n` +
-          `👥 Clients: ${meta.totalClients}\n` +
-          `📁 Projects: ${meta.totalProjects}\n` +
-          `✓ Tasks: ${meta.totalTasks}\n\n` +
-          `📅 ${new Date(backup.exportDate).toLocaleString()}\n` +
-          `Version: ${backup.version}\n\n` +
-          `Continue?`;
+      // Show preview with metadata if available (v2.0+) or calculate counts (v1.0)
+      const meta = backup.metadata || {
+        totalClients: backup.data.clients?.length || 0,
+        totalProjects: backup.data.projects?.length || 0,
+        totalTasks: backup.data.tasks?.length || 0,
+        totalRecurringTasks: backup.data.recurringTasks?.length || 0,
+        totalTaskTemplates: backup.data.taskTemplates?.length || 0,
+        totalRecords: (backup.data.clients?.length || 0) +
+                      (backup.data.projects?.length || 0) +
+                      (backup.data.tasks?.length || 0) +
+                      (backup.data.recurringTasks?.length || 0) +
+                      (backup.data.taskTemplates?.length || 0)
+      };
 
-        if (!confirm(confirmMsg)) {
-          event.target.value = '';
-          setIsImporting(false);
-          return;
-        }
+      const confirmMsg = `Import backup with:\n\n` +
+        `📊 Total Records: ${meta.totalRecords}\n` +
+        `👥 Clients: ${meta.totalClients}\n` +
+        `📁 Projects: ${meta.totalProjects}\n` +
+        `✓ Tasks: ${meta.totalTasks}\n` +
+        `🔄 Recurring: ${meta.totalRecurringTasks}\n` +
+        `📋 Templates: ${meta.totalTaskTemplates}\n\n` +
+        `📅 ${new Date(backup.exportDate).toLocaleString()}\n` +
+        `Version: ${backup.version}\n\n` +
+        `Continue?`;
+
+      if (!confirm(confirmMsg)) {
+        event.target.value = '';
+        setIsImporting(false);
+        return;
       }
 
       await api.importBackup(backup);
