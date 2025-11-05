@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import UptimeKumaService from './uptime-kuma-service.js';
 
 const { verbose } = sqlite3;
 const __filename = fileURLToPath(import.meta.url);
@@ -116,6 +117,21 @@ const initDB = () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS uptime_kuma_config (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      enabled BOOLEAN DEFAULT 0,
+      url TEXT,
+      username TEXT,
+      password TEXT,
+      create_tasks_on_down BOOLEAN DEFAULT 1,
+      create_tasks_on_up BOOLEAN DEFAULT 0,
+      auto_assign_client TEXT,
+      auto_assign_project TEXT,
+      min_downtime_seconds INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`
   ];
 
@@ -942,10 +958,61 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Uptime Kuma Integration
+const uptimeKumaService = new UptimeKumaService(db);
+
+// Uptime Kuma API endpoints
+app.get('/api/uptime-kuma/config', authenticateToken, async (req, res) => {
+  try {
+    const config = await uptimeKumaService.loadConfig();
+    // Don't send password to frontend
+    const { password, ...safeConfig } = config;
+    res.json(safeConfig);
+  } catch (error) {
+    console.error('Error loading Uptime Kuma config:', error);
+    res.status(500).json({ error: 'Failed to load configuration' });
+  }
+});
+
+app.post('/api/uptime-kuma/config', authenticateToken, async (req, res) => {
+  try {
+    const config = req.body;
+    await uptimeKumaService.saveConfig(config);
+
+    // Reconnect if configuration changed
+    await uptimeKumaService.reconnect();
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving Uptime Kuma config:', error);
+    res.status(500).json({ error: 'Failed to save configuration' });
+  }
+});
+
+app.get('/api/uptime-kuma/status', authenticateToken, (req, res) => {
+  const status = uptimeKumaService.getStatus();
+  res.json(status);
+});
+
+app.post('/api/uptime-kuma/connect', authenticateToken, async (req, res) => {
+  try {
+    await uptimeKumaService.connect();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error connecting to Uptime Kuma:', error);
+    res.status(500).json({ error: 'Failed to connect' });
+  }
+});
+
+app.post('/api/uptime-kuma/disconnect', authenticateToken, (req, res) => {
+  uptimeKumaService.disconnect();
+  res.json({ success: true });
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('/app/dist'));
-  
+
   app.get('*', (req, res) => {
     res.sendFile('/app/dist/index.html');
   });
@@ -953,11 +1020,19 @@ if (process.env.NODE_ENV === 'production') {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Auto-connect to Uptime Kuma on startup
+  setTimeout(() => {
+    uptimeKumaService.connect().catch(err => {
+      console.error('Failed to auto-connect to Uptime Kuma:', err);
+    });
+  }, 3000);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down server...');
+  uptimeKumaService.disconnect();
   db.close((err) => {
     if (err) {
       console.error('Error closing database:', err);

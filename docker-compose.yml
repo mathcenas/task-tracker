@@ -23,6 +23,25 @@ services:
       start_period: 40s
     security_opt:
       - no-new-privileges:true
+    networks:
+      - app-network
+
+  # Example: Uptime Kuma integration (uncomment to use)
+  # uptime-kuma:
+  #   image: louislam/uptime-kuma:latest
+  #   container_name: uptime-kuma
+  #   ports:
+  #     - "3001:3001"
+  #   volumes:
+  #     - uptime_kuma_data:/app/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   tasktracker_data:
+  # uptime_kuma_data:  # Uncomment if using Uptime Kuma

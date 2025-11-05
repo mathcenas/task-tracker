@@ -457,6 +457,34 @@ class ApiService {
   async healthCheck() {
     return this.request('/health');
   }
+
+  // Uptime Kuma Integration
+  async getUptimeKumaConfig() {
+    return this.request('/uptime-kuma/config');
+  }
+
+  async saveUptimeKumaConfig(config: any) {
+    return this.request('/uptime-kuma/config', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async getUptimeKumaStatus() {
+    return this.request('/uptime-kuma/status');
+  }
+
+  async connectUptimeKuma() {
+    return this.request('/uptime-kuma/connect', {
+      method: 'POST',
+    });
+  }
+
+  async disconnectUptimeKuma() {
+    return this.request('/uptime-kuma/disconnect', {
+      method: 'POST',
+    });
+  }
 }
 
 export const apiService = new ApiService();
