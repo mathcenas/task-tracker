@@ -730,7 +730,8 @@ app.get('/api/backup', authenticateToken, (req, res) => {
 
 // Restore - Import data
 app.post('/api/restore', authenticateToken, (req, res) => {
-  const { data } = req.body;
+  // Support both formats: { data: {...} } and the full backup object
+  const data = req.body.data || req.body;
 
   if (!data || !data.clients || !data.projects || !data.tasks) {
     return res.status(400).json({ error: 'Invalid backup format' });
@@ -740,7 +741,9 @@ app.post('/api/restore', authenticateToken, (req, res) => {
   console.log('Data to restore:', {
     clients: data.clients.length,
     projects: data.projects.length,
-    tasks: data.tasks.length
+    tasks: data.tasks.length,
+    recurringTasks: data.recurringTasks?.length || 0,
+    taskTemplates: data.taskTemplates?.length || 0
   });
 
   // Start transaction
