@@ -71,19 +71,48 @@ export function TaskForm() {
     e.preventDefault();
 
     if (isSubmitting) return;
+
+    // Validation
+    if (!selectedClient) {
+      alert('Please select a client');
+      return;
+    }
+
+    if (!formData.projectId) {
+      alert('Please select a project');
+      return;
+    }
+
+    if (formData.projectId === 'new' && !formData.newProject.trim()) {
+      alert('Please enter a project name');
+      return;
+    }
+
     setIsSubmitting(true);
 
     console.log('📝 Creating task with date:', formData.date);
-    
+
     let finalProjectId = formData.projectId;
 
-    if (formData.projectId === 'new' && formData.newProject) {
-      const newProject = {
-        clientId: selectedClient,
-        name: formData.newProject,
-        status: 'active' as const
-      };
-      finalProjectId = await addProject(newProject);
+    try {
+      if (formData.projectId === 'new' && formData.newProject) {
+        const newProject = {
+          clientId: selectedClient,
+          name: formData.newProject,
+          status: 'active' as const
+        };
+        finalProjectId = await addProject(newProject);
+        console.log('✅ New project created:', finalProjectId);
+
+        if (!finalProjectId) {
+          throw new Error('Failed to create project');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error creating project:', error);
+      alert('Failed to create project. Please try again.');
+      setIsSubmitting(false);
+      return;
     }
 
     // Helper function to calculate next weekend date
