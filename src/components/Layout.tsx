@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns, ChevronLeft, ChevronRight, Download, Upload } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
+import { api } from '../services/api';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
@@ -26,12 +27,95 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const session = getSession();
   const [currentUser] = useState(session ? {
     username: session.username,
     role: session.role
   } : null);
-  
+
+  const handleExportBackup = async () => {
+    setIsExporting(true);
+    try {
+      const backup = await api.exportBackup();
+      const dataStr = JSON.stringify(backup, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `tasktracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const meta = backup.metadata;
+      alert(`✅ Backup Downloaded!\n\n` +
+        `📊 Total Records: ${meta.totalRecords}\n` +
+        `👥 Clients: ${meta.totalClients}\n` +
+        `📁 Projects: ${meta.totalProjects}\n` +
+        `✓ Tasks: ${meta.totalTasks}\n` +
+        `🔄 Recurring: ${meta.totalRecurringTasks}\n` +
+        `📋 Templates: ${meta.totalTaskTemplates}\n\n` +
+        `📅 ${new Date(backup.exportDate).toLocaleString()}\n` +
+        `Version: ${backup.version}`);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export backup');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm('This will replace all existing data. Continue?')) {
+      event.target.value = '';
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+
+      if (!backup.data || !backup.data.clients || !backup.data.projects || !backup.data.tasks) {
+        throw new Error('Invalid backup file format');
+      }
+
+      const meta = backup.metadata;
+      if (meta) {
+        const confirmMsg = `Import backup with:\n\n` +
+          `📊 Total Records: ${meta.totalRecords}\n` +
+          `👥 Clients: ${meta.totalClients}\n` +
+          `📁 Projects: ${meta.totalProjects}\n` +
+          `✓ Tasks: ${meta.totalTasks}\n\n` +
+          `📅 ${new Date(backup.exportDate).toLocaleString()}\n` +
+          `Version: ${backup.version}\n\n` +
+          `Continue?`;
+
+        if (!confirm(confirmMsg)) {
+          event.target.value = '';
+          setIsImporting(false);
+          return;
+        }
+      }
+
+      await api.importBackup(backup);
+      alert('✅ Backup imported successfully! Reloading...');
+      window.location.reload();
+    } catch (err) {
+      console.error('Import error:', err);
+      alert('Failed to import backup. Please check the file format.');
+    } finally {
+      setIsImporting(false);
+      event.target.value = '';
+    }
+  };
+
   // Force refresh when data changes
   React.useEffect(() => {
     setRefreshKey(prev => prev + 1);
@@ -132,6 +216,38 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
+
+        {/* Backup Section */}
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+          {isSidebarOpen && (
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 mb-2">
+              Data Management
+            </div>
+          )}
+
+          <button
+            onClick={handleExportBackup}
+            disabled={isExporting}
+            className={`flex items-center ${isSidebarOpen ? 'px-3' : 'px-2 justify-center'} py-2 w-full text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50`}
+            title={!isSidebarOpen ? 'Download Backup' : undefined}
+          >
+            <Download className="w-5 h-5 flex-shrink-0" />
+            {isSidebarOpen && <span className="ml-3">{isExporting ? 'Exporting...' : 'Download Backup'}</span>}
+          </button>
+
+          <label className={`flex items-center ${isSidebarOpen ? 'px-3' : 'px-2 justify-center'} py-2 w-full text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer ${isImporting ? 'opacity-50' : ''}`}
+            title={!isSidebarOpen ? 'Import Backup' : undefined}>
+            <Upload className="w-5 h-5 flex-shrink-0" />
+            {isSidebarOpen && <span className="ml-3">{isImporting ? 'Importing...' : 'Import Backup'}</span>}
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImportBackup}
+              disabled={isImporting}
+              className="hidden"
+            />
+          </label>
+        </div>
 
         {/* New Task Button */}
         <div className="p-3 border-t border-gray-200 dark:border-gray-700">

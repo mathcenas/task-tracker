@@ -662,7 +662,9 @@ app.get('/api/backup', authenticateToken, (req, res) => {
 
   const backup = {
     exportDate: new Date().toISOString(),
-    version: '1.0',
+    version: '2.0',
+    exportedBy: req.user?.username || 'unknown',
+    metadata: {},
     data: {}
   };
 
@@ -706,13 +708,17 @@ app.get('/api/backup', authenticateToken, (req, res) => {
             }
             backup.data.taskTemplates = taskTemplates || [];
 
-            console.log('✅ Backup created:', {
-              clients: clients.length,
-              projects: projects.length,
-              tasks: tasks.length,
-              recurringTasks: recurringTasks?.length || 0,
-              taskTemplates: taskTemplates?.length || 0
-            });
+            // Add metadata with counts
+            backup.metadata = {
+              totalClients: clients.length,
+              totalProjects: projects.length,
+              totalTasks: tasks.length,
+              totalRecurringTasks: recurringTasks?.length || 0,
+              totalTaskTemplates: taskTemplates?.length || 0,
+              totalRecords: clients.length + projects.length + tasks.length + (recurringTasks?.length || 0) + (taskTemplates?.length || 0)
+            };
+
+            console.log('✅ Backup created:', backup.metadata);
 
             res.json(backup);
           });
