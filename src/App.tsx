@@ -17,6 +17,7 @@ import { AllTasksPage } from './components/AllTasksPage';
 import { RecurringTasksPage } from './components/RecurringTasksPage';
 import { KanbanBoard } from './components/KanbanBoard';
 import UptimeKumaSettings from './components/UptimeKumaSettings';
+import { CSVImport } from './components/CSVImport';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
                   <Route path="/recurring-tasks" element={<RecurringTasksPage />} />
                   <Route path="/clients" element={<ClientDashboard />} />
                   <Route path="/projects" element={<ProjectsDashboard />} />
+                  <Route path="/import-csv" element={<CSVImport />} />
                   <Route path="/integrations/uptime-kuma" element={<UptimeKumaSettings />} />
                   <Route path="/add-client" element={<ClientForm />} />
                   <Route path="/add-task" element={<TaskForm />} />
