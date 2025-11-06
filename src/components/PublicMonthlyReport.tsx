@@ -24,7 +24,7 @@ export function PublicMonthlyReport() {
       setError(null);
 
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const apiUrl = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
         const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}`);
 
         if (!response.ok) {

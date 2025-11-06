@@ -32,11 +32,18 @@ class ApiService {
     this.loadToken();
 
     const url = `${API_BASE_URL}/api${endpoint}`;
-    const headers = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
 
+    // Add any existing headers
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        headers[key] = String(value);
+      });
+    }
+
+    // Add Authorization header if token exists
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
@@ -46,6 +53,7 @@ class ApiService {
       url,
       token: this.token || 'NO TOKEN',
       hasAuth: !!this.token,
+      headers: headers,
       body: options.body ? JSON.parse(options.body as string) : undefined
     });
 
