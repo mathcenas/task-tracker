@@ -2,12 +2,23 @@ import React, { useState } from 'react';
 import { Clock, CheckSquare, BookTemplate as Template, Repeat, CalendarDays, Users, Folders, BarChart3, Download, Search, Moon, Sun, Smartphone, Globe, Shield, Zap, TrendingUp, FileText, Package, AlertTriangle, Calendar, DollarSign, Target, Plus, Pencil, Trash2, Copy, ExternalLink, Upload, Database } from 'lucide-react';
 import { api } from '../services/api';
 
+const getSession = () => {
+  try {
+    const encryptedSession = localStorage.getItem('tasktracker_session');
+    if (!encryptedSession) return null;
+    return JSON.parse(atob(encryptedSession));
+  } catch {
+    return null;
+  }
+};
+
 export function AboutPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [error, setError] = useState('');
+  const isAuthenticated = !!getSession();
 
   const handleExportBackup = async () => {
     setIsExporting(true);
@@ -656,14 +667,15 @@ export function AboutPage() {
         </div>
       ))}
 
-      {/* Backup & Restore */}
-      <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
-          <Database className="w-5 h-5 text-blue-500 mr-2" />
-          Backup & Restore
-        </h2>
+      {/* Backup & Restore - Only visible to authenticated users */}
+      {isAuthenticated && (
+        <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+            <Database className="w-5 h-5 text-blue-500 mr-2" />
+            Backup & Restore
+          </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Export Backup */}
           <div className="border rounded-lg p-6 dark:border-gray-700">
             <div className="flex items-start space-x-3 mb-4">
@@ -765,12 +777,13 @@ export function AboutPage() {
           </div>
         )}
 
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-800">
-          <p className="text-sm text-yellow-800 dark:text-yellow-300">
-            <strong>Note:</strong> Importing a backup will replace all existing data. Make sure to export your current data first if you want to keep it.
-          </p>
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-800">
+            <p className="text-sm text-yellow-800 dark:text-yellow-300">
+              <strong>Note:</strong> Importing a backup will replace all existing data. Make sure to export your current data first if you want to keep it.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Footer */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 dark:from-blue-900/20 dark:to-purple-900/20">
