@@ -725,8 +725,19 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
               projects: projects.length
             });
 
+            // Transform client field names from snake_case to camelCase
+            const clientData = {
+              id: client.id,
+              name: client.name,
+              slug: client.slug,
+              hourlyRate: client.hourly_rate,
+              contactPerson: client.contact_person,
+              email: client.email,
+              phone: client.phone
+            };
+
             res.json({
-              client,
+              client: clientData,
               tasks,
               projects,
               month: parseInt(month),
