@@ -52,6 +52,7 @@ class ApiService {
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include',
     });
 
     console.log('📥 [ApiService] Response received:', {
