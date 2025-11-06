@@ -114,7 +114,9 @@ export function PublicMonthlyReport() {
               
               <div className="mt-8">
                 <a
-                  href="/about"
+                  href="https://github.com/yourusername/tasktracker-pro"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
@@ -199,6 +201,8 @@ export function PublicMonthlyReport() {
   });
 
   const exportPDF = () => {
+    if (!client || !year || !month) return;
+
     const doc = new jsPDF();
     const clientName = client.name;
     const monthYear = format(reportDate, 'MMMM yyyy');
@@ -210,15 +214,15 @@ export function PublicMonthlyReport() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
     doc.text('⏰', 19, 18);
-    
+
     doc.setFontSize(24);
     doc.setTextColor(41, 98, 255);
     doc.text('TaskTracker Pro', 35, 20);
-    
+
     doc.setFontSize(20);
     doc.setTextColor(0, 0, 0);
     doc.text('MONTHLY REPORT', 35, 40);
-    const reportNumber = `RPT-${year}${month.padStart(2, '0')}-${client.id.slice(-6)}`;
+    const reportNumber = `RPT-${year}${month.toString().padStart(2, '0')}-${client.id.slice(-6)}`;
     doc.setFontSize(12);
     doc.text(`Report #: ${reportNumber}`, 35, 50);
     
@@ -439,7 +443,9 @@ export function PublicMonthlyReport() {
             </div>
             <div className="flex items-center space-x-3">
               <a
-                href="/about"
+                href="https://github.com/yourusername/tasktracker-pro"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
@@ -643,13 +649,13 @@ export function PublicMonthlyReport() {
                 </div>
               )}
 
-              {/* 6-Month Trend Chart */}
-              {trendData.some(d => d.hours > 0) && (
+              {/* Task Breakdown Chart */}
+              {(trendData[0].incidentHours > 0 || trendData[0].requestHours > 0) && (
                 <div className="bg-gray-50 rounded-lg p-6 mb-8 dark:bg-gray-700">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                       <BarChart3 className="w-5 h-5 text-blue-500 mr-2" />
-                      6-Month Performance Trend
+                      Task Breakdown for {format(reportDate, 'MMMM yyyy')}
                     </h4>
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-1">
@@ -662,89 +668,64 @@ export function PublicMonthlyReport() {
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-6 gap-2">
-                    {trendData.map((data, index) => {
-                      const maxHours = Math.max(...trendData.map(d => d.hours));
-                      const isCurrentMonth = format(reportDate, 'MMM') === data.month;
-                      const monthDate = subMonths(reportDate, 5 - index);
-                      const monthYear = monthDate.getFullYear();
-                      const monthNum = monthDate.getMonth() + 1;
 
-                      const incidentHeight = maxHours > 0 ? Math.max((data.incidentHours / maxHours) * 100, data.incidentHours > 0 ? 5 : 0) : 0;
-                      const requestHeight = maxHours > 0 ? Math.max((data.requestHours / maxHours) * 100, data.requestHours > 0 ? 5 : 0) : 0;
-
-                      return (
-                        <div
-                          key={data.month}
-                          className="text-center cursor-pointer group transition-all duration-200 hover:scale-105"
-                          onClick={() => window.location.href = `/report/${clientSlug}/${monthYear}/${monthNum}`}
-                          title={`Click to view ${format(monthDate, 'MMMM yyyy')} report\nIncidents: ${data.incidentHours.toFixed(1)}h\nRequests: ${data.requestHours.toFixed(1)}h`}
-                        >
-                          <div className="h-24 flex items-end justify-center mb-2">
-                            <div className="w-8 flex flex-col items-stretch">
-                              {data.incidentHours > 0 && (
-                                <div
-                                  className={`w-full transition-all duration-300 ${
-                                    isCurrentMonth
-                                      ? 'bg-red-500 group-hover:bg-red-600'
-                                      : 'bg-red-400 dark:bg-red-500 group-hover:bg-red-500 dark:group-hover:bg-red-600'
-                                  } ${data.requestHours > 0 ? '' : 'rounded-t'}`}
-                                  style={{ height: `${incidentHeight}%` }}
-                                />
-                              )}
-                              {data.requestHours > 0 && (
-                                <div
-                                  className={`w-full rounded-t transition-all duration-300 ${
-                                    isCurrentMonth
-                                      ? 'bg-blue-500 group-hover:bg-blue-600'
-                                      : 'bg-blue-400 dark:bg-blue-500 group-hover:bg-blue-500 dark:group-hover:bg-blue-600'
-                                  }`}
-                                  style={{ height: `${requestHeight}%` }}
-                                />
-                              )}
-                              {data.hours === 0 && (
-                                <div
-                                  className="w-full rounded-t bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500"
-                                  style={{ height: '5%' }}
-                                />
-                              )}
-                            </div>
-                          </div>
-                          <p className={`text-xs font-medium ${
-                            isCurrentMonth
-                              ? 'text-blue-600 dark:text-blue-400'
-                              : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                          }`}>
-                            {data.month}
-                          </p>
-                          <p className={`text-xs font-medium transition-colors ${
-                            isCurrentMonth
-                              ? 'text-blue-900 dark:text-blue-300'
-                              : 'text-gray-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-300'
-                          }`}>
-                            {data.hours.toFixed(1)}h
-                          </p>
-                          <p className={`text-xs transition-colors ${
-                            isCurrentMonth
-                              ? 'text-green-700 dark:text-green-300'
-                              : 'text-green-600 dark:text-green-400 group-hover:text-green-700 dark:group-hover:text-green-300'
-                          }`}>
-                            ${data.revenue.toFixed(0)}
-                          </p>
+                  <div className="flex justify-center">
+                    <div className="text-center">
+                      <div className="h-32 flex items-end justify-center mb-2">
+                        <div className="w-20 flex flex-col items-stretch">
+                          {trendData[0].incidentHours > 0 && (
+                            <div
+                              className="w-full transition-all duration-300 bg-red-500"
+                              style={{
+                                height: `${(trendData[0].incidentHours / trendData[0].hours) * 100}%`,
+                                minHeight: '20px'
+                              }}
+                              title={`Incidents: ${trendData[0].incidentHours.toFixed(1)}h`}
+                            />
+                          )}
+                          {trendData[0].requestHours > 0 && (
+                            <div
+                              className="w-full rounded-t transition-all duration-300 bg-blue-500"
+                              style={{
+                                height: `${(trendData[0].requestHours / trendData[0].hours) * 100}%`,
+                                minHeight: '20px'
+                              }}
+                              title={`Requests: ${trendData[0].requestHours.toFixed(1)}h`}
+                            />
+                          )}
                         </div>
-                      );
-                    })}
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                        {trendData[0].hours.toFixed(1)} total hours
+                      </p>
+                    </div>
                   </div>
-                  
-                  <div className="mt-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-                    <span>6-month average: {(trendData.reduce((sum, d) => sum + d.hours, 0) / 6).toFixed(1)}h/month</span>
-                    <span>Total billed: ${trendData.reduce((sum, d) => sum + d.revenue, 0).toFixed(0)}</span>
-                  </div>
-                  <div className="mt-2 text-center">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      💡 <strong>Tip:</strong> Click on any month bar to view that month's detailed report
-                    </p>
+
+                  <div className="mt-6 grid grid-cols-2 gap-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Requests</span>
+                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {trendData[0].requestHours.toFixed(1)}h
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        {trendData[0].hours > 0 ? ((trendData[0].requestHours / trendData[0].hours) * 100).toFixed(0) : 0}% of total
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Incidents</span>
+                        <div className="w-3 h-3 bg-red-500 rounded"></div>
+                      </div>
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        {trendData[0].incidentHours.toFixed(1)}h
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        {trendData[0].hours > 0 ? ((trendData[0].incidentHours / trendData[0].hours) * 100).toFixed(0) : 0}% of total
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
