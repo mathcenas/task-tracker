@@ -187,7 +187,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {isSidebarOpen && (
             <Link to="/" className="flex items-center space-x-2">
               <img src="/logo - Copy.png" alt="Logo" className="h-8 w-auto" />
-              <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">by Cenas-Support</span>
+              </div>
             </Link>
           )}
           <button
@@ -419,7 +422,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
               <Link to="/" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
                 <img src="/logo - Copy.png" alt="Logo" className="h-8 w-auto" />
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">by Cenas-Support</span>
+                </div>
               </Link>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}

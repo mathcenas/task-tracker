@@ -120,7 +120,8 @@ export function PublicMonthlyReport() {
               <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mx-auto mb-6">
                 <Clock className="w-8 h-8 text-white" />
               </div>
-              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">TaskTracker Pro</h1>
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">TaskTracker Pro</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">by Cenas-Support</p>
               <p className="text-gray-600 dark:text-gray-400 mb-2">
                 Access Denied
               </p>
@@ -144,7 +145,7 @@ export function PublicMonthlyReport() {
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
-                  Learn About TaskTracker Pro
+                  Learn About TaskTracker Pro by Cenas-Support
                 </a>
               </div>
             </div>
@@ -266,6 +267,10 @@ export function PublicMonthlyReport() {
     doc.setFontSize(24);
     doc.setTextColor(41, 98, 255);
     doc.text('TaskTracker Pro', 35, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text('by Cenas-Support', 35, 27);
 
     doc.setFontSize(20);
     doc.setTextColor(0, 0, 0);
@@ -486,7 +491,7 @@ export function PublicMonthlyReport() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">TaskTracker Pro</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Client Dashboard</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">by Cenas-Support • Client Dashboard</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">

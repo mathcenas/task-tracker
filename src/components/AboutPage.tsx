@@ -293,7 +293,8 @@ export function AboutPage() {
           <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mx-auto mb-6">
             <Clock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">TaskTracker Pro</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">TaskTracker Pro</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">by Cenas-Support</p>
           <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
             Professional task management and client reporting system
           </p>
@@ -593,7 +594,7 @@ export function AboutPage() {
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 dark:from-blue-900/20 dark:to-purple-900/20">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            TaskTracker Pro - Production Ready
+            TaskTracker Pro by Cenas-Support - Production Ready
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
             A comprehensive task management system built with modern web technologies

@@ -76,6 +76,9 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             TaskTracker Pro
           </h2>
+          <p className="mt-1 text-center text-sm text-gray-500 dark:text-gray-400">
+            by Cenas-Support
+          </p>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Sign in to your account
           </p>
