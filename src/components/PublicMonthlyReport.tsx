@@ -154,6 +154,11 @@ export function PublicMonthlyReport() {
     );
   }
 
+  // Guard: Ensure client data is loaded before computing stats
+  if (!client) {
+    return null;
+  }
+
   const reportDate = new Date(parseInt(year), parseInt(month) - 1, 1);
   const monthStart = startOfMonth(reportDate);
   const monthEnd = endOfMonth(reportDate);
