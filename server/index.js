@@ -672,6 +672,69 @@ app.put('/api/users/:id/password', authenticateToken, (req, res) => {
   });
 });
 
+// Public endpoint for client reports
+app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
+  const { slug, year, month } = req.params;
+
+  console.log('🌐 Public report request:', { slug, year, month });
+
+  db.get('SELECT * FROM clients WHERE slug = ?', [slug], (err, client) => {
+    if (err) {
+      console.error('Error fetching client:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!client) {
+      console.log('❌ Client not found for slug:', slug);
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+
+    db.all(
+      `SELECT * FROM tasks
+       WHERE client_id = ?
+       AND date >= ?
+       AND date <= ?
+       AND finished = 1
+       ORDER BY date DESC`,
+      [client.id, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]],
+      (err, tasks) => {
+        if (err) {
+          console.error('Error fetching tasks:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        db.all(
+          'SELECT * FROM projects WHERE client_id = ?',
+          [client.id],
+          (err, projects) => {
+            if (err) {
+              console.error('Error fetching projects:', err);
+              return res.status(500).json({ error: 'Database error' });
+            }
+
+            console.log('✅ Public report data:', {
+              client: client.name,
+              tasks: tasks.length,
+              projects: projects.length
+            });
+
+            res.json({
+              client,
+              tasks,
+              projects,
+              month: parseInt(month),
+              year: parseInt(year)
+            });
+          }
+        );
+      }
+    );
+  });
+});
+
 // Backup - Export all data
 app.get('/api/backup', authenticateToken, (req, res) => {
   console.log('📦 Exporting database backup...');

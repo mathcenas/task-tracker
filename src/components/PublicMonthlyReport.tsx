@@ -1,16 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
 import { format, startOfMonth, endOfMonth, isWithinInterval, isAfter, endOfDay, subMonths, addMonths, parseISO } from 'date-fns';
 import { Clock, AlertTriangle, FileText, Package, DollarSign, Calendar, Download, ChevronLeft, ChevronRight, BarChart3, TrendingUp } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { exportMonthlyReportToCSV } from '../utils/csvExport';
+import { Client, Project, Task } from '../types';
 
 export function PublicMonthlyReport() {
   const { clientSlug, year, month } = useParams<{ clientSlug: string; year: string; month: string }>();
-  const { getClientBySlug, getClientTasks, getProject, clients } = useApp();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [client, setClient] = useState<Client | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load report data from public API
+  useEffect(() => {
+    const loadReportData = async () => {
+      if (!clientSlug || !year || !month) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError('not_found');
+          } else {
+            setError('server_error');
+          }
+          return;
+        }
+
+        const data = await response.json();
+        setClient(data.client);
+        setTasks(data.tasks);
+        setProjects(data.projects);
+      } catch (err) {
+        console.error('Error loading report data:', err);
+        setError('network_error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReportData();
+  }, [clientSlug, year, month]);
 
   // Handle missing parameters
   if (!clientSlug || !year || !month) {
@@ -35,12 +74,17 @@ export function PublicMonthlyReport() {
     );
   }
 
-  const client = getClientBySlug(clientSlug);
-
-  // Force refresh when data changes
-  React.useEffect(() => {
-    setRefreshKey(prev => prev + 1);
-  }, [clientSlug, year, month]);
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading report...</p>
+        </div>
+      </div>
+    );
+  }
   
   // If client not found, show access denied (no client info exposed)
   if (!client) {
@@ -88,44 +132,39 @@ export function PublicMonthlyReport() {
   const monthStart = startOfMonth(reportDate);
   const monthEnd = endOfMonth(reportDate);
   const today = new Date();
-  
-  // Get client tasks for the requested month
-  const clientTasks = getClientTasks(client.id);
-  const monthlyTasks = clientTasks.filter(task => 
-    task.finished && 
-    isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
-  );
-  
-  console.log('🌐 Public Report - filtering for:', {
+
+  // Tasks are already filtered by the API, but we have them in state
+  const monthlyTasks = tasks;
+
+  console.log('🌐 Public Report - data loaded:', {
     clientSlug,
     year,
     month,
     monthStart: format(monthStart, 'yyyy-MM-dd'),
     monthEnd: format(monthEnd, 'yyyy-MM-dd'),
-    clientTasks: clientTasks.length,
-    monthlyTasks: monthlyTasks.length
+    tasks: tasks.length,
+    projects: projects.length
   });
-  
+
   // Report is always available for valid clients, even without completed tasks
   const isReportAvailable = true;
 
-  // Calculate 6-month trend data
-  const trendData = Array.from({ length: 6 }, (_, i) => {
-    const month = subMonths(reportDate, 5 - i);
-    const monthTasks = clientTasks.filter(task => 
-      task.finished && 
-      isWithinInterval(parseISO(task.date), { start: startOfMonth(month), end: endOfMonth(month) })
-    );
-    const hours = monthTasks.filter(t => t.type !== 'insumos').reduce((sum, task) => sum + (task.hours || 0), 0);
-    const revenue = hours * client.hourlyRate;
-    
-    return {
-      month: format(month, 'MMM'),
-      hours,
-      revenue,
-      tasks: monthTasks.length
-    };
-  });
+  // For trend data, we'll show just the current month
+  // (6-month trend would require additional API calls)
+  const hours = monthlyTasks.filter(t => t.type !== 'insumos').reduce((sum, task) => sum + (task.hours || 0), 0);
+  const revenue = hours * client.hourlyRate;
+
+  const trendData = [{
+    month: format(reportDate, 'MMM'),
+    hours,
+    revenue,
+    tasks: monthlyTasks.length
+  }];
+
+  // Helper function to get project by ID
+  const getProject = (projectId: string) => {
+    return projects.find(p => p.id === projectId);
+  };
 
   const clientStats = monthlyTasks.reduce((stats, task) => {
     if (task.type === 'insumos') {
