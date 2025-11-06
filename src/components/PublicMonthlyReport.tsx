@@ -151,12 +151,16 @@ export function PublicMonthlyReport() {
 
   // For trend data, we'll show just the current month
   // (6-month trend would require additional API calls)
-  const hours = monthlyTasks.filter(t => t.type !== 'insumos').reduce((sum, task) => sum + (task.hours || 0), 0);
+  const incidentHours = monthlyTasks.filter(t => t.type === 'incident').reduce((sum, task) => sum + (task.hours || 0), 0);
+  const requestHours = monthlyTasks.filter(t => t.type === 'request').reduce((sum, task) => sum + (task.hours || 0), 0);
+  const hours = incidentHours + requestHours;
   const revenue = hours * client.hourlyRate;
 
   const trendData = [{
     month: format(reportDate, 'MMM'),
     hours,
+    incidentHours,
+    requestHours,
     revenue,
     tasks: monthlyTasks.length
   }];
@@ -647,39 +651,69 @@ export function PublicMonthlyReport() {
                       <BarChart3 className="w-5 h-5 text-blue-500 mr-2" />
                       6-Month Performance Trend
                     </h4>
+                    <div className="flex items-center gap-4 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                        <span className="text-gray-600 dark:text-gray-400">Requests</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-red-500 rounded"></div>
+                        <span className="text-gray-600 dark:text-gray-400">Incidents</span>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-6 gap-2">
                     {trendData.map((data, index) => {
                       const maxHours = Math.max(...trendData.map(d => d.hours));
-                      const height = maxHours > 0 ? Math.max((data.hours / maxHours) * 100, 5) : 5;
                       const isCurrentMonth = format(reportDate, 'MMM') === data.month;
                       const monthDate = subMonths(reportDate, 5 - index);
                       const monthYear = monthDate.getFullYear();
                       const monthNum = monthDate.getMonth() + 1;
-                      
+
+                      const incidentHeight = maxHours > 0 ? Math.max((data.incidentHours / maxHours) * 100, data.incidentHours > 0 ? 5 : 0) : 0;
+                      const requestHeight = maxHours > 0 ? Math.max((data.requestHours / maxHours) * 100, data.requestHours > 0 ? 5 : 0) : 0;
+
                       return (
-                        <div 
-                          key={data.month} 
+                        <div
+                          key={data.month}
                           className="text-center cursor-pointer group transition-all duration-200 hover:scale-105"
                           onClick={() => window.location.href = `/report/${clientSlug}/${monthYear}/${monthNum}`}
-                          title={`Click to view ${format(monthDate, 'MMMM yyyy')} report`}
+                          title={`Click to view ${format(monthDate, 'MMMM yyyy')} report\nIncidents: ${data.incidentHours.toFixed(1)}h\nRequests: ${data.requestHours.toFixed(1)}h`}
                         >
                           <div className="h-24 flex items-end justify-center mb-2">
-                            <div 
-                              className={`w-8 rounded-t transition-all duration-300 ${
-                                isCurrentMonth 
-                                  ? 'bg-blue-500 group-hover:bg-blue-600' 
-                                  : data.hours > 0
-                                  ? 'bg-gray-400 dark:bg-gray-500 group-hover:bg-blue-400 dark:group-hover:bg-blue-500'
-                                  : 'bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500'
-                              }`}
-                              style={{ height: `${height}%` }}
-                            />
+                            <div className="w-8 flex flex-col items-stretch">
+                              {data.incidentHours > 0 && (
+                                <div
+                                  className={`w-full transition-all duration-300 ${
+                                    isCurrentMonth
+                                      ? 'bg-red-500 group-hover:bg-red-600'
+                                      : 'bg-red-400 dark:bg-red-500 group-hover:bg-red-500 dark:group-hover:bg-red-600'
+                                  } ${data.requestHours > 0 ? '' : 'rounded-t'}`}
+                                  style={{ height: `${incidentHeight}%` }}
+                                />
+                              )}
+                              {data.requestHours > 0 && (
+                                <div
+                                  className={`w-full rounded-t transition-all duration-300 ${
+                                    isCurrentMonth
+                                      ? 'bg-blue-500 group-hover:bg-blue-600'
+                                      : 'bg-blue-400 dark:bg-blue-500 group-hover:bg-blue-500 dark:group-hover:bg-blue-600'
+                                  }`}
+                                  style={{ height: `${requestHeight}%` }}
+                                />
+                              )}
+                              {data.hours === 0 && (
+                                <div
+                                  className="w-full rounded-t bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500"
+                                  style={{ height: '5%' }}
+                                />
+                              )}
+                            </div>
                           </div>
                           <p className={`text-xs font-medium ${
-                            isCurrentMonth 
-                              ? 'text-blue-600 dark:text-blue-400' 
+                            isCurrentMonth
+                              ? 'text-blue-600 dark:text-blue-400'
                               : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
                           }`}>
                             {data.month}
