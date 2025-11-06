@@ -14,8 +14,9 @@ export function PublicMonthlyReport() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
 
-  // Load report data from public API
+  // Load report data from public API (including 6 months of data for trend)
   useEffect(() => {
     const loadReportData = async () => {
       if (!clientSlug || !year || !month) return;
@@ -25,6 +26,8 @@ export function PublicMonthlyReport() {
 
       try {
         const apiUrl = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+
+        // Load current month data
         const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}`);
 
         if (!response.ok) {
@@ -40,6 +43,27 @@ export function PublicMonthlyReport() {
         setClient(data.client);
         setTasks(data.tasks);
         setProjects(data.projects);
+
+        // Load 6 months of data for trend chart
+        const currentDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const trendPromises = [];
+
+        for (let i = 5; i >= 0; i--) {
+          const trendDate = subMonths(currentDate, i);
+          const trendYear = trendDate.getFullYear();
+          const trendMonth = trendDate.getMonth() + 1;
+
+          trendPromises.push(
+            fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${trendYear}/${trendMonth}`)
+              .then(res => res.ok ? res.json() : { tasks: [] })
+              .catch(() => ({ tasks: [] }))
+          );
+        }
+
+        const trendResults = await Promise.all(trendPromises);
+        const allTasksData = trendResults.flatMap(result => result.tasks || []);
+        setAllTasks(allTasksData);
+
       } catch (err) {
         console.error('Error loading report data:', err);
         setError('network_error');
@@ -151,21 +175,40 @@ export function PublicMonthlyReport() {
   // Report is always available for valid clients, even without completed tasks
   const isReportAvailable = true;
 
-  // For trend data, we'll show just the current month
-  // (6-month trend would require additional API calls)
+  // Build 6-month trend data
+  const trendData = [];
+  for (let i = 5; i >= 0; i--) {
+    const trendDate = subMonths(reportDate, i);
+    const trendMonthStart = startOfMonth(trendDate);
+    const trendMonthEnd = endOfMonth(trendDate);
+
+    // Filter tasks for this specific month
+    const monthTasks = allTasks.filter(task => {
+      const taskDate = new Date(task.date);
+      return isWithinInterval(taskDate, { start: trendMonthStart, end: trendMonthEnd });
+    });
+
+    const incidentHours = monthTasks.filter(t => t.type === 'incident').reduce((sum, task) => sum + (task.hours || 0), 0);
+    const requestHours = monthTasks.filter(t => t.type === 'request').reduce((sum, task) => sum + (task.hours || 0), 0);
+    const hours = incidentHours + requestHours;
+
+    trendData.push({
+      month: format(trendDate, 'MMM'),
+      year: trendDate.getFullYear(),
+      monthNum: trendDate.getMonth() + 1,
+      hours,
+      incidentHours,
+      requestHours,
+      revenue: hours * client.hourlyRate,
+      tasks: monthTasks.length
+    });
+  }
+
+  // Current month stats for the main report
   const incidentHours = monthlyTasks.filter(t => t.type === 'incident').reduce((sum, task) => sum + (task.hours || 0), 0);
   const requestHours = monthlyTasks.filter(t => t.type === 'request').reduce((sum, task) => sum + (task.hours || 0), 0);
   const hours = incidentHours + requestHours;
   const revenue = hours * client.hourlyRate;
-
-  const trendData = [{
-    month: format(reportDate, 'MMM'),
-    hours,
-    incidentHours,
-    requestHours,
-    revenue,
-    tasks: monthlyTasks.length
-  }];
 
   // Helper function to get project by ID
   const getProject = (projectId: string) => {
@@ -649,13 +692,13 @@ export function PublicMonthlyReport() {
                 </div>
               )}
 
-              {/* Task Breakdown Chart */}
-              {(trendData[0].incidentHours > 0 || trendData[0].requestHours > 0) && (
+              {/* 6-Month Performance Trend */}
+              {trendData.some(d => d.hours > 0) && (
                 <div className="bg-gray-50 rounded-lg p-6 mb-8 dark:bg-gray-700">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                       <BarChart3 className="w-5 h-5 text-blue-500 mr-2" />
-                      Task Breakdown for {format(reportDate, 'MMMM yyyy')}
+                      6-Month Performance Trend
                     </h4>
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-1">
@@ -669,63 +712,85 @@ export function PublicMonthlyReport() {
                     </div>
                   </div>
 
-                  <div className="flex justify-center">
-                    <div className="text-center">
-                      <div className="h-32 flex items-end justify-center mb-2">
-                        <div className="w-20 flex flex-col items-stretch">
-                          {trendData[0].incidentHours > 0 && (
-                            <div
-                              className="w-full transition-all duration-300 bg-red-500"
-                              style={{
-                                height: `${(trendData[0].incidentHours / trendData[0].hours) * 100}%`,
-                                minHeight: '20px'
-                              }}
-                              title={`Incidents: ${trendData[0].incidentHours.toFixed(1)}h`}
-                            />
-                          )}
-                          {trendData[0].requestHours > 0 && (
-                            <div
-                              className="w-full rounded-t transition-all duration-300 bg-blue-500"
-                              style={{
-                                height: `${(trendData[0].requestHours / trendData[0].hours) * 100}%`,
-                                minHeight: '20px'
-                              }}
-                              title={`Requests: ${trendData[0].requestHours.toFixed(1)}h`}
-                            />
-                          )}
+                  <div className="grid grid-cols-6 gap-2">
+                    {trendData.map((data, index) => {
+                      const maxHours = Math.max(...trendData.map(d => d.hours));
+                      const isCurrentMonth = data.year === parseInt(year) && data.monthNum === parseInt(month);
+
+                      const incidentHeight = maxHours > 0 ? Math.max((data.incidentHours / maxHours) * 100, data.incidentHours > 0 ? 5 : 0) : 0;
+                      const requestHeight = maxHours > 0 ? Math.max((data.requestHours / maxHours) * 100, data.requestHours > 0 ? 5 : 0) : 0;
+
+                      return (
+                        <div
+                          key={`${data.year}-${data.monthNum}`}
+                          className="text-center cursor-pointer group transition-all duration-200 hover:scale-105"
+                          onClick={() => window.location.href = `/report/${clientSlug}/${data.year}/${data.monthNum}`}
+                          title={`Click to view ${data.month} ${data.year} report\nIncidents: ${data.incidentHours.toFixed(1)}h\nRequests: ${data.requestHours.toFixed(1)}h`}
+                        >
+                          <div className="h-24 flex items-end justify-center mb-2">
+                            <div className="w-8 flex flex-col items-stretch">
+                              {data.incidentHours > 0 && (
+                                <div
+                                  className={`w-full transition-all duration-300 ${
+                                    isCurrentMonth
+                                      ? 'bg-red-500 group-hover:bg-red-600'
+                                      : 'bg-red-400 dark:bg-red-500 group-hover:bg-red-500 dark:group-hover:bg-red-600'
+                                  } ${data.requestHours > 0 ? '' : 'rounded-t'}`}
+                                  style={{ height: `${incidentHeight}%` }}
+                                />
+                              )}
+                              {data.requestHours > 0 && (
+                                <div
+                                  className={`w-full rounded-t transition-all duration-300 ${
+                                    isCurrentMonth
+                                      ? 'bg-blue-500 group-hover:bg-blue-600'
+                                      : 'bg-blue-400 dark:bg-blue-500 group-hover:bg-blue-500 dark:group-hover:bg-blue-600'
+                                  }`}
+                                  style={{ height: `${requestHeight}%` }}
+                                />
+                              )}
+                              {data.hours === 0 && (
+                                <div
+                                  className="w-full rounded-t bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500"
+                                  style={{ height: '5%' }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                          <p className={`text-xs font-medium ${
+                            isCurrentMonth
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                          }`}>
+                            {data.month}
+                          </p>
+                          <p className={`text-xs font-medium transition-colors ${
+                            isCurrentMonth
+                              ? 'text-blue-900 dark:text-blue-300'
+                              : 'text-gray-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-300'
+                          }`}>
+                            {data.hours.toFixed(1)}h
+                          </p>
+                          <p className={`text-xs transition-colors ${
+                            isCurrentMonth
+                              ? 'text-green-700 dark:text-green-300'
+                              : 'text-green-600 dark:text-green-400 group-hover:text-green-700 dark:group-hover:text-green-300'
+                          }`}>
+                            ${data.revenue.toFixed(0)}
+                          </p>
                         </div>
-                      </div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                        {trendData[0].hours.toFixed(1)} total hours
-                      </p>
-                    </div>
+                      );
+                    })}
                   </div>
 
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Requests</span>
-                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                      </div>
-                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {trendData[0].requestHours.toFixed(1)}h
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        {trendData[0].hours > 0 ? ((trendData[0].requestHours / trendData[0].hours) * 100).toFixed(0) : 0}% of total
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Incidents</span>
-                        <div className="w-3 h-3 bg-red-500 rounded"></div>
-                      </div>
-                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                        {trendData[0].incidentHours.toFixed(1)}h
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        {trendData[0].hours > 0 ? ((trendData[0].incidentHours / trendData[0].hours) * 100).toFixed(0) : 0}% of total
-                      </p>
-                    </div>
+                  <div className="mt-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+                    <span>6-month average: {(trendData.reduce((sum, d) => sum + d.hours, 0) / 6).toFixed(1)}h/month</span>
+                    <span>Total billed: ${trendData.reduce((sum, d) => sum + d.revenue, 0).toFixed(0)}</span>
+                  </div>
+                  <div className="mt-2 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      💡 <strong>Tip:</strong> Click on any month bar to view that month's detailed report
+                    </p>
                   </div>
                 </div>
               )}
