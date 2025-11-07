@@ -28,7 +28,7 @@ db.serialize(() => {
   db.all(`
     SELECT id, description, finished, status, hours, cost, type
     FROM tasks
-    WHERE finished = 1 AND status != 'completed'
+    WHERE finished = 1 AND (status != 'completed' OR status IS NULL)
   `, [], (err, tasks) => {
     if (err) {
       console.error('❌ Error querying tasks:', err);
@@ -52,7 +52,7 @@ db.serialize(() => {
     db.run(`
       UPDATE tasks
       SET status = 'completed'
-      WHERE finished = 1 AND status != 'completed'
+      WHERE finished = 1 AND (status != 'completed' OR status IS NULL)
     `, [], function(err) {
       if (err) {
         console.error('❌ Error updating tasks:', err);

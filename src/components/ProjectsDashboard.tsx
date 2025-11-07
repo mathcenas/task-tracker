@@ -176,9 +176,15 @@ export function ProjectsDashboard() {
                     const projectTasks = filterOutPendingRecurringReminders(allProjectTasks);
                     const recurringReminders = getPendingRecurringReminders(allProjectTasks);
 
-                    const pendingTasks = projectTasks.filter(t => !t.finished && t.status === 'pending');
-                    const inProgressTasks = projectTasks.filter(t => !t.finished && t.status === 'in-progress');
-                    const completedTasks = projectTasks.filter(t => t.finished);
+                    const pendingTasks = projectTasks.filter(t =>
+                      !t.finished && (t.status === 'pending' || t.status === 'not_started')
+                    );
+                    const inProgressTasks = projectTasks.filter(t =>
+                      !t.finished && t.status === 'in-progress'
+                    );
+                    const completedTasks = projectTasks.filter(t =>
+                      t.finished || t.status === 'completed'
+                    );
 
                     const totalHours = projectTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
                     const revenue = totalHours * (client.hourlyRate || 0);
