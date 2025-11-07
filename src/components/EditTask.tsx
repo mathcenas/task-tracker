@@ -61,6 +61,8 @@ export function EditTask() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const isFinished = formData.type === 'insumos' ? true : (formData.hours ? true : formData.finished);
+
     const updatedTask = {
       ...task,
       description: formData.description,
@@ -68,28 +70,16 @@ export function EditTask() {
       cost: formData.type === 'insumos' ? Number(formData.cost) : undefined,
       date: formData.date,
       type: formData.type,
-      status: formData.status,
+      status: isFinished ? 'completed' : formData.status,
       priority: formData.priority,
       notes: formData.notes,
-      finished: formData.type === 'insumos' ? true : (formData.hours ? true : formData.finished)
+      finished: isFinished
     };
 
     await updateTask(updatedTask);
-    
-    // Redirect to client dashboard if task is completed and has a client
-    if (updatedTask.finished && task.clientId) {
-      const client = getClient(task.clientId);
-      if (client && client.slug) {
-        const currentDate = new Date();
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1;
-        navigate(`/report/${client.slug}/${year}/${month}`);
-        return;
-      }
-    }
-    
-    // Default redirect to dashboard
-    navigate('/');
+
+    // Go back to previous page
+    navigate(-1);
   };
 
   const handleDelete = () => {

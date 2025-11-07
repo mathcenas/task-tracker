@@ -123,9 +123,9 @@ export function AllTasksPage() {
       const task = tasks.find(t => t.id === selectedTaskId);
       if (task) {
         if (task.type === 'insumos') {
-          updateTask({ ...task, finished: true, completedAt: new Date().toISOString() });
+          updateTask({ ...task, finished: true, status: 'completed', completedAt: new Date().toISOString() });
         } else {
-          updateTask({ ...task, hours, finished: true, completedAt: new Date().toISOString() });
+          updateTask({ ...task, hours, finished: true, status: 'completed', completedAt: new Date().toISOString() });
         }
       }
       setIsModalOpen(false);

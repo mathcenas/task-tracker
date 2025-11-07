@@ -175,6 +175,7 @@ export function WeeklyDashboard() {
         const updateData: any = {
           ...task,
           finished: true,
+          status: 'completed',
           completedAt: new Date().toISOString()
         };
 

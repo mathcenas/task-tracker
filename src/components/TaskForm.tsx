@@ -252,7 +252,7 @@ export function TaskForm() {
       cost: formData.type === 'insumos' ? Number(formData.cost) : undefined,
       date: formData.date,
       type: formData.type,
-      status: formData.status,
+      status: (formData.type === 'insumos' || (formData.hours && Number(formData.hours) > 0)) ? 'completed' : formData.status,
       priority: formData.priority,
       finished: formData.type === 'insumos' ? true : (formData.hours && Number(formData.hours) > 0),
       createdAt: new Date().toISOString(),
