@@ -101,6 +101,7 @@ export function transformCSVToTasks(
         type,
         hours: finalHours,
         cost,
+        priority: 'medium',
         finished: true,
         status: 'completed'
       };
