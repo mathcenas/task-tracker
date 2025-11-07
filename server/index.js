@@ -136,6 +136,18 @@ const initDB = () => {
       min_downtime_seconds INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS activity_logs (
+      id TEXT PRIMARY KEY,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT,
+      entity_name TEXT,
+      details TEXT,
+      user_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id)
     )`
   ];
 
@@ -166,6 +178,21 @@ const initDB = () => {
 };
 
 initDB();
+
+// Activity logging helper function
+const logActivity = (action, entityType, entityId, entityName, details = null, userId = 'system') => {
+  const id = `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const detailsJson = details ? JSON.stringify(details) : null;
+
+  db.run(
+    `INSERT INTO activity_logs (id, action, entity_type, entity_id, entity_name, details, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, action, entityType, entityId, entityName, detailsJson, userId],
+    (err) => {
+      if (err) console.error('Error logging activity:', err);
+    }
+  );
+};
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
@@ -271,6 +298,9 @@ app.post('/api/clients', authenticateToken, (req, res) => {
       }
       console.log('✅ [API] Client created successfully with id:', id);
 
+      // Log activity
+      logActivity('created', 'client', id, name, { hourlyRate, email, phone }, req.user?.id);
+
       // Verify the client was saved by reading it back
       db.get('SELECT * FROM clients WHERE id = ?', [id], (err, client) => {
         if (err) {
@@ -300,6 +330,8 @@ app.put('/api/clients/:id', authenticateToken, (req, res) => {
         console.error('Error updating client:', err);
         return res.status(500).json({ error: 'Database error' });
       }
+      // Log activity
+      logActivity('updated', 'client', id, name, { hourlyRate, email, phone }, req.user?.id);
       res.json({ success: true });
     }
   );
@@ -446,6 +478,15 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
       }
       console.log('✅ [API] Task created successfully with id:', id);
 
+      // Log activity
+      logActivity('created', 'task', id, description || 'Untitled Task', {
+        type,
+        hours,
+        cost,
+        status,
+        finished
+      }, req.user?.id);
+
       // Verify the task was saved by reading it back
       db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
         if (err) {
@@ -480,6 +521,13 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
       }
+      // Log activity
+      logActivity('updated', 'task', id, description || 'Untitled Task', {
+        hours,
+        cost,
+        status,
+        finished
+      }, req.user?.id);
       res.json({ success: true });
     }
   );
@@ -488,11 +536,18 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
 app.delete('/api/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
 
-  db.run('DELETE FROM tasks WHERE id = ?', [id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json({ success: true });
+  // Get task details before deletion
+  db.get('SELECT description FROM tasks WHERE id = ?', [id], (err, task) => {
+    const taskName = task?.description || 'Unknown Task';
+
+    db.run('DELETE FROM tasks WHERE id = ?', [id], function(err) {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      // Log activity
+      logActivity('deleted', 'task', id, taskName, null, req.user?.id);
+      res.json({ success: true });
+    });
   });
 });
 
@@ -1034,6 +1089,31 @@ app.get('/api/health', (req, res) => {
       clientCount: result.count
     });
   });
+});
+
+// Activity Logs API
+app.get('/api/activity-logs', authenticateToken, (req, res) => {
+  const limit = parseInt(req.query.limit) || 100;
+  const offset = parseInt(req.query.offset) || 0;
+
+  db.all(
+    `SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [limit, offset],
+    (err, logs) => {
+      if (err) {
+        console.error('Error fetching activity logs:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      // Parse JSON details
+      const parsedLogs = logs.map(log => ({
+        ...log,
+        details: log.details ? JSON.parse(log.details) : null
+      }));
+
+      res.json(parsedLogs);
+    }
+  );
 });
 
 // Uptime Kuma Integration

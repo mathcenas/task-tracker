@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
@@ -169,6 +169,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/clients', icon: Users, label: 'Clients', group: 'Management' },
     { path: '/projects', icon: Folders, label: 'Projects', group: 'Management' },
     { path: '/import-csv', icon: FileSpreadsheet, label: 'Import CSV', group: 'Tools' },
+    { path: '/activity-log', icon: History, label: 'Activity Log', group: 'Tools' },
     { path: '/integrations/uptime-kuma', icon: Activity, label: 'Uptime Kuma', group: 'Integrations' },
     { path: '/about', icon: BarChart3, label: 'About', group: 'Other' },
   ];

@@ -127,6 +127,18 @@ const initDB = async () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS activity_logs (
+      id TEXT PRIMARY KEY,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT,
+      entity_name TEXT,
+      details TEXT,
+      user_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id)
     )`
   ];
 
