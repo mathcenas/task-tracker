@@ -25,6 +25,46 @@ The application will be available at http://localhost:3000
   - Admin: `admin` / `TaskTracker2025!`
   - User: `user` / `User2025!`
 
+## Database Maintenance
+
+### Docker Environment
+
+```bash
+# Make the fix script executable (first time only)
+chmod +x docker-fix-db.sh
+
+# Verify database consistency
+./docker-fix-db.sh verify
+
+# Fix database issues
+./docker-fix-db.sh fix
+
+# Verify and fix (interactive)
+./docker-fix-db.sh both
+```
+
+Or run directly:
+```bash
+# Verify
+docker exec tasktracker-app npm run verify:status
+
+# Fix
+docker exec tasktracker-app npm run fix:completed
+```
+
+### Development Environment
+
+```bash
+# Verify database
+npm run verify:status
+
+# Fix completed tasks status
+npm run fix:completed
+
+# Clean orphaned tasks
+npm run clean:orphaned
+```
+
 ## Development
 
 ```bash
