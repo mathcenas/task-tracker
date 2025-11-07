@@ -11,6 +11,8 @@
     "build:server": "node server/init-db.js",
     "migrate": "node server/migrate.js",
     "clean:orphaned": "node server/clean-orphaned-tasks.js",
+    "fix:completed": "node server/fix-completed-tasks.js",
+    "verify:status": "node server/verify-task-status.js",
     "test:recurring": "node server/set-recurring-due-today.js",
     "lint": "eslint .",
     "preview": "vite preview"
