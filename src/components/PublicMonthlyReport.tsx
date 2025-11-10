@@ -382,7 +382,7 @@ export function PublicMonthlyReport() {
       const breakdownData = [];
       if (incidentTasks.length > 0) {
         breakdownData.push([
-          '🚨 Incidents',
+          'Incidents',
           incidentTasks.length.toString(),
           `${incidentHours.toFixed(1)}h`,
           `$${incidentTotal.toFixed(2)}`,
@@ -391,7 +391,7 @@ export function PublicMonthlyReport() {
       }
       if (requestTasks.length > 0) {
         breakdownData.push([
-          '📋 Requests',
+          'Requests',
           requestTasks.length.toString(),
           `${requestHours.toFixed(1)}h`,
           `$${requestTotal.toFixed(2)}`,
