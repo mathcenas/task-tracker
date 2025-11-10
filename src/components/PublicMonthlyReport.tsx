@@ -738,32 +738,35 @@ export function PublicMonthlyReport() {
                           title={`Click to view ${data.month} ${data.year} report\nIncidents: ${data.incidentHours.toFixed(1)}h\nRequests: ${data.requestHours.toFixed(1)}h`}
                         >
                           <div className="h-24 flex items-end justify-center mb-2">
-                            <div className="w-8 flex flex-col items-stretch">
-                              {data.incidentHours > 0 && (
-                                <div
-                                  className={`w-full transition-all duration-300 ${
-                                    isCurrentMonth
-                                      ? 'bg-red-500 group-hover:bg-red-600'
-                                      : 'bg-red-400 dark:bg-red-500 group-hover:bg-red-500 dark:group-hover:bg-red-600'
-                                  } ${data.requestHours > 0 ? '' : 'rounded-t'}`}
-                                  style={{ height: `${incidentHeight}%` }}
-                                />
-                              )}
-                              {data.requestHours > 0 && (
-                                <div
-                                  className={`w-full rounded-t transition-all duration-300 ${
-                                    isCurrentMonth
-                                      ? 'bg-blue-500 group-hover:bg-blue-600'
-                                      : 'bg-blue-400 dark:bg-blue-500 group-hover:bg-blue-500 dark:group-hover:bg-blue-600'
-                                  }`}
-                                  style={{ height: `${requestHeight}%` }}
-                                />
-                              )}
-                              {data.hours === 0 && (
+                            <div className="w-full flex flex-col-reverse items-stretch">
+                              {data.hours === 0 ? (
                                 <div
                                   className="w-full rounded-t bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500"
-                                  style={{ height: '5%' }}
+                                  style={{ height: '8px' }}
                                 />
+                              ) : (
+                                <>
+                                  {data.requestHours > 0 && (
+                                    <div
+                                      className={`w-full rounded-t transition-all duration-300 ${
+                                        isCurrentMonth
+                                          ? 'bg-blue-500 group-hover:bg-blue-600'
+                                          : 'bg-blue-400 dark:bg-blue-500 group-hover:bg-blue-500 dark:group-hover:bg-blue-600'
+                                      }`}
+                                      style={{ height: `${requestHeight}%` }}
+                                    />
+                                  )}
+                                  {data.incidentHours > 0 && (
+                                    <div
+                                      className={`w-full transition-all duration-300 ${
+                                        isCurrentMonth
+                                          ? 'bg-red-500 group-hover:bg-red-600'
+                                          : 'bg-red-400 dark:bg-red-500 group-hover:bg-red-500 dark:group-hover:bg-red-600'
+                                      } ${data.requestHours === 0 ? 'rounded-t' : ''}`}
+                                      style={{ height: `${incidentHeight}%` }}
+                                    />
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
