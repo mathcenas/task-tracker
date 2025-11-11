@@ -93,14 +93,21 @@ class UptimeKumaService {
       return;
     }
 
-    console.log(`🔌 Connecting to Uptime Kuma at ${this.config.url}...`);
+    // Ensure URL has protocol
+    let url = this.config.url.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `http://${url}`;
+    }
+
+    console.log(`🔌 Connecting to Uptime Kuma at ${url}...`);
 
     try {
-      this.socket = io(this.config.url, {
+      this.socket = io(url, {
         reconnection: true,
         reconnectionDelay: 5000,
         reconnectionDelayMax: 30000,
-        timeout: 10000
+        timeout: 10000,
+        transports: ['websocket', 'polling']
       });
 
       this.setupEventHandlers();

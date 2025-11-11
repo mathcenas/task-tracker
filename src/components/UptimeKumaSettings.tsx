@@ -201,11 +201,11 @@ export default function UptimeKumaSettings() {
               type="text"
               value={config.url}
               onChange={(e) => setConfig({ ...config, url: e.target.value })}
-              placeholder="http://uptime-kuma:3001 or http://localhost:3001"
+              placeholder="http://10.8.8.21:3001 or uptime-kuma:3001"
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              For Docker: use container name (e.g., http://uptime-kuma:3001)
+              Protocol is optional. Examples: <code className="bg-gray-100 dark:bg-gray-600 px-1 rounded">10.8.8.21:3001</code> or <code className="bg-gray-100 dark:bg-gray-600 px-1 rounded">http://uptime-kuma:3001</code>
             </p>
           </div>
 
