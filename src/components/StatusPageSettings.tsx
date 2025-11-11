@@ -31,9 +31,11 @@ export default function StatusPageSettings() {
   const loadPages = async () => {
     try {
       const data = await apiService.getStatusPages();
-      setPages(data);
+      setPages(data || []);
+      console.log('Loaded status pages:', data);
     } catch (error) {
       console.error('Failed to load status pages:', error);
+      setPages([]);
     }
   };
 
@@ -66,7 +68,17 @@ export default function StatusPageSettings() {
       setEditingPage(null);
       await loadPages();
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to save status page' });
+      console.error('Error saving status page:', error);
+      let errorMessage = 'Failed to save status page';
+
+      // Handle specific error messages
+      if (error.message?.includes('UNIQUE constraint') || error.message?.includes('duplicate')) {
+        errorMessage = 'A status page with this slug already exists. Please choose a different slug.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setMessage({ type: 'error', text: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -239,6 +251,11 @@ export default function StatusPageSettings() {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Create your first public status page to share your service uptime with customers.
               </p>
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg max-w-md mx-auto">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Note:</strong> Make sure Uptime Kuma is connected first (Integrations &gt; Uptime Kuma) to display monitors on your status page.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

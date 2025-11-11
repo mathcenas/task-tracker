@@ -14,6 +14,7 @@
     "fix:completed": "node server/fix-completed-tasks.js",
     "verify:status": "node server/verify-task-status.js",
     "test:recurring": "node server/set-recurring-due-today.js",
+    "check:status-pages": "node server/check-status-pages.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

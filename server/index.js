@@ -1297,6 +1297,12 @@ app.post('/api/status-pages', authenticateToken, (req, res) => {
     function(err) {
       if (err) {
         console.error('Error creating status page:', err);
+
+        // Check for unique constraint violation
+        if (err.code === 'SQLITE_CONSTRAINT' && err.message.includes('UNIQUE')) {
+          return res.status(400).json({ error: 'A status page with this slug already exists' });
+        }
+
         return res.status(500).json({ error: 'Failed to create status page' });
       }
 
