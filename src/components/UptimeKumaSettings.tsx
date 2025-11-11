@@ -97,8 +97,13 @@ export default function UptimeKumaSettings() {
 
     try {
       await apiService.saveUptimeKumaConfig(config);
-      setMessage({ type: 'success', text: 'Configuration saved successfully!' });
+      setMessage({ type: 'success', text: 'Configuration saved and reconnecting...' });
+
+      // Wait for reconnection to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       await loadStatus();
+      setMessage({ type: 'success', text: 'Configuration saved successfully!' });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to save configuration' });
     } finally {

@@ -130,6 +130,17 @@ class UptimeKumaService {
         }, (response) => {
           if (response.ok) {
             console.log('✅ Logged in to Uptime Kuma successfully');
+
+            // Request monitor list after successful login
+            console.log('📡 Requesting monitor list...');
+            this.socket.emit('getMonitorList', (monitors) => {
+              console.log(`📊 Received ${Object.keys(monitors || {}).length} monitors from getMonitorList`);
+              if (monitors) {
+                Object.entries(monitors).forEach(([id, monitor]) => {
+                  this.monitors.set(parseInt(id), monitor);
+                });
+              }
+            });
           } else {
             console.error('❌ Failed to login:', response.msg);
           }
@@ -270,7 +281,12 @@ ${monitor.accepted_statuscodes_json ? `Expected Status Codes: ${monitor.accepted
   }
 
   async reconnect() {
+    console.log('🔄 Reconnecting to Uptime Kuma...');
     this.disconnect();
+
+    // Wait a bit before reconnecting to ensure clean disconnect
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     await this.connect();
   }
 
