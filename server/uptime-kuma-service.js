@@ -18,6 +18,8 @@ class UptimeKumaService {
     };
     this.monitors = new Map();
     this.lastHeartbeats = new Map();
+    this.serverInfo = null;
+    this.isAuthenticated = false;
   }
 
   async loadConfig() {
@@ -120,32 +122,12 @@ class UptimeKumaService {
     this.socket.on('connect', () => {
       console.log('✅ Connected to Uptime Kuma');
       this.isConnected = true;
+      this.authenticate();
+    });
 
-      if (this.config.username && this.config.password) {
-        console.log('🔐 Logging in to Uptime Kuma...');
-        this.socket.emit('login', {
-          username: this.config.username,
-          password: this.config.password,
-          token: ''
-        }, (response) => {
-          if (response.ok) {
-            console.log('✅ Logged in to Uptime Kuma successfully');
-
-            // Request monitor list after successful login
-            console.log('📡 Requesting monitor list...');
-            this.socket.emit('getMonitorList', (monitors) => {
-              console.log(`📊 Received ${Object.keys(monitors || {}).length} monitors from getMonitorList`);
-              if (monitors) {
-                Object.entries(monitors).forEach(([id, monitor]) => {
-                  this.monitors.set(parseInt(id), monitor);
-                });
-              }
-            });
-          } else {
-            console.error('❌ Failed to login:', response.msg);
-          }
-        });
-      }
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log(`🔄 Reconnected to Uptime Kuma after ${attemptNumber} attempts`);
+      this.authenticate();
     });
 
     this.socket.on('disconnect', () => {
@@ -174,6 +156,13 @@ class UptimeKumaService {
 
     this.socket.on('info', (info) => {
       console.log('ℹ️ Uptime Kuma info:', info);
+      this.serverInfo = info;
+    });
+
+    this.socket.on('autoLogin', () => {
+      console.log('✅ Auto-login successful');
+      this.isAuthenticated = true;
+      this.requestMonitorList();
     });
 
     this.socket.on('connect_error', (error) => {
@@ -269,14 +258,68 @@ ${monitor.accepted_statuscodes_json ? `Expected Status Codes: ${monitor.accepted
     });
   }
 
+  authenticate() {
+    if (!this.socket || !this.isConnected) {
+      console.log('⚠️ Cannot authenticate: socket not connected');
+      return;
+    }
+
+    if (this.config.username && this.config.password) {
+      console.log('🔐 Logging in to Uptime Kuma...');
+      this.socket.emit('login', {
+        username: this.config.username,
+        password: this.config.password,
+        token: ''
+      }, (response) => {
+        if (response && response.ok) {
+          console.log('✅ Logged in to Uptime Kuma successfully');
+          this.isAuthenticated = true;
+          this.requestMonitorList();
+        } else {
+          console.error('❌ Failed to login:', response?.msg || 'Unknown error');
+          this.isAuthenticated = false;
+        }
+      });
+    } else {
+      console.log('⚠️ No credentials configured for Uptime Kuma');
+    }
+  }
+
+  requestMonitorList() {
+    if (!this.socket || !this.isAuthenticated) {
+      console.log('⚠️ Cannot request monitor list: not authenticated');
+      return;
+    }
+
+    console.log('📡 Requesting monitor list...');
+    this.socket.emit('getMonitorList', (monitors) => {
+      if (monitors) {
+        const monitorCount = Object.keys(monitors).length;
+        console.log(`📊 Received ${monitorCount} monitors from getMonitorList`);
+
+        // Clear existing monitors and load new ones
+        this.monitors.clear();
+        Object.entries(monitors).forEach(([id, monitor]) => {
+          this.monitors.set(parseInt(id), monitor);
+        });
+
+        console.log(`✅ Loaded ${this.monitors.size} monitors into memory`);
+      } else {
+        console.log('⚠️ Received empty monitor list');
+      }
+    });
+  }
+
   disconnect() {
     if (this.socket) {
       console.log('🔌 Disconnecting from Uptime Kuma...');
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
+      this.isAuthenticated = false;
       this.monitors.clear();
       this.lastHeartbeats.clear();
+      this.serverInfo = null;
     }
   }
 
@@ -293,6 +336,7 @@ ${monitor.accepted_statuscodes_json ? `Expected Status Codes: ${monitor.accepted
   getStatus() {
     return {
       connected: this.isConnected,
+      authenticated: this.isAuthenticated,
       config: {
         enabled: this.config.enabled,
         url: this.config.url,
@@ -300,7 +344,8 @@ ${monitor.accepted_statuscodes_json ? `Expected Status Codes: ${monitor.accepted
       },
       monitors: Array.from(this.monitors.values()),
       monitorCount: this.monitors.size,
-      lastHeartbeats: this.lastHeartbeats.size
+      lastHeartbeats: this.lastHeartbeats.size,
+      serverInfo: this.serverInfo
     };
   }
 

@@ -342,9 +342,12 @@ export default function UptimeKumaSettings() {
                   </h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="text-blue-800 dark:text-blue-300">
-                      Monitors: <span className="font-medium">{status.monitors}</span>
+                      Authenticated: <span className="font-medium">{status.authenticated ? 'Yes' : 'No'}</span>
                     </div>
                     <div className="text-blue-800 dark:text-blue-300">
+                      Monitors: <span className="font-medium">{status.monitorCount || status.monitors || 0}</span>
+                    </div>
+                    <div className="text-blue-800 dark:text-blue-300 col-span-2">
                       Active Heartbeats: <span className="font-medium">{status.lastHeartbeats}</span>
                     </div>
                   </div>
