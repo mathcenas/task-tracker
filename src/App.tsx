@@ -22,6 +22,8 @@ import StatusPageSettings from './components/StatusPageSettings';
 import MonitorClientMapping from './components/MonitorClientMapping';
 import { CSVImport } from './components/CSVImport';
 import { ActivityLog } from './components/ActivityLog';
+import { CompanySettings } from './components/CompanySettings';
+import { QuotesList } from './components/QuotesList';
 
 export default function App() {
   return (
@@ -51,6 +53,8 @@ export default function App() {
                   <Route path="/integrations/uptime-kuma" element={<UptimeKumaSettings />} />
                   <Route path="/integrations/status-pages" element={<StatusPageSettings />} />
                   <Route path="/integrations/monitor-mapping" element={<MonitorClientMapping />} />
+                  <Route path="/settings/company" element={<CompanySettings />} />
+                  <Route path="/quotes" element={<QuotesList />} />
                   <Route path="/add-client" element={<ClientForm />} />
                   <Route path="/add-task" element={<TaskForm />} />
                   <Route path="/task" element={<TaskForm />} />

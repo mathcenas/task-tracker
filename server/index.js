@@ -168,6 +168,49 @@ const initDB = () => {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS company_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      company_name TEXT DEFAULT 'TaskTracker Pro',
+      logo_url TEXT,
+      address TEXT,
+      phone TEXT,
+      email TEXT,
+      website TEXT,
+      tax_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS quotes (
+      id TEXT PRIMARY KEY,
+      quote_number TEXT UNIQUE NOT NULL,
+      client_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      date DATE NOT NULL,
+      expiry_date DATE,
+      status TEXT DEFAULT 'draft',
+      notes TEXT,
+      terms TEXT,
+      subtotal REAL DEFAULT 0,
+      tax_rate REAL DEFAULT 0,
+      tax_amount REAL DEFAULT 0,
+      total REAL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients (id)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS quote_items (
+      id TEXT PRIMARY KEY,
+      quote_id TEXT NOT NULL,
+      description TEXT NOT NULL,
+      quantity REAL DEFAULT 1,
+      unit_price REAL DEFAULT 0,
+      amount REAL DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE CASCADE
     )`
   ];
 
@@ -1424,6 +1467,225 @@ app.post('/api/monitor-mappings', authenticateToken, (req, res) => {
         res.json(allMappings);
       });
     });
+  });
+});
+
+// Company Settings API
+app.get('/api/company-settings', authenticateToken, (req, res) => {
+  db.get('SELECT * FROM company_settings WHERE id = 1', (err, settings) => {
+    if (err) {
+      console.error('Error fetching company settings:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!settings) {
+      return res.json({
+        company_name: 'TaskTracker Pro',
+        logo_url: null,
+        address: null,
+        phone: null,
+        email: null,
+        website: null,
+        tax_id: null
+      });
+    }
+
+    res.json(settings);
+  });
+});
+
+app.post('/api/company-settings', authenticateToken, (req, res) => {
+  const { company_name, logo_url, address, phone, email, website, tax_id } = req.body;
+
+  db.run(
+    `INSERT INTO company_settings (id, company_name, logo_url, address, phone, email, website, tax_id)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       company_name = excluded.company_name,
+       logo_url = excluded.logo_url,
+       address = excluded.address,
+       phone = excluded.phone,
+       email = excluded.email,
+       website = excluded.website,
+       tax_id = excluded.tax_id,
+       updated_at = CURRENT_TIMESTAMP`,
+    [company_name, logo_url, address, phone, email, website, tax_id],
+    function(err) {
+      if (err) {
+        console.error('Error saving company settings:', err);
+        return res.status(500).json({ error: 'Failed to save settings' });
+      }
+
+      db.get('SELECT * FROM company_settings WHERE id = 1', (err, settings) => {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to fetch updated settings' });
+        }
+        res.json(settings);
+      });
+    }
+  );
+});
+
+// Quotes API
+app.get('/api/quotes', authenticateToken, (req, res) => {
+  db.all(
+    `SELECT q.*, c.name as client_name
+     FROM quotes q
+     LEFT JOIN clients c ON q.client_id = c.id
+     ORDER BY q.date DESC`,
+    (err, quotes) => {
+      if (err) {
+        console.error('Error fetching quotes:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(quotes);
+    }
+  );
+});
+
+app.get('/api/quotes/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT * FROM quotes WHERE id = ?', [id], (err, quote) => {
+    if (err) {
+      console.error('Error fetching quote:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!quote) {
+      return res.status(404).json({ error: 'Quote not found' });
+    }
+
+    db.all(
+      'SELECT * FROM quote_items WHERE quote_id = ? ORDER BY sort_order',
+      [id],
+      (err, items) => {
+        if (err) {
+          console.error('Error fetching quote items:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        res.json({ ...quote, items });
+      }
+    );
+  });
+});
+
+app.post('/api/quotes', authenticateToken, (req, res) => {
+  const { client_id, title, date, expiry_date, notes, terms, tax_rate, items } = req.body;
+  const id = `quote-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const quoteNumber = `QT-${Date.now().toString().slice(-6)}`;
+
+  let subtotal = 0;
+  items.forEach((item) => {
+    subtotal += item.quantity * item.unit_price;
+  });
+
+  const taxAmount = subtotal * (tax_rate / 100);
+  const total = subtotal + taxAmount;
+
+  db.run(
+    `INSERT INTO quotes
+     (id, quote_number, client_id, title, date, expiry_date, notes, terms,
+      subtotal, tax_rate, tax_amount, total, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+    [id, quoteNumber, client_id, title, date, expiry_date, notes, terms,
+     subtotal, tax_rate, taxAmount, total],
+    function(err) {
+      if (err) {
+        console.error('Error creating quote:', err);
+        return res.status(500).json({ error: 'Failed to create quote' });
+      }
+
+      const stmt = db.prepare(
+        `INSERT INTO quote_items (id, quote_id, description, quantity, unit_price, amount, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      );
+
+      items.forEach((item, index) => {
+        const itemId = `item-${Date.now()}-${index}`;
+        const amount = item.quantity * item.unit_price;
+        stmt.run(itemId, id, item.description, item.quantity, item.unit_price, amount, index);
+      });
+
+      stmt.finalize((err) => {
+        if (err) {
+          console.error('Error adding quote items:', err);
+          return res.status(500).json({ error: 'Failed to add items' });
+        }
+
+        res.json({ id, quote_number: quoteNumber });
+      });
+    }
+  );
+});
+
+app.put('/api/quotes/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { client_id, title, date, expiry_date, notes, terms, tax_rate, items, status } = req.body;
+
+  let subtotal = 0;
+  items.forEach((item) => {
+    subtotal += item.quantity * item.unit_price;
+  });
+
+  const taxAmount = subtotal * (tax_rate / 100);
+  const total = subtotal + taxAmount;
+
+  db.run(
+    `UPDATE quotes SET
+       client_id = ?, title = ?, date = ?, expiry_date = ?, notes = ?, terms = ?,
+       subtotal = ?, tax_rate = ?, tax_amount = ?, total = ?, status = ?,
+       updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [client_id, title, date, expiry_date, notes, terms,
+     subtotal, tax_rate, taxAmount, total, status, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating quote:', err);
+        return res.status(500).json({ error: 'Failed to update quote' });
+      }
+
+      db.run('DELETE FROM quote_items WHERE quote_id = ?', [id], (err) => {
+        if (err) {
+          console.error('Error deleting old items:', err);
+          return res.status(500).json({ error: 'Failed to update items' });
+        }
+
+        const stmt = db.prepare(
+          `INSERT INTO quote_items (id, quote_id, description, quantity, unit_price, amount, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
+        );
+
+        items.forEach((item, index) => {
+          const itemId = item.id || `item-${Date.now()}-${index}`;
+          const amount = item.quantity * item.unit_price;
+          stmt.run(itemId, id, item.description, item.quantity, item.unit_price, amount, index);
+        });
+
+        stmt.finalize((err) => {
+          if (err) {
+            console.error('Error updating quote items:', err);
+            return res.status(500).json({ error: 'Failed to update items' });
+          }
+
+          res.json({ success: true });
+        });
+      });
+    }
+  );
+});
+
+app.delete('/api/quotes/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.run('DELETE FROM quotes WHERE id = ?', [id], function(err) {
+    if (err) {
+      console.error('Error deleting quote:', err);
+      return res.status(500).json({ error: 'Failed to delete quote' });
+    }
+
+    res.json({ success: true });
   });
 });
 

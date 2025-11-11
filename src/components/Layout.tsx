@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2 } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
@@ -170,9 +170,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/projects', icon: Folders, label: 'Projects', group: 'Management' },
     { path: '/import-csv', icon: FileSpreadsheet, label: 'Import CSV', group: 'Tools' },
     { path: '/activity-log', icon: History, label: 'Activity Log', group: 'Tools' },
+    { path: '/quotes', icon: FileText, label: 'Quotes', group: 'Management' },
     { path: '/integrations/uptime-kuma', icon: Activity, label: 'Uptime Kuma', group: 'Integrations' },
     { path: '/integrations/status-pages', icon: Globe, label: 'Status Pages', group: 'Integrations' },
     { path: '/integrations/monitor-mapping', icon: Users, label: 'Monitor Mapping', group: 'Integrations' },
+    { path: '/settings/company', icon: Building2, label: 'Company Settings', group: 'Settings' },
     { path: '/about', icon: BarChart3, label: 'About', group: 'Other' },
   ];
 

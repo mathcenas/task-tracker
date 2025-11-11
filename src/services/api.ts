@@ -536,6 +536,47 @@ class ApiService {
   async getActivityLogs(limit: number = 100, offset: number = 0) {
     return this.request(`/activity-logs?limit=${limit}&offset=${offset}`);
   }
+
+  // Company Settings
+  async getCompanySettings() {
+    return this.request('/company-settings');
+  }
+
+  async saveCompanySettings(settings: any) {
+    return this.request('/company-settings', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  // Quotes
+  async getQuotes() {
+    return this.request('/quotes');
+  }
+
+  async getQuote(id: string) {
+    return this.request(`/quotes/${id}`);
+  }
+
+  async createQuote(quote: any) {
+    return this.request('/quotes', {
+      method: 'POST',
+      body: JSON.stringify(quote),
+    });
+  }
+
+  async updateQuote(id: string, quote: any) {
+    return this.request(`/quotes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(quote),
+    });
+  }
+
+  async deleteQuote(id: string) {
+    return this.request(`/quotes/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();
