@@ -172,6 +172,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/activity-log', icon: History, label: 'Activity Log', group: 'Tools' },
     { path: '/integrations/uptime-kuma', icon: Activity, label: 'Uptime Kuma', group: 'Integrations' },
     { path: '/integrations/status-pages', icon: Globe, label: 'Status Pages', group: 'Integrations' },
+    { path: '/integrations/monitor-mapping', icon: Users, label: 'Monitor Mapping', group: 'Integrations' },
     { path: '/about', icon: BarChart3, label: 'About', group: 'Other' },
   ];
 

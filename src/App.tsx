@@ -19,6 +19,7 @@ import { RecurringTasksPage } from './components/RecurringTasksPage';
 import { KanbanBoard } from './components/KanbanBoard';
 import UptimeKumaSettings from './components/UptimeKumaSettings';
 import StatusPageSettings from './components/StatusPageSettings';
+import MonitorClientMapping from './components/MonitorClientMapping';
 import { CSVImport } from './components/CSVImport';
 import { ActivityLog } from './components/ActivityLog';
 
@@ -49,6 +50,7 @@ export default function App() {
                   <Route path="/activity-log" element={<ActivityLog />} />
                   <Route path="/integrations/uptime-kuma" element={<UptimeKumaSettings />} />
                   <Route path="/integrations/status-pages" element={<StatusPageSettings />} />
+                  <Route path="/integrations/monitor-mapping" element={<MonitorClientMapping />} />
                   <Route path="/add-client" element={<ClientForm />} />
                   <Route path="/add-task" element={<TaskForm />} />
                   <Route path="/task" element={<TaskForm />} />

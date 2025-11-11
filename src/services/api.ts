@@ -519,6 +519,18 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Monitor Mappings
+  async getMonitorMappings() {
+    return this.request('/monitor-mappings');
+  }
+
+  async saveMonitorMappings(mappings: any[]) {
+    return this.request('/monitor-mappings', {
+      method: 'POST',
+      body: JSON.stringify(mappings),
+    });
+  }
 }
 
 export const apiService = new ApiService();

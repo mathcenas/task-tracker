@@ -282,9 +282,14 @@ ${monitor.accepted_statuscodes_json ? `Expected Status Codes: ${monitor.accepted
         url: this.config.url,
         hasCredentials: !!(this.config.username && this.config.password)
       },
-      monitors: this.monitors.size,
+      monitors: Array.from(this.monitors.values()),
+      monitorCount: this.monitors.size,
       lastHeartbeats: this.lastHeartbeats.size
     };
+  }
+
+  getMonitors() {
+    return Array.from(this.monitors.values());
   }
 }
 

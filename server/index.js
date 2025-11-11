@@ -158,6 +158,16 @@ const initDB = () => {
       enabled BOOLEAN DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS monitor_mappings (
+      monitor_id INTEGER PRIMARY KEY,
+      client_id TEXT,
+      project_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients (id),
+      FOREIGN KEY (project_id) REFERENCES projects (id)
     )`
   ];
 
@@ -1350,6 +1360,70 @@ app.delete('/api/status-pages/:id', authenticateToken, (req, res) => {
       return res.status(500).json({ error: 'Failed to delete status page' });
     }
     res.json({ success: true });
+  });
+});
+
+// Monitor Mappings
+app.get('/api/monitor-mappings', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM monitor_mappings', (err, mappings) => {
+    if (err) {
+      console.error('Error fetching monitor mappings:', err);
+      return res.status(500).json({ error: 'Failed to fetch monitor mappings' });
+    }
+    res.json(mappings);
+  });
+});
+
+app.post('/api/monitor-mappings', authenticateToken, (req, res) => {
+  const mappings = req.body;
+
+  if (!Array.isArray(mappings)) {
+    return res.status(400).json({ error: 'Expected an array of mappings' });
+  }
+
+  // Delete all existing mappings and insert new ones
+  db.run('DELETE FROM monitor_mappings', (err) => {
+    if (err) {
+      console.error('Error deleting old mappings:', err);
+      return res.status(500).json({ error: 'Failed to clear old mappings' });
+    }
+
+    // Insert new mappings
+    const stmt = db.prepare(
+      `INSERT INTO monitor_mappings (monitor_id, client_id, project_id)
+       VALUES (?, ?, ?)`
+    );
+
+    let errorOccurred = false;
+
+    mappings.forEach((mapping) => {
+      stmt.run(
+        mapping.monitor_id,
+        mapping.client_id || null,
+        mapping.project_id || null,
+        (err) => {
+          if (err && !errorOccurred) {
+            errorOccurred = true;
+            console.error('Error inserting mapping:', err);
+          }
+        }
+      );
+    });
+
+    stmt.finalize((err) => {
+      if (err || errorOccurred) {
+        console.error('Error finalizing mappings:', err);
+        return res.status(500).json({ error: 'Failed to save mappings' });
+      }
+
+      // Return all mappings
+      db.all('SELECT * FROM monitor_mappings', (err, allMappings) => {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to fetch saved mappings' });
+        }
+        res.json(allMappings);
+      });
+    });
   });
 });
 
