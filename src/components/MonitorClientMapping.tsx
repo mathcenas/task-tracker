@@ -53,6 +53,9 @@ export default function MonitorClientMapping() {
         apiService.getMonitorMappings()
       ]);
 
+      console.log('Kuma Status:', statusData);
+      console.log('Monitors received:', statusData.monitors);
+
       setKumaStatus(statusData);
       setClients(clientsData);
       setProjects(projectsData);
@@ -72,7 +75,11 @@ export default function MonitorClientMapping() {
 
       // Get monitors from status
       if (statusData.monitors && Array.isArray(statusData.monitors)) {
+        console.log(`Setting ${statusData.monitors.length} monitors`);
         setMonitors(statusData.monitors);
+      } else {
+        console.log('No monitors found in status data');
+        setMonitors([]);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -119,7 +126,7 @@ export default function MonitorClientMapping() {
     return client ? client.name : '';
   };
 
-  if (!kumaStatus?.connected) {
+  if (!kumaStatus?.connected || !kumaStatus?.authenticated) {
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -127,11 +134,18 @@ export default function MonitorClientMapping() {
             <div className="text-center py-12">
               <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Uptime Kuma Not Connected
+                {!kumaStatus?.connected ? 'Uptime Kuma Not Connected' : 'Uptime Kuma Not Authenticated'}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Please connect to Uptime Kuma first to sync monitors.
+                {!kumaStatus?.connected
+                  ? 'Please connect to Uptime Kuma first to sync monitors.'
+                  : 'Connected but not authenticated. Please check your credentials.'}
               </p>
+              {kumaStatus?.connected && kumaStatus?.authenticated === false && (
+                <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+                  Authentication failed. Please verify your username and password in settings.
+                </p>
+              )}
               <a
                 href="/integrations/uptime-kuma"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -210,7 +224,25 @@ export default function MonitorClientMapping() {
               </div>
 
               <div className="space-y-4">
-                {monitors.map((monitor) => {
+                {monitors.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                    <Monitor className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      No Monitors Found
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Connected to Uptime Kuma but no monitors are available.
+                    </p>
+                    <button
+                      onClick={loadData}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Refresh Monitors
+                    </button>
+                  </div>
+                ) : (
+                  monitors.map((monitor) => {
                   const mapping = mappings[monitor.id] || { monitor_id: monitor.id, client_id: null, project_id: null };
                   const selectedClient = mapping.client_id;
                   const clientProjects = selectedClient ? getProjectsForClient(selectedClient) : [];
@@ -295,7 +327,8 @@ export default function MonitorClientMapping() {
                       </div>
                     </div>
                   );
-                })}
+                })
+                )}
               </div>
 
               <div className="flex items-center gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
