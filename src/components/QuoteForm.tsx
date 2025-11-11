@@ -57,9 +57,10 @@ export function QuoteForm() {
   const loadCompanySettings = async () => {
     try {
       const settings = await apiService.getCompanySettings();
-      setCompanySettings(settings);
+      setCompanySettings(settings || {});
     } catch (error) {
       console.error('Failed to load company settings:', error);
+      setCompanySettings({});
     }
   };
 
