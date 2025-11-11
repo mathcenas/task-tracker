@@ -114,6 +114,11 @@ export default function MonitorClientMapping() {
     return projects.filter(p => p.client_id === clientId);
   };
 
+  const getClientName = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    return client ? client.name : '';
+  };
+
   if (!kumaStatus?.connected) {
     return (
       <div className="max-w-6xl mx-auto p-6">
@@ -279,7 +284,9 @@ export default function MonitorClientMapping() {
                               >
                                 <option value="">None</option>
                                 {clientProjects.map(project => (
-                                  <option key={project.id} value={project.id}>{project.name}</option>
+                                  <option key={project.id} value={project.id}>
+                                    {getClientName(project.client_id)} - {project.name}
+                                  </option>
                                 ))}
                               </select>
                             </div>
