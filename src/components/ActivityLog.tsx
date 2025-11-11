@@ -22,15 +22,11 @@ export function ActivityLog() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/activity-logs?limit=200', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
+      const data = await api.getActivityLogs(200);
       setLogs(data);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
+      setLogs([]);
     } finally {
       setLoading(false);
     }

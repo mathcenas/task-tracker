@@ -531,6 +531,11 @@ class ApiService {
       body: JSON.stringify(mappings),
     });
   }
+
+  // Activity Logs
+  async getActivityLogs(limit: number = 100, offset: number = 0) {
+    return this.request(`/activity-logs?limit=${limit}&offset=${offset}`);
+  }
 }
 
 export const apiService = new ApiService();
