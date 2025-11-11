@@ -12,11 +12,13 @@ import { ClientForm } from './components/ClientForm';
 import { TaskForm } from './components/TaskForm';
 import { EditTask } from './components/EditTask';
 import { PublicMonthlyReport } from './components/PublicMonthlyReport';
+import { PublicStatusPage } from './components/PublicStatusPage';
 import { AboutPage } from './components/AboutPage';
 import { AllTasksPage } from './components/AllTasksPage';
 import { RecurringTasksPage } from './components/RecurringTasksPage';
 import { KanbanBoard } from './components/KanbanBoard';
 import UptimeKumaSettings from './components/UptimeKumaSettings';
+import StatusPageSettings from './components/StatusPageSettings';
 import { CSVImport } from './components/CSVImport';
 import { ActivityLog } from './components/ActivityLog';
 
@@ -27,6 +29,7 @@ export default function App() {
         <Routes>
           {/* Public routes - no authentication required */}
           <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
+          <Route path="/status/:slug" element={<PublicStatusPage />} />
           <Route path="/about" element={<AboutPage />} />
 
           {/* Protected routes - authentication required */}
@@ -45,6 +48,7 @@ export default function App() {
                   <Route path="/import-csv" element={<CSVImport />} />
                   <Route path="/activity-log" element={<ActivityLog />} />
                   <Route path="/integrations/uptime-kuma" element={<UptimeKumaSettings />} />
+                  <Route path="/integrations/status-pages" element={<StatusPageSettings />} />
                   <Route path="/add-client" element={<ClientForm />} />
                   <Route path="/add-task" element={<TaskForm />} />
                   <Route path="/task" element={<TaskForm />} />

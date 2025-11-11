@@ -494,6 +494,31 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  // Status Pages
+  async getStatusPages() {
+    return this.request('/status-pages');
+  }
+
+  async createStatusPage(data: any) {
+    return this.request('/status-pages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateStatusPage(id: string, data: any) {
+    return this.request(`/status-pages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteStatusPage(id: string) {
+    return this.request(`/status-pages/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();

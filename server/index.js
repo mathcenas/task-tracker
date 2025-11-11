@@ -148,6 +148,16 @@ const initDB = () => {
       user_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users (id)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS status_pages (
+      id TEXT PRIMARY KEY,
+      slug TEXT UNIQUE NOT NULL,
+      organization_name TEXT NOT NULL,
+      description TEXT,
+      enabled BOOLEAN DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`
   ];
 
@@ -805,6 +815,84 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
   });
 });
 
+// Public Status Page - Get monitor statuses from Uptime Kuma
+app.get('/api/public/status/:slug', async (req, res) => {
+  const { slug } = req.params;
+
+  console.log('🌐 Public status page request:', { slug });
+
+  try {
+    // Check if status page is enabled for this slug
+    db.get('SELECT * FROM status_pages WHERE slug = ? AND enabled = 1', [slug], async (err, statusPage) => {
+      if (err) {
+        console.error('Error fetching status page:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (!statusPage) {
+        console.log('❌ Status page not found or disabled for slug:', slug);
+        return res.status(404).json({ error: 'Status page not found' });
+      }
+
+      // Get Uptime Kuma monitors
+      const monitors = await uptimeKumaService.getMonitors();
+
+      if (!monitors || monitors.length === 0) {
+        return res.json({
+          organizationName: statusPage.organization_name,
+          description: statusPage.description,
+          monitors: [],
+          overallStatus: 'operational',
+          lastUpdated: new Date().toISOString()
+        });
+      }
+
+      // Transform monitors for public display
+      const publicMonitors = monitors.map(monitor => ({
+        id: monitor.id,
+        name: monitor.name,
+        type: monitor.type,
+        url: monitor.url,
+        hostname: monitor.hostname,
+        status: monitor.active === 1 ? 'up' : 'down',
+        uptime: calculateUptime(monitor),
+        lastCheck: monitor.lastCheck || new Date().toISOString(),
+        responseTime: monitor.ping || null,
+        tags: monitor.tags || []
+      }));
+
+      // Calculate overall status
+      const downMonitors = publicMonitors.filter(m => m.status === 'down').length;
+      const overallStatus = downMonitors === 0
+        ? 'operational'
+        : downMonitors < publicMonitors.length
+        ? 'degraded'
+        : 'outage';
+
+      res.json({
+        organizationName: statusPage.organization_name,
+        description: statusPage.description,
+        monitors: publicMonitors,
+        overallStatus,
+        lastUpdated: new Date().toISOString()
+      });
+    });
+  } catch (error) {
+    console.error('Error generating status page:', error);
+    res.status(500).json({ error: 'Failed to generate status page' });
+  }
+});
+
+// Helper function to calculate uptime percentage
+function calculateUptime(monitor) {
+  // Calculate based on 30-day uptime if available
+  if (monitor.uptime30) {
+    return monitor.uptime30 * 100;
+  }
+  // Default to 100% if no data or monitor is up
+  return monitor.active === 1 ? 99.9 : 95.0;
+}
+
 // Backup - Export all data
 app.get('/api/backup', authenticateToken, (req, res) => {
   console.log('📦 Exporting database backup...');
@@ -1185,6 +1273,78 @@ app.listen(PORT, () => {
       console.error('Failed to auto-connect to Uptime Kuma:', err);
     });
   }, 3000);
+});
+
+// Status Page Management
+app.get('/api/status-pages', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM status_pages ORDER BY created_at DESC', (err, pages) => {
+    if (err) {
+      console.error('Error fetching status pages:', err);
+      return res.status(500).json({ error: 'Failed to fetch status pages' });
+    }
+    res.json(pages);
+  });
+});
+
+app.post('/api/status-pages', authenticateToken, (req, res) => {
+  const { slug, organizationName, description, enabled } = req.body;
+  const id = `status-${Date.now()}`;
+
+  db.run(
+    `INSERT INTO status_pages (id, slug, organization_name, description, enabled)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, slug, organizationName, description, enabled ? 1 : 0],
+    function(err) {
+      if (err) {
+        console.error('Error creating status page:', err);
+        return res.status(500).json({ error: 'Failed to create status page' });
+      }
+
+      db.get('SELECT * FROM status_pages WHERE id = ?', [id], (err, page) => {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to fetch created page' });
+        }
+        res.json(page);
+      });
+    }
+  );
+});
+
+app.put('/api/status-pages/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { slug, organizationName, description, enabled } = req.body;
+
+  db.run(
+    `UPDATE status_pages
+     SET slug = ?, organization_name = ?, description = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [slug, organizationName, description, enabled ? 1 : 0, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating status page:', err);
+        return res.status(500).json({ error: 'Failed to update status page' });
+      }
+
+      db.get('SELECT * FROM status_pages WHERE id = ?', [id], (err, page) => {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to fetch updated page' });
+        }
+        res.json(page);
+      });
+    }
+  );
+});
+
+app.delete('/api/status-pages/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.run('DELETE FROM status_pages WHERE id = ?', [id], function(err) {
+    if (err) {
+      console.error('Error deleting status page:', err);
+      return res.status(500).json({ error: 'Failed to delete status page' });
+    }
+    res.json({ success: true });
+  });
 });
 
 // Graceful shutdown
