@@ -210,9 +210,9 @@ export function QuoteForm() {
 
     const tableData = formData.items.map(item => [
       item.description,
-      item.quantity.toString(),
-      `$${item.unit_price.toFixed(2)}`,
-      `$${item.amount.toFixed(2)}`
+      Number(item.quantity).toString(),
+      `$${Number(item.unit_price).toFixed(2)}`,
+      `$${Number(item.amount).toFixed(2)}`
     ]);
 
     (doc as any).autoTable({
