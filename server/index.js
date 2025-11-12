@@ -1308,26 +1308,6 @@ app.post('/api/uptime-kuma/disconnect', authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('/app/dist'));
-
-  app.get('*', (req, res) => {
-    res.sendFile('/app/dist/index.html');
-  });
-}
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-
-  // Auto-connect to Uptime Kuma on startup
-  setTimeout(() => {
-    uptimeKumaService.connect().catch(err => {
-      console.error('Failed to auto-connect to Uptime Kuma:', err);
-    });
-  }, 3000);
-});
-
 // Status Page Management
 app.get('/api/status-pages', authenticateToken, (req, res) => {
   db.all('SELECT * FROM status_pages ORDER BY created_at DESC', (err, pages) => {
@@ -1687,6 +1667,27 @@ app.delete('/api/quotes/:id', authenticateToken, (req, res) => {
 
     res.json({ success: true });
   });
+});
+
+// Serve static files in production - MUST BE AFTER all API routes
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static('/app/dist'));
+
+  app.get('*', (req, res) => {
+    res.sendFile('/app/dist/index.html');
+  });
+}
+
+// Start server - MUST BE AFTER all routes
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+
+  // Auto-connect to Uptime Kuma on startup
+  setTimeout(() => {
+    uptimeKumaService.connect().catch(err => {
+      console.error('Failed to auto-connect to Uptime Kuma:', err);
+    });
+  }, 3000);
 });
 
 // Graceful shutdown
