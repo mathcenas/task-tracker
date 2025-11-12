@@ -34,15 +34,21 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
+# Detect docker compose command (with or without hyphen)
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+elif docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+else
     print_error "Docker Compose is not installed. Please install Docker Compose first."
     exit 1
 fi
 
+print_status "Using command: $DOCKER_COMPOSE"
+
 # Stop existing containers
 print_status "Stopping existing containers..."
-docker-compose down
+$DOCKER_COMPOSE down
 
 # Remove old images (optional)
 read -p "Do you want to remove old Docker images? (y/N): " -n 1 -r
@@ -54,7 +60,7 @@ fi
 
 # Build and start containers
 print_status "Building and starting containers..."
-docker-compose up --build -d
+$DOCKER_COMPOSE up --build -d
 
 # Check if containers are running
 if [ $? -eq 0 ]; then
@@ -64,9 +70,9 @@ if [ $? -eq 0 ]; then
     echo "📊 Health Check: http://localhost:3000/about"
     echo ""
     echo "📋 Useful commands:"
-    echo "  • View logs: docker-compose logs -f"
-    echo "  • Stop app: docker-compose down"
-    echo "  • Restart: docker-compose restart"
+    echo "  • View logs: $DOCKER_COMPOSE logs -f"
+    echo "  • Stop app: $DOCKER_COMPOSE down"
+    echo "  • Restart: $DOCKER_COMPOSE restart"
     echo "  • Update: ./docker-deploy.sh"
     echo ""
     
@@ -77,9 +83,9 @@ if [ $? -eq 0 ]; then
     if curl -f -s http://localhost:3000 > /dev/null; then
         print_success "Application is healthy and responding!"
     else
-        print_warning "Application may still be starting up. Check logs with: docker-compose logs -f"
+        print_warning "Application may still be starting up. Check logs with: $DOCKER_COMPOSE logs -f"
     fi
 else
-    print_error "Failed to start containers. Check the logs with: docker-compose logs"
+    print_error "Failed to start containers. Check the logs with: $DOCKER_COMPOSE logs"
     exit 1
 fi
