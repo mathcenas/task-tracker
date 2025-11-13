@@ -58,8 +58,8 @@ export default function App() {
                   <Route path="/settings/company" element={<CompanySettings />} />
                   <Route path="/quotes" element={<QuotesList />} />
                   <Route path="/quotes/new" element={<QuoteForm />} />
-                  <Route path="/quotes/:id" element={<QuoteView />} />
                   <Route path="/quotes/:id/edit" element={<QuoteForm />} />
+                  <Route path="/quotes/:id" element={<QuoteView />} />
                   <Route path="/add-client" element={<ClientForm />} />
                   <Route path="/add-task" element={<TaskForm />} />
                   <Route path="/task" element={<TaskForm />} />

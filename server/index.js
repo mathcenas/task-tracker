@@ -1551,7 +1551,16 @@ app.get('/api/quotes/:id', authenticateToken, (req, res) => {
             return res.status(500).json({ error: 'Database error' });
           }
 
-          res.json({ ...quote, line_items: items });
+          // Map database fields to frontend expectations
+          const lineItems = items.map(item => ({
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total: item.amount // Map 'amount' to 'total'
+          }));
+
+          res.json({ ...quote, line_items: lineItems });
         }
       );
     }
