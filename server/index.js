@@ -1526,29 +1526,36 @@ app.get('/api/quotes', authenticateToken, (req, res) => {
 app.get('/api/quotes/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
 
-  db.get('SELECT * FROM quotes WHERE id = ?', [id], (err, quote) => {
-    if (err) {
-      console.error('Error fetching quote:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    if (!quote) {
-      return res.status(404).json({ error: 'Quote not found' });
-    }
-
-    db.all(
-      'SELECT * FROM quote_items WHERE quote_id = ? ORDER BY sort_order',
-      [id],
-      (err, items) => {
-        if (err) {
-          console.error('Error fetching quote items:', err);
-          return res.status(500).json({ error: 'Database error' });
-        }
-
-        res.json({ ...quote, items });
+  db.get(
+    `SELECT q.*, c.name as client_name
+     FROM quotes q
+     LEFT JOIN clients c ON q.client_id = c.id
+     WHERE q.id = ?`,
+    [id],
+    (err, quote) => {
+      if (err) {
+        console.error('Error fetching quote:', err);
+        return res.status(500).json({ error: 'Database error' });
       }
-    );
-  });
+
+      if (!quote) {
+        return res.status(404).json({ error: 'Quote not found' });
+      }
+
+      db.all(
+        'SELECT * FROM quote_items WHERE quote_id = ? ORDER BY sort_order',
+        [id],
+        (err, items) => {
+          if (err) {
+            console.error('Error fetching quote items:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+
+          res.json({ ...quote, line_items: items });
+        }
+      );
+    }
+  );
 });
 
 app.post('/api/quotes', authenticateToken, (req, res) => {
