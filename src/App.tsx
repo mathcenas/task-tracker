@@ -25,6 +25,7 @@ import { ActivityLog } from './components/ActivityLog';
 import { CompanySettings } from './components/CompanySettings';
 import { QuotesList } from './components/QuotesList';
 import { QuoteForm } from './components/QuoteForm';
+import { QuoteView } from './components/QuoteView';
 
 export default function App() {
   return (
@@ -57,6 +58,7 @@ export default function App() {
                   <Route path="/settings/company" element={<CompanySettings />} />
                   <Route path="/quotes" element={<QuotesList />} />
                   <Route path="/quotes/new" element={<QuoteForm />} />
+                  <Route path="/quotes/:id" element={<QuoteView />} />
                   <Route path="/quotes/:id/edit" element={<QuoteForm />} />
                   <Route path="/add-client" element={<ClientForm />} />
                   <Route path="/add-task" element={<TaskForm />} />
