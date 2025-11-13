@@ -3,8 +3,8 @@ import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
 import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { PDFExporter } from '../utils/pdfExport';
+import { apiService } from '../services/api';
 
 export function ClientDashboard() {
   const { clients, getClientTasks, getProject, deleteClient } = useApp();
@@ -55,201 +55,150 @@ export function ClientDashboard() {
     return format(taskDate, 'MMM d, yyyy');
   };
 
-  const exportMonthlyReport = (clientData: any, clientTasks: any[], exportMonth = selectedMonth) => {
-    const exportMonthStart = startOfMonth(exportMonth);
-    const exportMonthEnd = endOfMonth(exportMonth);
-    const exportTasks = clientTasks.filter(task =>
-      task.finished &&
-      isWithinInterval(new Date(task.date), { start: exportMonthStart, end: exportMonthEnd })
-    );
+  const exportMonthlyReport = async (clientData: any, clientTasks: any[], exportMonth = selectedMonth) => {
+    try {
+      const exportMonthStart = startOfMonth(exportMonth);
+      const exportMonthEnd = endOfMonth(exportMonth);
+      const exportTasks = clientTasks.filter(task =>
+        task.finished &&
+        isWithinInterval(new Date(task.date), { start: exportMonthStart, end: exportMonthEnd })
+      );
 
-    const doc = new jsPDF();
-    const clientName = clientData.name;
-    const monthYear = format(exportMonth, 'MMMM yyyy');
-    const hourlyRate = clientData.hourlyRate;
+      const companySettings = await apiService.getCompanySettings();
+      const pdf = new PDFExporter(companySettings);
 
-    doc.setFillColor(41, 98, 255);
-    doc.roundedRect(15, 10, 12, 12, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
-    doc.text('⏰', 19, 18);
+      const clientName = clientData.name;
+      const monthYear = format(exportMonth, 'MMMM yyyy');
+      const hourlyRate = clientData.hourlyRate;
+      const reportNumber = `RPT-${format(exportMonth, 'yyyyMM')}-${clientData.id.slice(-6)}`;
 
-    doc.setFontSize(24);
-    doc.setTextColor(41, 98, 255);
-    doc.text('TaskTracker Pro', 35, 20);
+      await pdf.addHeader('MONTHLY REPORT');
 
-    doc.setFontSize(20);
-    doc.setTextColor(0, 0, 0);
-    doc.text('MONTHLY REPORT', 35, 40);
-    const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
-    doc.setFontSize(12);
-    doc.text(`Report #: ${invoiceNumber}`, 35, 50);
-
-    doc.setFontSize(12);
-    const clientDetails = [
-      `Client: ${clientName}`,
-      `Period: ${monthYear}`,
-      `Generated: ${format(new Date(), 'MMM dd, yyyy')}`,
-      `Service Rate: $${hourlyRate.toFixed(2)}/hour`
-    ];
-
-    let yPos = 70;
-    clientDetails.forEach(detail => {
-      doc.text(detail, 20, yPos);
-      yPos += 10;
-    });
-
-    const servicesTasks = exportTasks.filter(task => task.type !== 'insumos');
-    const suppliesTasks = exportTasks.filter(task => task.type === 'insumos');
-
-    if (servicesTasks.length > 0) {
-      doc.setFontSize(14);
-      doc.text('Services', 20, yPos + 10);
-
-      const servicesTableData = servicesTasks.map(task => [
-        format(new Date(task.date), 'MMM d, yyyy'),
-        getProject(task.projectId)?.name || '',
-        task.type.charAt(0).toUpperCase() + task.type.slice(1),
-        task.description,
-        task.hours?.toString() || '',
-        `$${(task.hours * hourlyRate).toFixed(2)}`
-      ]);
-
-      (doc as any).autoTable({
-        startY: yPos + 15,
-        head: [['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount']],
-        body: servicesTableData,
-        theme: 'striped',
-        headStyles: {
-          fillColor: [41, 98, 255],
-          textColor: [255, 255, 255]
-        },
-        columnStyles: {
-          0: { cellWidth: 25 },
-          3: { cellWidth: 60 },
-          4: { cellWidth: 20 },
-          5: { cellWidth: 25 }
-        }
+      pdf.addSection('Report Details', {
+        'Report Number': reportNumber,
+        'Client': clientName,
+        'Period': monthYear,
+        'Generated': format(new Date(), 'MMM dd, yyyy'),
+        'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 10;
-    }
+      const servicesTasks = exportTasks.filter(task => task.type !== 'insumos');
+      const suppliesTasks = exportTasks.filter(task => task.type === 'insumos');
 
-    if (suppliesTasks.length > 0) {
-      doc.setFontSize(14);
-      doc.text('Supplies (Insumos)', 20, yPos + 10);
-
-      const suppliesTableData = suppliesTasks.map(task => [
-        format(new Date(task.date), 'MMM d, yyyy'),
-        getProject(task.projectId)?.name || '',
-        task.description,
-        `$${task.cost?.toFixed(2)}`
-      ]);
-
-      (doc as any).autoTable({
-        startY: yPos + 15,
-        head: [['Date', 'Project', 'Description', 'Cost']],
-        body: suppliesTableData,
-        theme: 'striped',
-        headStyles: {
-          fillColor: [156, 39, 176],
-          textColor: [255, 255, 255]
-        },
-        columnStyles: {
-          0: { cellWidth: 25 },
-          2: { cellWidth: 100 },
-          3: { cellWidth: 25 }
-        }
-      });
-
-      yPos = (doc as any).lastAutoTable.finalY + 10;
-    }
-
-    const incidentTasks = servicesTasks.filter(task => task.type === 'incident');
-    const requestTasks = servicesTasks.filter(task => task.type === 'request');
-
-    const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-    const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-    const incidentTotal = incidentHours * hourlyRate;
-    const requestTotal = requestHours * hourlyRate;
-
-    const servicesTotal = servicesTasks.reduce((sum, task) =>
-      sum + ((task.hours || 0) * hourlyRate), 0);
-    const suppliesTotal = suppliesTasks.reduce((sum, task) =>
-      sum + (task.cost || 0), 0);
-    const totalAmount = servicesTotal + suppliesTotal;
-
-    if (incidentTasks.length > 0 || requestTasks.length > 0) {
-      doc.setFontSize(14);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Service Type Breakdown', 20, yPos + 10);
-
-      const breakdownData = [];
-      if (incidentTasks.length > 0) {
-        breakdownData.push([
-          '🚨 Incidents',
-          incidentTasks.length.toString(),
-          `${incidentHours.toFixed(1)}h`,
-          `$${incidentTotal.toFixed(2)}`,
-          servicesTotal > 0 ? `${((incidentTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
+      if (servicesTasks.length > 0) {
+        const servicesTableData = servicesTasks.map(task => [
+          format(new Date(task.date), 'MMM d, yyyy'),
+          getProject(task.projectId)?.name || '',
+          task.type.charAt(0).toUpperCase() + task.type.slice(1),
+          task.description,
+          task.hours?.toString() || '',
+          `$${(task.hours * hourlyRate).toFixed(2)}`
         ]);
-      }
-      if (requestTasks.length > 0) {
-        breakdownData.push([
-          '📋 Requests',
-          requestTasks.length.toString(),
-          `${requestHours.toFixed(1)}h`,
-          `$${requestTotal.toFixed(2)}`,
-          servicesTotal > 0 ? `${((requestTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
-        ]);
+
+        pdf.addTable(
+          ['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount'],
+          servicesTableData,
+          {
+            columnStyles: {
+              0: { cellWidth: 25 },
+              3: { cellWidth: 60 },
+              4: { cellWidth: 20 },
+              5: { cellWidth: 25 }
+            }
+          }
+        );
       }
 
-      (doc as any).autoTable({
-        startY: yPos + 15,
-        head: [['Type', 'Tasks', 'Hours', 'Amount', '% of Services']],
-        body: breakdownData,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [100, 100, 100],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold'
-        },
-        columnStyles: {
-          0: { cellWidth: 40, fontStyle: 'bold' },
-          1: { cellWidth: 25, halign: 'center' },
-          2: { cellWidth: 30, halign: 'center' },
-          3: { cellWidth: 35, halign: 'right' },
-          4: { cellWidth: 35, halign: 'center' }
+      if (suppliesTasks.length > 0) {
+        const suppliesTableData = suppliesTasks.map(task => [
+          format(new Date(task.date), 'MMM d, yyyy'),
+          getProject(task.projectId)?.name || '',
+          task.description,
+          `$${task.cost?.toFixed(2)}`
+        ]);
+
+        pdf.addTable(
+          ['Date', 'Project', 'Description', 'Cost'],
+          suppliesTableData,
+          {
+            headStyles: {
+              fillColor: [156, 39, 176]
+            },
+            columnStyles: {
+              0: { cellWidth: 25 },
+              2: { cellWidth: 100 },
+              3: { cellWidth: 25 }
+            }
+          }
+        );
+      }
+
+      const incidentTasks = servicesTasks.filter(task => task.type === 'incident');
+      const requestTasks = servicesTasks.filter(task => task.type === 'request');
+      const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+      const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+      const incidentTotal = incidentHours * hourlyRate;
+      const requestTotal = requestHours * hourlyRate;
+      const servicesTotal = servicesTasks.reduce((sum, task) => sum + ((task.hours || 0) * hourlyRate), 0);
+      const suppliesTotal = suppliesTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
+      const totalAmount = servicesTotal + suppliesTotal;
+
+      if (incidentTasks.length > 0 || requestTasks.length > 0) {
+        const breakdownData = [];
+        if (incidentTasks.length > 0) {
+          breakdownData.push([
+            'Incidents',
+            incidentTasks.length.toString(),
+            `${incidentHours.toFixed(1)}h`,
+            `$${incidentTotal.toFixed(2)}`,
+            servicesTotal > 0 ? `${((incidentTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
+          ]);
         }
-      });
+        if (requestTasks.length > 0) {
+          breakdownData.push([
+            'Requests',
+            requestTasks.length.toString(),
+            `${requestHours.toFixed(1)}h`,
+            `$${requestTotal.toFixed(2)}`,
+            servicesTotal > 0 ? `${((requestTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
+          ]);
+        }
 
-      yPos = (doc as any).lastAutoTable.finalY + 10;
+        pdf.addTable(
+          ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],
+          breakdownData,
+          {
+            theme: 'grid',
+            headStyles: {
+              fillColor: [100, 100, 100]
+            },
+            columnStyles: {
+              0: { cellWidth: 40, fontStyle: 'bold' },
+              1: { cellWidth: 25, halign: 'center' },
+              2: { cellWidth: 30, halign: 'center' },
+              3: { cellWidth: 35, halign: 'right' },
+              4: { cellWidth: 35, halign: 'center' }
+            }
+          }
+        );
+      }
+
+      const totalServiceHours = servicesTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+
+      pdf.addTotals([
+        { label: 'Total Service Hours:', value: `${totalServiceHours.toFixed(2)}h` },
+        { label: 'Services Total:', value: `$${servicesTotal.toFixed(2)}` },
+        { label: 'Supplies Total:', value: `$${suppliesTotal.toFixed(2)}` },
+        { label: 'Total Amount:', value: `$${totalAmount.toFixed(2)}`, bold: true }
+      ]);
+
+      pdf.addNotes('Thank you', 'Thank you for your business!');
+
+      pdf.save(`${clientName.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`);
+    } catch (error) {
+      console.error('Failed to generate monthly report:', error);
+      alert('Failed to generate PDF report');
     }
-
-    doc.setFontSize(12);
-    const summary = [
-      `Total Service Hours: ${servicesTasks.reduce((sum, task) => sum + (task.hours || 0), 0).toFixed(2)}`,
-      `Services Total: $${servicesTotal.toFixed(2)}`,
-      `Supplies Total: $${suppliesTotal.toFixed(2)}`,
-      `Total Amount: $${totalAmount.toFixed(2)}`
-    ];
-
-    yPos += 10;
-    summary.forEach((line, index) => {
-      const fontSize = index === summary.length - 1 ? 14 : 12;
-      const fontStyle = index === summary.length - 1 ? 'bold' : 'normal';
-      doc.setFontSize(fontSize);
-      doc.setFont(undefined, fontStyle);
-      doc.text(line, 20, yPos);
-      yPos += 10;
-    });
-
-    const footerText = 'Thank you for your business!';
-    doc.setFontSize(10);
-    doc.setTextColor(128, 128, 128);
-    doc.text(footerText, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
-
-    doc.save(`${clientName.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`);
   };
 
   const previousMonth = () => {

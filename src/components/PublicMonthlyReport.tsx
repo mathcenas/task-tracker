@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, isAfter, endOfDay, subMonths, addMonths, parseISO } from 'date-fns';
 import { Clock, AlertTriangle, FileText, Package, DollarSign, Calendar, Download, ChevronLeft, ChevronRight, BarChart3, TrendingUp } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { PDFExporter } from '../utils/pdfExport';
 import { exportMonthlyReportToCSV } from '../utils/csvExport';
 import { Client, Project, Task } from '../types';
 

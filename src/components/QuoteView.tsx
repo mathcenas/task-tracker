@@ -3,8 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FileText, ArrowLeft, Edit, Download, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiService } from '../services/api';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { PDFExporter } from '../utils/pdfExport';
 
 interface QuoteLineItem {
   id: string;
@@ -61,58 +60,61 @@ export function QuoteView() {
     window.print();
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!quote) return;
 
-    const doc = new jsPDF();
+    try {
+      const companySettings = await apiService.getCompanySettings();
+      const pdf = new PDFExporter(companySettings);
 
-    doc.setFontSize(20);
-    doc.text('QUOTE', 105, 20, { align: 'center' });
+      await pdf.addHeader('QUOTE');
 
-    doc.setFontSize(12);
-    doc.text(`Quote #: ${quote.quote_number}`, 20, 40);
-    doc.text(`Date: ${format(new Date(quote.date), 'MMM d, yyyy')}`, 20, 48);
-    if (quote.expiry_date) {
-      doc.text(`Expiry: ${format(new Date(quote.expiry_date), 'MMM d, yyyy')}`, 20, 56);
+      pdf.addSection('Quote Details', {
+        'Quote Number': quote.quote_number,
+        'Date': format(new Date(quote.date), 'MMM d, yyyy'),
+        ...(quote.expiry_date && { 'Expiry Date': format(new Date(quote.expiry_date), 'MMM d, yyyy') }),
+        'Status': quote.status.toUpperCase()
+      });
+
+      pdf.addSection('Client Information', {
+        'Client': quote.client_name
+      });
+
+      pdf.addSection('Description', {
+        'Project': quote.title
+      });
+
+      const tableData = quote.line_items.map(item => [
+        item.description,
+        item.quantity.toString(),
+        `$${item.unit_price.toFixed(2)}`,
+        `$${item.total.toFixed(2)}`
+      ]);
+
+      pdf.addTable(
+        ['Description', 'Quantity', 'Unit Price', 'Total'],
+        tableData
+      );
+
+      pdf.addTotals([
+        { label: 'Subtotal:', value: `$${quote.subtotal.toFixed(2)}` },
+        { label: `Tax (${quote.tax_rate}%):`, value: `$${quote.tax_amount.toFixed(2)}` },
+        { label: 'Total:', value: `$${quote.total.toFixed(2)}`, bold: true }
+      ]);
+
+      if (quote.notes) {
+        pdf.addNotes('Notes', quote.notes);
+      }
+
+      if (quote.terms) {
+        pdf.addNotes('Terms & Conditions', quote.terms);
+      }
+
+      pdf.save(`quote-${quote.quote_number}.pdf`);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      alert('Failed to generate PDF');
     }
-
-    doc.text(`Client: ${quote.client_name}`, 120, 40);
-    doc.text(`Status: ${quote.status.toUpperCase()}`, 120, 48);
-
-    doc.setFontSize(14);
-    doc.text(quote.title, 20, 70);
-
-    const tableData = quote.line_items.map(item => [
-      item.description,
-      item.quantity.toString(),
-      `$${item.unit_price.toFixed(2)}`,
-      `$${item.total.toFixed(2)}`
-    ]);
-
-    (doc as any).autoTable({
-      startY: 80,
-      head: [['Description', 'Quantity', 'Unit Price', 'Total']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [37, 99, 235] }
-    });
-
-    const finalY = (doc as any).lastAutoTable.finalY || 80;
-
-    doc.text(`Subtotal: $${quote.subtotal.toFixed(2)}`, 140, finalY + 10);
-    doc.text(`Tax (${quote.tax_rate}%): $${quote.tax_amount.toFixed(2)}`, 140, finalY + 18);
-    doc.setFontSize(14);
-    doc.text(`Total: $${quote.total.toFixed(2)}`, 140, finalY + 28);
-
-    if (quote.notes) {
-      doc.setFontSize(10);
-      doc.text('Notes:', 20, finalY + 40);
-      doc.setFontSize(9);
-      const splitNotes = doc.splitTextToSize(quote.notes, 170);
-      doc.text(splitNotes, 20, finalY + 48);
-    }
-
-    doc.save(`quote-${quote.quote_number}.pdf`);
   };
 
   const getStatusBadge = (status: string) => {
