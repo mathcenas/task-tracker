@@ -43,12 +43,17 @@ export class PDFExporter {
     this.currentY = 20;
 
     if (this.companySettings.logo_url) {
-      const logoData = await this.loadLogo();
-      if (logoData) {
-        try {
-          this.doc.addImage(logoData, 'PNG', 15, this.currentY, 30, 30);
-        } catch (error) {
-          console.error('Failed to add logo to PDF:', error);
+      try {
+        this.doc.addImage(this.companySettings.logo_url, 'PNG', 15, this.currentY, 40, 15);
+      } catch (error) {
+        console.error('Failed to add logo to PDF:', error);
+        const logoData = await this.loadLogo();
+        if (logoData) {
+          try {
+            this.doc.addImage(logoData, 'PNG', 15, this.currentY, 40, 15);
+          } catch (e) {
+            console.error('Failed to add logo as base64:', e);
+          }
         }
       }
     }
@@ -93,7 +98,7 @@ export class PDFExporter {
       companyY += 4;
     }
 
-    this.currentY = Math.max(this.currentY + 35, companyY + 5);
+    this.currentY = Math.max(this.currentY + 30, companyY + 5);
 
     this.doc.setFontSize(24);
     this.doc.setFont('helvetica', 'bold');
