@@ -67,7 +67,7 @@ export function QuoteView() {
       const companySettings = await apiService.getCompanySettings();
       const pdf = new PDFExporter(companySettings);
 
-      await pdf.addHeader('QUOTE');
+      await pdf.addHeader('Quote');
 
       pdf.addSection('Quote Details', {
         'Quote Number': quote.quote_number,

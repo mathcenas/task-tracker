@@ -72,7 +72,7 @@ export function ClientDashboard() {
       const hourlyRate = clientData.hourlyRate;
       const reportNumber = `RPT-${format(exportMonth, 'yyyyMM')}-${clientData.id.slice(-6)}`;
 
-      await pdf.addHeader('MONTHLY REPORT');
+      await pdf.addHeader('Monthly Report');
 
       pdf.addSection('Report Details', {
         'Report Number': reportNumber,

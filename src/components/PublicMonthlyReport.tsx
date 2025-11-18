@@ -262,7 +262,7 @@ export function PublicMonthlyReport() {
       const hourlyRate = client.hourlyRate;
       const reportNumber = `RPT-${year}${month.toString().padStart(2, '0')}-${client.id.slice(-6)}`;
 
-      await pdf.addHeader('MONTHLY REPORT');
+      await pdf.addHeader('Monthly Report');
 
       pdf.addSection('Report Details', {
         'Report Number': reportNumber,
