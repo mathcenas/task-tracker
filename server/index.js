@@ -1474,6 +1474,29 @@ app.get('/api/company-settings', authenticateToken, (req, res) => {
   });
 });
 
+app.get('/api/public/company-settings', (req, res) => {
+  db.get('SELECT * FROM company_settings WHERE id = 1', (err, settings) => {
+    if (err) {
+      console.error('Error fetching company settings:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!settings) {
+      return res.json({
+        company_name: 'TaskTracker Pro',
+        logo_url: null,
+        address: null,
+        phone: null,
+        email: null,
+        website: null,
+        tax_id: null
+      });
+    }
+
+    res.json(settings);
+  });
+});
+
 app.post('/api/company-settings', authenticateToken, (req, res) => {
   const { company_name, logo_url, address, phone, email, website, tax_id } = req.body;
 
