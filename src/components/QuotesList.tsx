@@ -13,6 +13,7 @@ interface Quote {
   date: string;
   expiry_date: string | null;
   status: string;
+  quote_type: string;
   total: number;
 }
 
@@ -134,6 +135,9 @@ export function QuotesList() {
                       Title
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Type
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
                       Date
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -162,11 +166,20 @@ export function QuotesList() {
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                         {quote.title}
                       </td>
+                      <td className="py-3 px-4 text-sm">
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                          quote.quote_type === 'bom'
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                        }`}>
+                          {quote.quote_type === 'bom' ? 'BOM' : 'Standard'}
+                        </span>
+                      </td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                         {format(new Date(quote.date), 'MMM d, yyyy')}
                       </td>
                       <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                        ${quote.total.toFixed(2)}
+                        {quote.quote_type === 'bom' ? '-' : `$${quote.total.toFixed(2)}`}
                       </td>
                       <td className="py-3 px-4 text-sm">
                         {getStatusBadge(quote.status)}

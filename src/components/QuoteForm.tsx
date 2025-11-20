@@ -24,6 +24,7 @@ interface QuoteFormData {
   terms: string;
   tax_rate: number;
   status: string;
+  quote_type: string;
   items: QuoteItem[];
 }
 
@@ -44,6 +45,7 @@ export function QuoteForm() {
     terms: 'Payment is due within 30 days of the quote date.\nThis quote is valid for 30 days from the date of issue.',
     tax_rate: 0,
     status: 'draft',
+    quote_type: 'standard',
     items: [{ description: '', quantity: 1, unit_price: 0, amount: 0 }]
   });
 
@@ -78,6 +80,7 @@ export function QuoteForm() {
         terms: quote.terms || '',
         tax_rate: quote.tax_rate || 0,
         status: quote.status || 'draft',
+        quote_type: quote.quote_type || 'standard',
         items: quote.items || [{ description: '', quantity: 1, unit_price: 0, amount: 0 }]
       });
     } catch (error) {
@@ -184,10 +187,11 @@ export function QuoteForm() {
 
     doc.setFontSize(20);
     doc.setTextColor(0, 0, 0);
-    doc.text('QUOTE', 15, yPos + 15);
+    const documentTitle = formData.quote_type === 'bom' ? 'BILL OF MATERIALS (BOM)' : 'QUOTE';
+    doc.text(documentTitle, 15, yPos + 15);
 
     doc.setFontSize(12);
-    doc.text(`Quote Date: ${format(new Date(formData.date), 'MMM dd, yyyy')}`, 15, yPos + 25);
+    doc.text(`Date: ${format(new Date(formData.date), 'MMM dd, yyyy')}`, 15, yPos + 25);
     if (formData.expiry_date) {
       doc.text(`Valid Until: ${format(new Date(formData.expiry_date), 'MMM dd, yyyy')}`, 15, yPos + 32);
     }
@@ -208,67 +212,93 @@ export function QuoteForm() {
     doc.setFontSize(16);
     doc.text(formData.title, 15, yPos + 70);
 
-    const tableData = formData.items.map(item => [
-      item.description,
-      Number(item.quantity).toString(),
-      `$${Number(item.unit_price).toFixed(2)}`,
-      `$${Number(item.amount).toFixed(2)}`
-    ]);
+    const isBOM = formData.quote_type === 'bom';
+
+    const tableData = isBOM
+      ? formData.items.map(item => [
+          item.description,
+          Number(item.quantity).toString()
+        ])
+      : formData.items.map(item => [
+          item.description,
+          Number(item.quantity).toString(),
+          `$${Number(item.unit_price).toFixed(2)}`,
+          `$${Number(item.amount).toFixed(2)}`
+        ]);
+
+    const tableHeaders = isBOM
+      ? ['Description', 'Quantity']
+      : ['Description', 'Quantity', 'Unit Price', 'Amount'];
+
+    const columnStyles = isBOM
+      ? {
+          0: { cellWidth: 140 },
+          1: { cellWidth: 40 }
+        }
+      : {
+          0: { cellWidth: 90 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 30 }
+        };
 
     (doc as any).autoTable({
       startY: yPos + 80,
-      head: [['Description', 'Quantity', 'Unit Price', 'Amount']],
+      head: [tableHeaders],
       body: tableData,
       theme: 'striped',
       headStyles: {
         fillColor: [41, 98, 255],
         textColor: [255, 255, 255]
       },
-      columnStyles: {
-        0: { cellWidth: 90 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 30 }
-      }
+      columnStyles
     });
 
     const finalY = (doc as any).lastAutoTable.finalY + 10;
 
-    const subtotal = calculateSubtotal();
-    const tax = calculateTax();
-    const total = calculateTotal();
+    if (!isBOM) {
+      const subtotal = calculateSubtotal();
+      const tax = calculateTax();
+      const total = calculateTotal();
 
-    doc.setFontSize(12);
-    doc.text('Subtotal:', 130, finalY);
-    doc.text(`$${subtotal.toFixed(2)}`, 170, finalY, { align: 'right' });
+      doc.setFontSize(12);
+      doc.text('Subtotal:', 130, finalY);
+      doc.text(`$${subtotal.toFixed(2)}`, 170, finalY, { align: 'right' });
 
-    if (formData.tax_rate > 0) {
-      doc.text(`Tax (${formData.tax_rate}%):`, 130, finalY + 7);
-      doc.text(`$${tax.toFixed(2)}`, 170, finalY + 7, { align: 'right' });
+      if (formData.tax_rate > 0) {
+        doc.text(`Tax (${formData.tax_rate}%):`, 130, finalY + 7);
+        doc.text(`$${tax.toFixed(2)}`, 170, finalY + 7, { align: 'right' });
+      }
+
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Total:', 130, finalY + 14);
+      doc.text(`$${total.toFixed(2)}`, 170, finalY + 14, { align: 'right' });
     }
 
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text('Total:', 130, finalY + 14);
-    doc.text(`$${total.toFixed(2)}`, 170, finalY + 14, { align: 'right' });
+    const notesStartY = isBOM ? finalY + 10 : finalY + 30;
 
     if (formData.notes) {
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
-      doc.text('Notes:', 15, finalY + 30);
+      doc.text('Notes:', 15, notesStartY);
       const notesLines = doc.splitTextToSize(formData.notes, 180);
-      doc.text(notesLines, 15, finalY + 37);
+      doc.text(notesLines, 15, notesStartY + 7);
     }
 
     if (formData.terms) {
-      const termsY = finalY + (formData.notes ? 55 : 30);
+      const termsY = notesStartY + (formData.notes ? 25 : 0);
       doc.setFontSize(10);
       doc.text('Terms & Conditions:', 15, termsY);
       const termsLines = doc.splitTextToSize(formData.terms, 180);
       doc.text(termsLines, 15, termsY + 7);
     }
 
-    doc.save(`Quote-${format(new Date(formData.date), 'yyyy-MM-dd')}-${client?.name || 'Client'}.pdf`);
+    const fileName = isBOM
+      ? `BOM-${format(new Date(formData.date), 'yyyy-MM-dd')}-${client?.name || 'Client'}.pdf`
+      : `Quote-${format(new Date(formData.date), 'yyyy-MM-dd')}-${client?.name || 'Client'}.pdf`;
+
+    doc.save(fileName);
   };
 
   if (loading) {
@@ -342,7 +372,21 @@ export function QuoteForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Quote Type *
+              </label>
+              <select
+                value={formData.quote_type}
+                onChange={(e) => setFormData({ ...formData, quote_type: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="standard">Standard (with prices)</option>
+                <option value="bom">BOM (Bill of Materials)</option>
+              </select>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Quote Date *
@@ -400,8 +444,8 @@ export function QuoteForm() {
 
             <div className="space-y-3">
               {formData.items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-3 items-start p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <div className="col-span-5">
+                <div key={index} className={`grid gap-3 items-start p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg ${formData.quote_type === 'bom' ? 'grid-cols-8' : 'grid-cols-12'}`}>
+                  <div className={formData.quote_type === 'bom' ? 'col-span-6' : 'col-span-5'}>
                     <input
                       type="text"
                       value={item.description}
@@ -421,22 +465,26 @@ export function QuoteForm() {
                       step="0.01"
                     />
                   </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      value={item.unit_price}
-                      onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Price"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <div className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white">
-                      ${item.amount.toFixed(2)}
-                    </div>
-                  </div>
+                  {formData.quote_type !== 'bom' && (
+                    <>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          value={item.unit_price}
+                          onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Price"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <div className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white">
+                          ${item.amount.toFixed(2)}
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div className="col-span-1 flex justify-end">
                     <button
                       onClick={() => removeItem(index)}
@@ -451,43 +499,45 @@ export function QuoteForm() {
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <div className="w-64 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                <span className="font-medium text-gray-900 dark:text-white">
-                  ${calculateSubtotal().toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Tax Rate:</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={formData.tax_rate}
-                    onChange={(e) => setFormData({ ...formData, tax_rate: Number(e.target.value) })}
-                    className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                  />
-                  <span className="text-gray-600 dark:text-gray-400">%</span>
-                </div>
-              </div>
-              {formData.tax_rate > 0 && (
+          {formData.quote_type !== 'bom' && (
+            <div className="flex justify-end">
+              <div className="w-64 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Tax:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    ${calculateTax().toFixed(2)}
+                    ${calculateSubtotal().toFixed(2)}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between text-lg font-bold border-t border-gray-300 dark:border-gray-600 pt-2">
-                <span className="text-gray-900 dark:text-white">Total:</span>
-                <span className="text-blue-600">${calculateTotal().toFixed(2)}</span>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Tax Rate:</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={formData.tax_rate}
+                      onChange={(e) => setFormData({ ...formData, tax_rate: Number(e.target.value) })}
+                      className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                    <span className="text-gray-600 dark:text-gray-400">%</span>
+                  </div>
+                </div>
+                {formData.tax_rate > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Tax:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      ${calculateTax().toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold border-t border-gray-300 dark:border-gray-600 pt-2">
+                  <span className="text-gray-900 dark:text-white">Total:</span>
+                  <span className="text-blue-600">${calculateTotal().toFixed(2)}</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

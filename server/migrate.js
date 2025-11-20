@@ -57,6 +57,10 @@ const runMigrations = async () => {
     {
       name: 'Update status: cancelled to completed',
       sql: `UPDATE tasks SET status = 'completed' WHERE status = 'cancelled'`
+    },
+    {
+      name: 'Add quote_type to quotes',
+      sql: `ALTER TABLE quotes ADD COLUMN quote_type TEXT DEFAULT 'standard'`
     }
   ];
 
