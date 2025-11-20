@@ -269,11 +269,16 @@ export function ClientDashboard() {
 
     try {
       const clientTasks = getClientTasks(projectFilterClient.id);
+      console.log('🔍 All client tasks:', clientTasks.length);
+      console.log('🔍 Client tasks:', clientTasks);
 
       let filteredTasks = clientTasks.filter(task => task.finished);
+      console.log('✅ Completed tasks:', filteredTasks.length);
+      console.log('✅ Completed tasks data:', filteredTasks);
 
       if (selectedProjectId !== 'all') {
         filteredTasks = filteredTasks.filter(task => task.projectId === selectedProjectId);
+        console.log('📦 After project filter:', filteredTasks.length, 'for project:', selectedProjectId);
       }
 
       if (filteredTasks.length === 0) {
