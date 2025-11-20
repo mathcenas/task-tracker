@@ -1139,10 +1139,10 @@ export function ClientDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Export by Project
+              Export Complete Project Report
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              Export report for {projectFilterClient.name}
+              Export all completed tasks for {projectFilterClient.name}
             </p>
 
             <div className="space-y-4">
@@ -1166,13 +1166,18 @@ export function ClientDashboard() {
                 </select>
               </div>
 
-              <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-3">
-                <p className="text-sm text-teal-800 dark:text-teal-300">
-                  <strong>Period:</strong> {format(selectedMonth, 'MMMM yyyy')}
-                </p>
-                <p className="text-sm text-teal-800 dark:text-teal-300 mt-1">
-                  <strong>Project:</strong> {selectedProjectId === 'all' ? 'All Projects' : projects.find(p => p.id === selectedProjectId)?.name || 'Unknown'}
-                </p>
+              <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <Package className="w-5 h-5 text-teal-600 dark:text-teal-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-teal-900 dark:text-teal-200 mb-1">
+                      Complete Project History
+                    </p>
+                    <p className="text-xs text-teal-700 dark:text-teal-300">
+                      This will export all completed tasks from the project's entire lifetime, from the first task to the most recent one.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1188,7 +1193,7 @@ export function ClientDashboard() {
                 className="flex-1 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
               >
                 <Download className="w-4 h-4 inline mr-2" />
-                Export
+                Export Complete Report
               </button>
             </div>
           </div>
