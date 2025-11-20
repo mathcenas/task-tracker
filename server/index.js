@@ -573,6 +573,21 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
     finished, notes, completedAt, accepted, acceptedAt
   } = req.body;
 
+  console.log('🔄 Updating task:', id, {
+    description,
+    hours,
+    cost,
+    date,
+    type,
+    status,
+    priority,
+    finished,
+    notes,
+    completedAt,
+    accepted,
+    acceptedAt
+  });
+
   db.run(`UPDATE tasks SET
     description = ?, hours = ?, cost = ?, date = ?, type = ?,
     status = ?, priority = ?, finished = ?, notes = ?, completed_at = ?,
@@ -582,8 +597,14 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
      finished ? 1 : 0, notes, completedAt, accepted ? 1 : 0, acceptedAt, id],
     function(err) {
       if (err) {
-        return res.status(500).json({ error: 'Database error' });
+        console.error('❌ Database error updating task:', err);
+        return res.status(500).json({ error: 'Database error', details: err.message });
       }
+      if (this.changes === 0) {
+        console.warn('⚠️ No task found with id:', id);
+        return res.status(404).json({ error: 'Task not found' });
+      }
+      console.log('✅ Task updated successfully:', id);
       // Log activity
       logActivity('updated', 'task', id, description || 'Untitled Task', {
         hours,
