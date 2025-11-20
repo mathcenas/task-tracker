@@ -10,6 +10,10 @@ export function ClientDashboard() {
   const { clients, getClientTasks, getProject, deleteClient } = useApp();
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [showMultiMonthModal, setShowMultiMonthModal] = useState(false);
+  const [multiMonthClient, setMultiMonthClient] = useState<any>(null);
+  const [startMonth, setStartMonth] = useState(new Date());
+  const [endMonth, setEndMonth] = useState(new Date());
   const navigate = useNavigate();
 
   const toggleClient = (clientId: string) => {
@@ -211,6 +215,181 @@ export function ClientDashboard() {
 
   const goToCurrentMonth = () => {
     setSelectedMonth(new Date());
+  };
+
+  const openMultiMonthExport = (client: any) => {
+    setMultiMonthClient(client);
+    setStartMonth(subMonths(new Date(), 2));
+    setEndMonth(new Date());
+    setShowMultiMonthModal(true);
+  };
+
+  const exportMultiMonthReport = async () => {
+    if (!multiMonthClient) return;
+
+    try {
+      const start = startOfMonth(startMonth);
+      const end = endOfMonth(endMonth);
+
+      if (start > end) {
+        alert('Start month must be before or equal to end month');
+        return;
+      }
+
+      const clientTasks = getClientTasks(multiMonthClient.id);
+      const filteredTasks = clientTasks.filter(task =>
+        task.finished &&
+        isWithinInterval(new Date(task.date), { start, end })
+      );
+
+      if (filteredTasks.length === 0) {
+        alert('No completed tasks found in the selected date range');
+        return;
+      }
+
+      const companySettings = await apiService.getCompanySettings();
+      const pdf = new PDFExporter(companySettings);
+
+      const clientName = multiMonthClient.name;
+      const dateRange = `${format(start, 'MMM yyyy')} - ${format(end, 'MMM yyyy')}`;
+      const hourlyRate = multiMonthClient.hourlyRate;
+      const reportNumber = `RPT-${format(start, 'yyyyMM')}-${format(end, 'yyyyMM')}-${multiMonthClient.id.slice(-6)}`;
+
+      await pdf.addHeader('Multi-Month Report');
+
+      pdf.addSection('Report Details', {
+        'Report Number': reportNumber,
+        'Client': clientName,
+        'Period': dateRange,
+        'Generated': format(new Date(), 'MMM dd, yyyy'),
+        'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
+      });
+
+      const servicesTasks = filteredTasks.filter(task => task.type !== 'insumos');
+      const suppliesTasks = filteredTasks.filter(task => task.type === 'insumos');
+
+      if (servicesTasks.length > 0) {
+        const servicesTableData = servicesTasks.map(task => [
+          format(new Date(task.date), 'MMM d, yyyy'),
+          getProject(task.projectId)?.name || '',
+          task.type.charAt(0).toUpperCase() + task.type.slice(1),
+          task.description,
+          task.hours?.toString() || '',
+          `$${(task.hours * hourlyRate).toFixed(2)}`
+        ]);
+
+        pdf.addTable(
+          ['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount'],
+          servicesTableData,
+          {
+            columnStyles: {
+              0: { cellWidth: 25 },
+              1: { cellWidth: 30 },
+              2: { cellWidth: 25 },
+              3: { cellWidth: 60 },
+              4: { cellWidth: 20, halign: 'center' },
+              5: { cellWidth: 25, halign: 'right' }
+            }
+          }
+        );
+      }
+
+      if (suppliesTasks.length > 0) {
+        const suppliesTableData = suppliesTasks.map(task => [
+          format(new Date(task.date), 'MMM d, yyyy'),
+          getProject(task.projectId)?.name || '',
+          task.description,
+          `$${(task.cost || 0).toFixed(2)}`
+        ]);
+
+        pdf.addTable(
+          ['Date', 'Project', 'Description', 'Cost'],
+          suppliesTableData,
+          {
+            theme: 'grid',
+            headStyles: {
+              fillColor: [120, 53, 190]
+            },
+            columnStyles: {
+              0: { cellWidth: 25 },
+              1: { cellWidth: 35 },
+              2: { cellWidth: 100 },
+              3: { cellWidth: 25, halign: 'right' }
+            }
+          }
+        );
+      }
+
+      const incidentTasks = servicesTasks.filter(task => task.type === 'incident');
+      const requestTasks = servicesTasks.filter(task => task.type === 'request');
+      const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+      const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+      const incidentTotal = incidentHours * hourlyRate;
+      const requestTotal = requestHours * hourlyRate;
+      const servicesTotal = servicesTasks.reduce((sum, task) => sum + ((task.hours || 0) * hourlyRate), 0);
+      const suppliesTotal = suppliesTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
+      const totalAmount = servicesTotal + suppliesTotal;
+
+      if (incidentTasks.length > 0 || requestTasks.length > 0) {
+        const breakdownData = [];
+        if (incidentTasks.length > 0) {
+          breakdownData.push([
+            'Incidents',
+            incidentTasks.length.toString(),
+            `${incidentHours.toFixed(1)}h`,
+            `$${incidentTotal.toFixed(2)}`,
+            servicesTotal > 0 ? `${((incidentTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
+          ]);
+        }
+        if (requestTasks.length > 0) {
+          breakdownData.push([
+            'Requests',
+            requestTasks.length.toString(),
+            `${requestHours.toFixed(1)}h`,
+            `$${requestTotal.toFixed(2)}`,
+            servicesTotal > 0 ? `${((requestTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
+          ]);
+        }
+
+        pdf.addTable(
+          ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],
+          breakdownData,
+          {
+            theme: 'grid',
+            headStyles: {
+              fillColor: [100, 100, 100]
+            },
+            columnStyles: {
+              0: { cellWidth: 40, fontStyle: 'bold' },
+              1: { cellWidth: 25, halign: 'center' },
+              2: { cellWidth: 30, halign: 'center' },
+              3: { cellWidth: 35, halign: 'right' },
+              4: { cellWidth: 35, halign: 'center' }
+            }
+          }
+        );
+      }
+
+      const totalServiceHours = servicesTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+
+      pdf.addTotals([
+        { label: 'Total Service Hours:', value: `${totalServiceHours.toFixed(2)}h` },
+        { label: 'Services Total:', value: `$${servicesTotal.toFixed(2)}` },
+        { label: 'Supplies Total:', value: `$${suppliesTotal.toFixed(2)}` },
+        { label: 'Total Amount:', value: `$${totalAmount.toFixed(2)}`, bold: true }
+      ]);
+
+      pdf.addNotes('Thank you', 'Thank you for your business!');
+
+      const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-report-${format(start, 'yyyy-MM')}-to-${format(end, 'yyyy-MM')}.pdf`;
+      pdf.save(filename);
+
+      setShowMultiMonthModal(false);
+      alert('Multi-month report generated successfully!');
+    } catch (error) {
+      console.error('Failed to generate multi-month report:', error);
+      alert('Failed to generate PDF report');
+    }
   };
 
   const getTaskIcon = (type: string) => {
@@ -485,6 +664,17 @@ export function ClientDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          openMultiMonthExport(client);
+                        }}
+                        disabled={allClientTasks.length === 0}
+                        className="inline-flex items-center px-3 py-2 border border-purple-300 rounded-lg shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Multi-Month Export
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleDeleteClient(client.id, client.name);
                         }}
                         className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
@@ -652,6 +842,67 @@ export function ClientDashboard() {
           })
         )}
       </div>
+
+      {showMultiMonthModal && multiMonthClient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Multi-Month Export
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Export report for {multiMonthClient.name}
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Start Month
+                </label>
+                <input
+                  type="month"
+                  value={format(startMonth, 'yyyy-MM')}
+                  onChange={(e) => setStartMonth(new Date(e.target.value + '-01'))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  End Month
+                </label>
+                <input
+                  type="month"
+                  value={format(endMonth, 'yyyy-MM')}
+                  onChange={(e) => setEndMonth(new Date(e.target.value + '-01'))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  Period: {format(startMonth, 'MMM yyyy')} - {format(endMonth, 'MMM yyyy')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowMultiMonthModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={exportMultiMonthReport}
+                className="flex-1 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-purple-600 hover:bg-purple-700"
+              >
+                <Download className="w-4 h-4 inline mr-2" />
+                Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
