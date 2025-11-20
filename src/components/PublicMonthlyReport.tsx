@@ -668,44 +668,48 @@ export function PublicMonthlyReport() {
 
                   <div className="grid grid-cols-6 gap-2">
                     {trendData.map((data, index) => {
-                      const maxHours = Math.max(...trendData.map(d => d.hours));
+                      const maxHours = Math.max(...trendData.map(d => d.hours), 1);
                       const isCurrentMonth = data.year === parseInt(year) && data.monthNum === parseInt(month);
 
-                      const incidentHeight = maxHours > 0 ? Math.max((data.incidentHours / maxHours) * 100, data.incidentHours > 0 ? 5 : 0) : 0;
-                      const requestHeight = maxHours > 0 ? Math.max((data.requestHours / maxHours) * 100, data.requestHours > 0 ? 5 : 0) : 0;
+                      const incidentPercent = (data.incidentHours / maxHours) * 100;
+                      const requestPercent = (data.requestHours / maxHours) * 100;
+
+                      const minVisibleHeight = 8;
+                      const incidentHeight = data.incidentHours > 0 ? Math.max(incidentPercent, minVisibleHeight) : 0;
+                      const requestHeight = data.requestHours > 0 ? Math.max(requestPercent, minVisibleHeight) : 0;
 
                       return (
                         <div
                           key={`${data.year}-${data.monthNum}`}
                           className="text-center cursor-pointer group transition-all duration-200 hover:scale-105"
                           onClick={() => window.location.href = `/report/${clientSlug}/${data.year}/${data.monthNum}`}
-                          title={`Click to view ${data.month} ${data.year} report\nIncidents: ${data.incidentHours.toFixed(1)}h\nRequests: ${data.requestHours.toFixed(1)}h`}
+                          title={`Click to view ${data.month} ${data.year} report\nIncidents: ${data.incidentHours.toFixed(1)}h\nRequests: ${data.requestHours.toFixed(1)}h\nTotal: ${data.hours.toFixed(1)}h`}
                         >
-                          <div className="h-24 flex items-end justify-center mb-2">
-                            <div className="w-full flex flex-col-reverse items-stretch">
+                          <div className="h-32 flex items-end justify-center mb-2 relative">
+                            <div className="w-full flex flex-col-reverse items-stretch gap-0.5">
                               {data.hours === 0 ? (
                                 <div
-                                  className="w-full rounded-t bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500"
+                                  className="w-full rounded bg-gray-300 dark:bg-gray-600 group-hover:bg-gray-400 dark:group-hover:bg-gray-500"
                                   style={{ height: '8px' }}
                                 />
                               ) : (
                                 <>
                                   {data.requestHours > 0 && (
                                     <div
-                                      className={`w-full rounded-t transition-all duration-300 ${
+                                      className={`w-full transition-all duration-300 shadow-sm ${
                                         isCurrentMonth
-                                          ? 'bg-blue-500 group-hover:bg-blue-600'
-                                          : 'bg-blue-400 dark:bg-blue-500 group-hover:bg-blue-500 dark:group-hover:bg-blue-600'
-                                      }`}
+                                          ? 'bg-blue-500 group-hover:bg-blue-600 ring-2 ring-blue-600'
+                                          : 'bg-blue-500 dark:bg-blue-500 group-hover:bg-blue-600'
+                                      } ${data.incidentHours === 0 ? 'rounded-t' : ''}`}
                                       style={{ height: `${requestHeight}%` }}
                                     />
                                   )}
                                   {data.incidentHours > 0 && (
                                     <div
-                                      className={`w-full transition-all duration-300 ${
+                                      className={`w-full transition-all duration-300 shadow-sm ${
                                         isCurrentMonth
-                                          ? 'bg-red-500 group-hover:bg-red-600'
-                                          : 'bg-red-400 dark:bg-red-500 group-hover:bg-red-500 dark:group-hover:bg-red-600'
+                                          ? 'bg-red-500 group-hover:bg-red-600 ring-2 ring-red-600'
+                                          : 'bg-red-500 dark:bg-red-500 group-hover:bg-red-600'
                                       } ${data.requestHours === 0 ? 'rounded-t' : ''}`}
                                       style={{ height: `${incidentHeight}%` }}
                                     />
