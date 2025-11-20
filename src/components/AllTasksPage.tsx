@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
 import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { exportTasksToCSV } from '../utils/csvExport';
 
 export function AllTasksPage() {
+  const location = useLocation();
   const { tasks, getClient, getProject, updateTask, clients, projects } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -457,6 +458,7 @@ export function AllTasksPage() {
                       <div className="flex items-center space-x-1">
                         <Link
                           to={`/edit-task/${task.id}`}
+                          state={{ from: location.pathname + location.search }}
                           className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-600 transition-colors"
                           title="Edit task"
                         >

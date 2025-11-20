@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { format } from 'date-fns';
 import { ArrowLeft, Save, Trash2 } from 'lucide-react';
 
 export function EditTask() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { taskId } = useParams<{ taskId: string }>();
   const { getTask, updateTask, deleteTask, getClient, getProject } = useApp();
+
+  const returnPath = (location.state as { from?: string })?.from || '/';
   
   const task = taskId ? getTask(taskId) : null;
   const [formData, setFormData] = useState({
@@ -44,11 +47,11 @@ export function EditTask() {
         <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
           <p className="text-gray-500 dark:text-gray-400">Task not found</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(returnPath)}
             className="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            Back
           </button>
         </div>
       </div>
@@ -76,16 +79,20 @@ export function EditTask() {
       finished: isFinished
     };
 
-    await updateTask(updatedTask);
-
-    // Go back to previous page
-    navigate(-1);
+    try {
+      await updateTask(updatedTask);
+      console.log('✅ Task updated, navigating to:', returnPath);
+      navigate(returnPath);
+    } catch (error) {
+      console.error('❌ Failed to update task:', error);
+      alert('Failed to save changes. Please try again.');
+    }
   };
 
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
       deleteTask(task.id);
-      navigate('/');
+      navigate(returnPath);
     }
   };
 
@@ -95,7 +102,7 @@ export function EditTask() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate(returnPath)}
               className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-700 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -303,7 +310,7 @@ export function EditTask() {
           <div className="flex justify-between pt-6">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate(returnPath)}
               className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
