@@ -7,7 +7,7 @@ import { PDFExporter } from '../utils/pdfExport';
 import { apiService } from '../services/api';
 
 export function ClientDashboard() {
-  const { clients, getClientTasks, getProject, deleteClient, projects } = useApp();
+  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient } = useApp();
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMultiMonthModal, setShowMultiMonthModal] = useState(false);
@@ -17,6 +17,9 @@ export function ClientDashboard() {
   const [showProjectFilterModal, setShowProjectFilterModal] = useState(false);
   const [projectFilterClient, setProjectFilterClient] = useState<any>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  const [showEditClientModal, setShowEditClientModal] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
+  const [editClientData, setEditClientData] = useState({ name: '', email: '', hourlyRate: 0 });
   const navigate = useNavigate();
 
   const toggleClient = (clientId: string) => {
@@ -51,6 +54,34 @@ export function ClientDashboard() {
         console.error('Error deleting client:', error);
         alert('❌ Failed to delete client. Please try again.');
       }
+    }
+  };
+
+  const openEditClient = (client: any) => {
+    setEditingClient(client);
+    setEditClientData({
+      name: client.name,
+      email: client.email,
+      hourlyRate: client.hourlyRate
+    });
+    setShowEditClientModal(true);
+  };
+
+  const handleSaveClient = async () => {
+    if (!editingClient) return;
+
+    try {
+      await updateClient({
+        ...editingClient,
+        name: editClientData.name,
+        email: editClientData.email,
+        hourlyRate: editClientData.hourlyRate
+      });
+      setShowEditClientModal(false);
+      alert('Client updated successfully!');
+    } catch (error) {
+      console.error('Failed to update client:', error);
+      alert('Failed to update client');
     }
   };
 
@@ -856,11 +887,21 @@ export function ClientDashboard() {
                           e.stopPropagation();
                           openProjectFilterExport(client);
                         }}
-                        disabled={monthlyTasks.length === 0}
+                        disabled={allClientTasks.filter(t => t.finished).length === 0}
                         className="inline-flex items-center px-3 py-2 border border-teal-300 rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         <Package className="w-4 h-4 mr-2" />
                         Export by Project
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditClient(client);
+                        }}
+                        className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Edit
                       </button>
                       <button
                         onClick={(e) => {
@@ -1148,6 +1189,77 @@ export function ClientDashboard() {
               >
                 <Download className="w-4 h-4 inline mr-2" />
                 Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditClientModal && editingClient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Edit Client
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Update client information
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Client Name
+                </label>
+                <input
+                  type="text"
+                  value={editClientData.name}
+                  onChange={(e) => setEditClientData({ ...editClientData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editClientData.email}
+                  onChange={(e) => setEditClientData({ ...editClientData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Hourly Rate
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="number"
+                    value={editClientData.hourlyRate}
+                    onChange={(e) => setEditClientData({ ...editClientData, hourlyRate: parseFloat(e.target.value) || 0 })}
+                    min="0"
+                    step="0.01"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowEditClientModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveClient}
+                className="flex-1 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Save Changes
               </button>
             </div>
           </div>
