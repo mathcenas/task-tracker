@@ -9,12 +9,14 @@ import { TaskStatusBadge } from './TaskStatusBadge';
 import { exportTasksToCSV } from '../utils/csvExport';
 
 export function AllTasksPage() {
-  const { tasks, getClient, getProject, updateTask } = useApp();
+  const { tasks, getClient, getProject, updateTask, clients, projects } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [clientFilter, setClientFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>('all');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Force refresh when tasks change
@@ -67,6 +69,12 @@ export function AllTasksPage() {
 
     // Priority filter
     if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+
+    // Client filter
+    if (clientFilter !== 'all' && task.clientId !== clientFilter) return false;
+
+    // Project filter
+    if (projectFilter !== 'all' && task.projectId !== projectFilter) return false;
 
     return true;
   });
@@ -260,17 +268,103 @@ export function AllTasksPage() {
 
 
       {/* Additional Filters */}
-      <TaskFilters
-        priorityFilter={priorityFilter}
-        typeFilter={typeFilter}
-        onPriorityFilterChange={setPriorityFilter}
-        onTypeFilterChange={setTypeFilter}
-        onClearFilters={() => {
-          setPriorityFilter('all');
-          setTypeFilter('all');
-        }}
-        filteredCount={filteredTasks.length}
-      />
+      <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Client
+            </label>
+            <select
+              value={clientFilter}
+              onChange={(e) => {
+                setClientFilter(e.target.value);
+                setProjectFilter('all');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            >
+              <option value="all">All Clients</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Project
+            </label>
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              disabled={clientFilter === 'all'}
+            >
+              <option value="all">All Projects</option>
+              {projects
+                .filter(p => clientFilter === 'all' || p.clientId === clientFilter)
+                .map(project => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Type
+            </label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            >
+              <option value="all">All Types</option>
+              <option value="incident">Incident</option>
+              <option value="request">Request</option>
+              <option value="insumos">Supplies</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Priority
+            </label>
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            >
+              <option value="all">All Priorities</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setPriorityFilter('all');
+                setTypeFilter('all');
+                setClientFilter('all');
+                setProjectFilter('all');
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        {filteredTasks.length > 0 && (
+          <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            Showing {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
 
       {/* Tasks List */}
       <div className="bg-white rounded-lg shadow dark:bg-gray-800">
