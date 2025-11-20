@@ -4,8 +4,7 @@ import { Save, Plus, Trash2, ArrowLeft, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiService } from '../services/api';
 import { useApp } from '../context/AppContext';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { PDFExporter } from '../utils/pdfExport';
 
 interface QuoteItem {
   id?: string;
@@ -166,139 +165,98 @@ export function QuoteForm() {
       return;
     }
 
-    const doc = new jsPDF();
     const client = clients.find(c => c.id === formData.client_id);
-    const companyName = companySettings?.company_name || 'TaskTracker Pro';
-
-    let yPos = 20;
-
-    if (companySettings?.logo_url) {
-      try {
-        doc.addImage(companySettings.logo_url, 'PNG', 15, 10, 40, 15);
-        yPos = 30;
-      } catch (error) {
-        console.error('Failed to load logo:', error);
-      }
-    }
-
-    doc.setFontSize(24);
-    doc.setTextColor(41, 98, 255);
-    doc.text(companyName, 15, yPos);
-
-    doc.setFontSize(20);
-    doc.setTextColor(0, 0, 0);
-    const documentTitle = formData.quote_type === 'bom' ? 'BILL OF MATERIALS (BOM)' : 'QUOTE';
-    doc.text(documentTitle, 15, yPos + 15);
-
-    doc.setFontSize(12);
-    doc.text(`Date: ${format(new Date(formData.date), 'MMM dd, yyyy')}`, 15, yPos + 25);
-    if (formData.expiry_date) {
-      doc.text(`Valid Until: ${format(new Date(formData.expiry_date), 'MMM dd, yyyy')}`, 15, yPos + 32);
-    }
-
-    if (companySettings?.address) {
-      doc.setFontSize(10);
-      const addressLines = companySettings.address.split('\n');
-      addressLines.forEach((line: string, i: number) => {
-        doc.text(line, 140, yPos + i * 5);
-      });
-    }
-
-    doc.setFontSize(14);
-    doc.text('Bill To:', 15, yPos + 50);
-    doc.setFontSize(12);
-    doc.text(client?.name || '', 15, yPos + 57);
-
-    doc.setFontSize(16);
-    doc.text(formData.title, 15, yPos + 70);
-
     const isBOM = formData.quote_type === 'bom';
 
-    const tableData = isBOM
-      ? formData.items.map(item => [
-          item.description,
-          Number(item.quantity).toString()
-        ])
-      : formData.items.map(item => [
-          item.description,
-          Number(item.quantity).toString(),
-          `$${Number(item.unit_price).toFixed(2)}`,
-          `$${Number(item.amount).toFixed(2)}`
-        ]);
+    try {
+      const pdf = new PDFExporter(companySettings);
 
-    const tableHeaders = isBOM
-      ? ['Description', 'Quantity']
-      : ['Description', 'Quantity', 'Unit Price', 'Amount'];
+      await pdf.addHeader(isBOM ? 'Bill of Materials (BOM)' : 'Quote');
 
-    const columnStyles = isBOM
-      ? {
-          0: { cellWidth: 140 },
-          1: { cellWidth: 40 }
-        }
-      : {
-          0: { cellWidth: 90 },
-          1: { cellWidth: 30 },
-          2: { cellWidth: 30 },
-          3: { cellWidth: 30 }
-        };
+      const detailsSection: Record<string, string> = {
+        'Date': format(new Date(formData.date), 'MMM d, yyyy'),
+        'Status': formData.status.toUpperCase()
+      };
 
-    (doc as any).autoTable({
-      startY: yPos + 80,
-      head: [tableHeaders],
-      body: tableData,
-      theme: 'striped',
-      headStyles: {
-        fillColor: [41, 98, 255],
-        textColor: [255, 255, 255]
-      },
-      columnStyles
-    });
-
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
-
-    if (!isBOM) {
-      const subtotal = calculateSubtotal();
-      const tax = calculateTax();
-      const total = calculateTotal();
-
-      doc.setFontSize(12);
-      doc.text('Subtotal:', 130, finalY);
-      doc.text(`$${subtotal.toFixed(2)}`, 170, finalY, { align: 'right' });
-
-      if (formData.tax_rate > 0) {
-        doc.text(`Tax (${formData.tax_rate}%):`, 130, finalY + 7);
-        doc.text(`$${tax.toFixed(2)}`, 170, finalY + 7, { align: 'right' });
+      if (formData.expiry_date) {
+        detailsSection['Valid Until'] = format(new Date(formData.expiry_date), 'MMM d, yyyy');
       }
 
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'bold');
-      doc.text('Total:', 130, finalY + 14);
-      doc.text(`$${total.toFixed(2)}`, 170, finalY + 14, { align: 'right' });
+      pdf.addSection(isBOM ? 'BOM Details' : 'Quote Details', detailsSection);
+
+      pdf.addSection('Client Information', {
+        'Client': client?.name || ''
+      });
+
+      pdf.addSection('Description', {
+        'Project': formData.title
+      });
+
+      const tableData = isBOM
+        ? formData.items.map(item => [
+            item.description,
+            Number(item.quantity).toString()
+          ])
+        : formData.items.map(item => [
+            item.description,
+            Number(item.quantity).toString(),
+            `$${Number(item.unit_price).toFixed(2)}`,
+            `$${Number(item.amount).toFixed(2)}`
+          ]);
+
+      const tableHeaders = isBOM
+        ? ['Description', 'Quantity']
+        : ['Description', 'Quantity', 'Unit Price', 'Amount'];
+
+      const columnStyles = isBOM
+        ? {
+            0: { cellWidth: 140 },
+            1: { cellWidth: 40 }
+          }
+        : {
+            0: { cellWidth: 90 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 30 }
+          };
+
+      pdf.addTable(tableHeaders, tableData, { columnStyles });
+
+      if (!isBOM) {
+        const subtotal = calculateSubtotal();
+        const tax = calculateTax();
+        const total = calculateTotal();
+
+        const totalsData = [
+          { label: 'Subtotal:', value: `$${subtotal.toFixed(2)}` }
+        ];
+
+        if (formData.tax_rate > 0) {
+          totalsData.push({ label: `Tax (${formData.tax_rate}%):`, value: `$${tax.toFixed(2)}` });
+        }
+
+        totalsData.push({ label: 'Total:', value: `$${total.toFixed(2)}`, bold: true });
+
+        pdf.addTotals(totalsData);
+      }
+
+      if (formData.notes) {
+        pdf.addNotes('Notes', formData.notes);
+      }
+
+      if (formData.terms) {
+        pdf.addNotes('Terms & Conditions', formData.terms);
+      }
+
+      const fileName = isBOM
+        ? `BOM-${format(new Date(formData.date), 'yyyy-MM-dd')}-${client?.name || 'Client'}.pdf`
+        : `Quote-${format(new Date(formData.date), 'yyyy-MM-dd')}-${client?.name || 'Client'}.pdf`;
+
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      alert('Failed to generate PDF');
     }
-
-    const notesStartY = isBOM ? finalY + 10 : finalY + 30;
-
-    if (formData.notes) {
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-      doc.text('Notes:', 15, notesStartY);
-      const notesLines = doc.splitTextToSize(formData.notes, 180);
-      doc.text(notesLines, 15, notesStartY + 7);
-    }
-
-    if (formData.terms) {
-      const termsY = notesStartY + (formData.notes ? 25 : 0);
-      doc.setFontSize(10);
-      doc.text('Terms & Conditions:', 15, termsY);
-      const termsLines = doc.splitTextToSize(formData.terms, 180);
-      doc.text(termsLines, 15, termsY + 7);
-    }
-
-    const fileName = isBOM
-      ? `BOM-${format(new Date(formData.date), 'yyyy-MM-dd')}-${client?.name || 'Client'}.pdf`
-      : `Quote-${format(new Date(formData.date), 'yyyy-MM-dd')}-${client?.name || 'Client'}.pdf`;
-
-    doc.save(fileName);
   };
 
   if (loading) {

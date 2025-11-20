@@ -22,6 +22,7 @@ interface Quote {
   date: string;
   expiry_date: string | null;
   status: string;
+  quote_type: string;
   notes: string;
   terms: string;
   subtotal: number;
@@ -66,15 +67,21 @@ export function QuoteView() {
     try {
       const companySettings = await apiService.getCompanySettings();
       const pdf = new PDFExporter(companySettings);
+      const isBOM = quote.quote_type === 'bom';
 
-      await pdf.addHeader('Quote');
+      await pdf.addHeader(isBOM ? 'Bill of Materials (BOM)' : 'Quote');
 
-      pdf.addSection('Quote Details', {
-        'Quote Number': quote.quote_number,
+      const detailsSection: Record<string, string> = {
+        [isBOM ? 'BOM Number' : 'Quote Number']: quote.quote_number,
         'Date': format(new Date(quote.date), 'MMM d, yyyy'),
-        ...(quote.expiry_date && { 'Expiry Date': format(new Date(quote.expiry_date), 'MMM d, yyyy') }),
         'Status': quote.status.toUpperCase()
-      });
+      };
+
+      if (quote.expiry_date) {
+        detailsSection['Valid Until'] = format(new Date(quote.expiry_date), 'MMM d, yyyy');
+      }
+
+      pdf.addSection(isBOM ? 'BOM Details' : 'Quote Details', detailsSection);
 
       pdf.addSection('Client Information', {
         'Client': quote.client_name
@@ -84,23 +91,44 @@ export function QuoteView() {
         'Project': quote.title
       });
 
-      const tableData = quote.line_items.map(item => [
-        item.description,
-        item.quantity.toString(),
-        `$${item.unit_price.toFixed(2)}`,
-        `$${item.total.toFixed(2)}`
-      ]);
+      const tableData = isBOM
+        ? quote.line_items.map(item => [
+            item.description,
+            item.quantity.toString()
+          ])
+        : quote.line_items.map(item => [
+            item.description,
+            item.quantity.toString(),
+            `$${item.unit_price.toFixed(2)}`,
+            `$${item.total.toFixed(2)}`
+          ]);
 
-      pdf.addTable(
-        ['Description', 'Quantity', 'Unit Price', 'Total'],
-        tableData
-      );
+      const tableHeaders = isBOM
+        ? ['Description', 'Quantity']
+        : ['Description', 'Quantity', 'Unit Price', 'Total'];
 
-      pdf.addTotals([
-        { label: 'Subtotal:', value: `$${quote.subtotal.toFixed(2)}` },
-        { label: `Tax (${quote.tax_rate}%):`, value: `$${quote.tax_amount.toFixed(2)}` },
-        { label: 'Total:', value: `$${quote.total.toFixed(2)}`, bold: true }
-      ]);
+      const columnStyles = isBOM
+        ? {
+            0: { cellWidth: 140 },
+            1: { cellWidth: 40 }
+          }
+        : undefined;
+
+      pdf.addTable(tableHeaders, tableData, columnStyles ? { columnStyles } : undefined);
+
+      if (!isBOM) {
+        const totalsData = [
+          { label: 'Subtotal:', value: `$${quote.subtotal.toFixed(2)}` }
+        ];
+
+        if (quote.tax_rate > 0) {
+          totalsData.push({ label: `Tax (${quote.tax_rate}%):`, value: `$${quote.tax_amount.toFixed(2)}` });
+        }
+
+        totalsData.push({ label: 'Total:', value: `$${quote.total.toFixed(2)}`, bold: true });
+
+        pdf.addTotals(totalsData);
+      }
 
       if (quote.notes) {
         pdf.addNotes('Notes', quote.notes);
@@ -110,7 +138,11 @@ export function QuoteView() {
         pdf.addNotes('Terms & Conditions', quote.terms);
       }
 
-      pdf.save(`quote-${quote.quote_number}.pdf`);
+      const fileName = isBOM
+        ? `BOM-${quote.quote_number}.pdf`
+        : `Quote-${quote.quote_number}.pdf`;
+
+      pdf.save(fileName);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       alert('Failed to generate PDF');
