@@ -269,39 +269,39 @@ export function ClientDashboard() {
 
     try {
       const clientTasks = getClientTasks(projectFilterClient.id);
-      const monthStart = startOfMonth(selectedMonth);
-      const monthEnd = endOfMonth(selectedMonth);
 
-      let filteredTasks = clientTasks.filter(task =>
-        task.finished &&
-        isWithinInterval(new Date(task.date), { start: monthStart, end: monthEnd })
-      );
+      let filteredTasks = clientTasks.filter(task => task.finished);
 
       if (selectedProjectId !== 'all') {
         filteredTasks = filteredTasks.filter(task => task.projectId === selectedProjectId);
       }
 
       if (filteredTasks.length === 0) {
-        alert('No completed tasks found for the selected project in this month');
+        alert('No completed tasks found for the selected project');
         return;
       }
+
+      const sortedTasks = filteredTasks.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const firstTaskDate = sortedTasks[0].date;
+      const lastTaskDate = sortedTasks[sortedTasks.length - 1].date;
 
       const companySettings = await apiService.getCompanySettings();
       const pdf = new PDFExporter(companySettings);
 
       const clientName = projectFilterClient.name;
-      const monthYear = format(selectedMonth, 'MMMM yyyy');
       const hourlyRate = projectFilterClient.hourlyRate;
       const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Unknown Project';
-      const reportNumber = `RPT-${format(selectedMonth, 'yyyyMM')}-${projectFilterClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}`;
+      const reportNumber = `RPT-PROJECT-${projectFilterClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}`;
+      const periodText = `${format(new Date(firstTaskDate), 'MMM d, yyyy')} - ${format(new Date(lastTaskDate), 'MMM d, yyyy')}`;
 
-      await pdf.addHeader('Monthly Report');
+      await pdf.addHeader('Project Report');
 
       pdf.addSection('Report Details', {
         'Report Number': reportNumber,
         'Client': clientName,
         'Project': projectName,
-        'Period': monthYear,
+        'Period': periodText,
+        'Total Tasks': filteredTasks.length.toString(),
         'Generated': format(new Date(), 'MMM dd, yyyy'),
         'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
       });
@@ -423,11 +423,11 @@ export function ClientDashboard() {
       pdf.addNotes('Thank you', 'Thank you for your business!');
 
       const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
-      const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-${format(selectedMonth, 'yyyy-MM')}.pdf`;
+      const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-complete.pdf`;
       pdf.save(filename);
 
       setShowProjectFilterModal(false);
-      alert('Project-filtered report generated successfully!');
+      alert('Project report generated successfully!');
     } catch (error) {
       console.error('Failed to generate project-filtered report:', error);
       alert('Failed to generate PDF report');
