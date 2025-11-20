@@ -300,6 +300,8 @@ export function PublicMonthlyReport() {
       }
 
       if (suppliesTasks.length > 0) {
+        pdf.addSectionTitle('Supply Costs');
+
         const suppliesTableData = suppliesTasks.map(task => [
           format(new Date(task.date), 'MMM d, yyyy'),
           getProject(task.projectId)?.name || '',
@@ -334,6 +336,8 @@ export function PublicMonthlyReport() {
       const totalAmount = servicesTotal + suppliesTotal;
 
       if (incidentTasks.length > 0 || requestTasks.length > 0) {
+        pdf.addSectionTitle('Service Type Breakdown');
+
         const breakdownData = [];
         if (incidentTasks.length > 0) {
           breakdownData.push([

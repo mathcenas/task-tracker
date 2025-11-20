@@ -139,6 +139,14 @@ export class PDFExporter {
     this.currentY += 6;
   }
 
+  addSectionTitle(title: string) {
+    this.doc.setFontSize(12);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setTextColor(50, 50, 50);
+    this.doc.text(title, 15, this.currentY);
+    this.currentY += 8;
+  }
+
   addTable(headers: string[], rows: any[][], options?: any) {
     (this.doc as any).autoTable({
       startY: this.currentY,
