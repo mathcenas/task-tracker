@@ -70,6 +70,15 @@ export function QuoteForm() {
 
     try {
       const quote = await apiService.getQuote(id);
+
+      const items = (quote.line_items || []).map((item: any) => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        amount: item.total || item.amount || 0
+      }));
+
       setFormData({
         client_id: quote.client_id,
         title: quote.title,
@@ -80,7 +89,7 @@ export function QuoteForm() {
         tax_rate: quote.tax_rate || 0,
         status: quote.status || 'draft',
         quote_type: quote.quote_type || 'standard',
-        items: quote.items || [{ description: '', quantity: 1, unit_price: 0, amount: 0 }]
+        items: items.length > 0 ? items : [{ description: '', quantity: 1, unit_price: 0, amount: 0 }]
       });
     } catch (error) {
       console.error('Failed to load quote:', error);
