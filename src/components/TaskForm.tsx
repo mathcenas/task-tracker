@@ -8,6 +8,7 @@ export function TaskForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { clients, getClientProjects, addProject, addTask, tasks, getClient } = useApp();
+  const returnPath = (location.state as { from?: string })?.from || '/';
   const [selectedClient, setSelectedClient] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -234,7 +235,7 @@ export function TaskForm() {
             : `Day ${formData.recurringDay} of each month`
         }\n🎯 Next due: ${format(new Date(nextDue), 'MMM d, yyyy')}\n\n💡 You can manage recurring tasks from the Weekly Dashboard > Quick Actions > Recurring.`);
 
-        navigate('/');
+        navigate(returnPath);
         return;
       } catch (error) {
         console.error('Error creating recurring task:', error);
@@ -264,7 +265,7 @@ export function TaskForm() {
       console.log('✅ Task added successfully:', task);
 
       // Default redirect to dashboard
-      navigate('/');
+      navigate(returnPath);
     } catch (error) {
       console.error('❌ Error adding task:', error);
       alert('Failed to add task. Please try again.');
@@ -657,7 +658,7 @@ export function TaskForm() {
           <div className="flex justify-end space-x-3 pt-6 border-t dark:border-gray-700">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate(returnPath)}
               className="px-6 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
             >
               Cancel

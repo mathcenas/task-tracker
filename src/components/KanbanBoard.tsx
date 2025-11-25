@@ -133,7 +133,7 @@ export function KanbanBoard() {
     };
 
     return (
-      <Link to={`/edit-task/${task.id}`} onClick={handleCardClick}>
+      <Link to={`/edit-task/${task.id}`} state={{ from: '/weekly' }} onClick={handleCardClick}>
         <div
           draggable
           onDragStart={handleCardDragStart}

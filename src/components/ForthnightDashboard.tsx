@@ -226,7 +226,7 @@ export function ForthnightDashboard() {
           <div className="flex gap-2 shrink-0">
             {!task.finished && (
               <>
-                <Link to={`/edit-task/${task.id}`}>
+                <Link to={`/edit-task/${task.id}`} state={{ from: '/fortnight' }}>
                   <button className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors">
                     <Pencil className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                   </button>

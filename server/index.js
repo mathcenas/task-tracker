@@ -1612,7 +1612,7 @@ app.get('/api/quotes/:id', authenticateToken, (req, res) => {
 });
 
 app.post('/api/quotes', authenticateToken, (req, res) => {
-  const { client_id, title, date, expiry_date, notes, terms, tax_rate, items } = req.body;
+  const { client_id, title, date, expiry_date, notes, terms, tax_rate, items, quote_type } = req.body;
   const id = `quote-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const quoteNumber = `QT-${Date.now().toString().slice(-6)}`;
 
@@ -1627,10 +1627,10 @@ app.post('/api/quotes', authenticateToken, (req, res) => {
   db.run(
     `INSERT INTO quotes
      (id, quote_number, client_id, title, date, expiry_date, notes, terms,
-      subtotal, tax_rate, tax_amount, total, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+      subtotal, tax_rate, tax_amount, total, status, quote_type)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)`,
     [id, quoteNumber, client_id, title, date, expiry_date, notes, terms,
-     subtotal, tax_rate, taxAmount, total],
+     subtotal, tax_rate, taxAmount, total, quote_type || 'standard'],
     function(err) {
       if (err) {
         console.error('Error creating quote:', err);
@@ -1662,7 +1662,7 @@ app.post('/api/quotes', authenticateToken, (req, res) => {
 
 app.put('/api/quotes/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
-  const { client_id, title, date, expiry_date, notes, terms, tax_rate, items, status } = req.body;
+  const { client_id, title, date, expiry_date, notes, terms, tax_rate, items, status, quote_type } = req.body;
 
   let subtotal = 0;
   items.forEach((item) => {
@@ -1675,11 +1675,11 @@ app.put('/api/quotes/:id', authenticateToken, (req, res) => {
   db.run(
     `UPDATE quotes SET
        client_id = ?, title = ?, date = ?, expiry_date = ?, notes = ?, terms = ?,
-       subtotal = ?, tax_rate = ?, tax_amount = ?, total = ?, status = ?,
+       subtotal = ?, tax_rate = ?, tax_amount = ?, total = ?, status = ?, quote_type = ?,
        updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
     [client_id, title, date, expiry_date, notes, terms,
-     subtotal, tax_rate, taxAmount, total, status, id],
+     subtotal, tax_rate, taxAmount, total, status, quote_type || 'standard', id],
     function(err) {
       if (err) {
         console.error('Error updating quote:', err);

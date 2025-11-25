@@ -452,10 +452,11 @@ export function ClientDashboard() {
       }
 
       const clientTasks = getClientTasks(multiMonthClient.id);
-      const filteredTasks = clientTasks.filter(task =>
-        task.finished &&
-        isWithinInterval(new Date(task.date), { start, end })
-      );
+      const filteredTasks = clientTasks.filter(task => {
+        if (!task.finished) return false;
+        const taskDate = parseISO(task.date + 'T00:00:00');
+        return isWithinInterval(taskDate, { start, end });
+      });
 
       if (filteredTasks.length === 0) {
         alert('No completed tasks found in the selected date range');
@@ -1048,6 +1049,7 @@ export function ClientDashboard() {
                                     </div>
                                     <Link
                                       to={`/edit-task/${task.id}`}
+                                      state={{ from: '/clients' }}
                                       onClick={(e) => e.stopPropagation()}
                                       className="p-2 hover:bg-gray-200 rounded-lg dark:hover:bg-gray-700 transition-colors opacity-0 group-hover:opacity-100"
                                       title="Edit task"
