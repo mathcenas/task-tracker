@@ -4,6 +4,10 @@
 echo "Initializing database..."
 node /app/server/init-db.js
 
+# Run migrations
+echo "Running migrations..."
+node /app/server/migrate.js
+
 # Set up cron job for daily backup at 2 AM
 echo "0 2 * * * cd /app && node /app/server/backup-cron.js >> /var/log/cron.log 2>&1" > /tmp/crontab.txt
 
