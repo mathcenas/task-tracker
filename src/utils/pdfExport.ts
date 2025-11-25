@@ -219,10 +219,11 @@ export class PDFExporter {
     this.doc.setFontSize(9);
     this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(70, 70, 70);
-    const lines = this.doc.splitTextToSize(content, 180);
+    const lines = this.doc.splitTextToSize(content, 175);
 
     this.doc.setFillColor(252, 252, 253);
-    this.doc.setDrawColor(220, 220, 220);
+    this.doc.setDrawColor(230, 230, 230);
+    this.doc.setLineWidth(0.1);
     this.doc.roundedRect(15, this.currentY - 3, 180, lines.length * 4 + 4, 1, 1, 'FD');
     this.currentY += 1;
 
