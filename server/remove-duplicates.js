@@ -1,12 +1,16 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+import sqlite3 from 'sqlite3';
+import path from 'path';
+import readline from 'readline';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const dbPath = path.join(__dirname, 'tasktracker.db');
 const db = new sqlite3.Database(dbPath);
 
 console.log('🔍 Finding duplicate tasks...\n');
 
-// Find duplicates based on date, description, and cost
 const findDuplicatesQuery = `
   SELECT
     date,
@@ -49,7 +53,6 @@ db.all(findDuplicatesQuery, [], (err, duplicates) => {
     console.log(`  Cost: $${group.cost}`);
     console.log(`  Duplicates: ${group.count} copies`);
 
-    // Keep the oldest one (first created), mark others for deletion
     const tasksByDate = ids.map((id, i) => ({
       id,
       created_at: dates[i]
@@ -76,13 +79,12 @@ db.all(findDuplicatesQuery, [], (err, duplicates) => {
     return;
   }
 
-  // Ask for confirmation
-  const readline = require('readline').createInterface({
+  const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  readline.question('\n⚠️  Do you want to delete these duplicate tasks? (yes/no): ', (answer) => {
+  rl.question('\n⚠️  Do you want to delete these duplicate tasks? (yes/no): ', (answer) => {
     if (answer.toLowerCase() === 'yes' || answer.toLowerCase() === 'y') {
       console.log('\n🗑️  Deleting duplicates...');
 
@@ -96,12 +98,12 @@ db.all(findDuplicatesQuery, [], (err, duplicates) => {
           console.log(`✅ Successfully deleted ${this.changes} duplicate tasks!`);
         }
 
-        readline.close();
+        rl.close();
         db.close();
       });
     } else {
       console.log('\n❌ Deletion cancelled.');
-      readline.close();
+      rl.close();
       db.close();
     }
   });
