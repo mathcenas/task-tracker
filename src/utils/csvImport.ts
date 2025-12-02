@@ -91,12 +91,15 @@ export function transformCSVToTasks(
       // For supplies (insumos), hours should be 0
       const finalHours = type === 'insumos' ? 0 : hours;
 
+      const taskDescription = row.Description ?
+        `${row.Activity} - ${row.Description}` :
+        row.Activity;
+
       return {
         id: `import-${Date.now()}-${index}`,
         clientId,
         projectId: projectId || '',
-        title: row.Activity,
-        description: row.Description || '',
+        description: taskDescription,
         date: parseDate(row.Date),
         type,
         hours: finalHours,
