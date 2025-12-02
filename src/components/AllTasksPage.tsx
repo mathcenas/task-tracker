@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
@@ -10,7 +10,7 @@ import { exportTasksToCSV } from '../utils/csvExport';
 
 export function AllTasksPage() {
   const location = useLocation();
-  const { tasks, getClient, getProject, updateTask, clients, projects } = useApp();
+  const { tasks, getClient, getProject, updateTask, deleteTask, clients, projects } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
@@ -139,6 +139,18 @@ export function AllTasksPage() {
       }
       setIsModalOpen(false);
       setSelectedTaskId(null);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task && window.confirm(`Are you sure you want to delete this task?\n\n"${task.description}"`)) {
+      try {
+        await deleteTask(taskId);
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('Failed to delete task. Please try again.');
+      }
     }
   };
 
@@ -473,6 +485,13 @@ export function AllTasksPage() {
                             <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="p-2 hover:bg-red-100 rounded-lg dark:hover:bg-red-900/20 transition-colors"
+                          title="Delete task"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        </button>
                       </div>
                     </div>
                   </div>
