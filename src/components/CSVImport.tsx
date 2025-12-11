@@ -226,7 +226,7 @@ export function CSVImport() {
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Title</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Description</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Hours</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cost</th>
                         </tr>
@@ -244,7 +244,7 @@ export function CSVImport() {
                                 {task.type}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white truncate max-w-xs">{task.title}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white truncate max-w-xs">{task.description}</td>
                             <td className="px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">{task.hours?.toFixed(2) || '0.00'}</td>
                             <td className="px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">${task.cost?.toFixed(2) || '0.00'}</td>
                           </tr>
@@ -277,9 +277,9 @@ export function CSVImport() {
               </h3>
               <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 <li>• Expected columns: Date, Duration, Price, Customer, Activity, Description</li>
-                <li>• Date format: M/D/YYYY (e.g., 10/1/2024)</li>
+                <li>• Date formats supported: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY (e.g., 2025-01-25, 01/25/2025, or 25/01/2025)</li>
                 <li>• Duration format: H:MM (e.g., 2:30 for 2.5 hours)</li>
-                <li>• Activity types: "Incidentes IT", "Solicitudes IT", "Gestión de Servicios IT", "Adquisiciones"</li>
+                <li>• Activity types: "Incidentes IT", "Solicitudes IT", "Gestión de Servicios IT", "Consultoría IT", "Consultoría Web", "Adquisiciones"</li>
                 <li>• All imported tasks will be marked as completed</li>
               </ul>
             </div>
