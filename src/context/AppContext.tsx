@@ -18,6 +18,7 @@ interface AppContextType {
   deleteProject: (projectId: string) => Promise<void>;
   updateClient: (client: Client) => Promise<void>;
   updateProject: (project: Project) => Promise<void>;
+  reloadTasks: () => Promise<void>;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   getClientProjects: (clientId: string) => Project[];
   getClientTasks: (clientId: string) => Task[];
@@ -247,6 +248,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const reloadTasks = async () => {
+    try {
+      const tasksData = await apiService.getTasks();
+      setTasks(tasksData);
+      console.log('✅ Tasks reloaded from API:', tasksData.length);
+    } catch (error) {
+      console.error('❌ Error reloading tasks:', error);
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       clients,
@@ -258,6 +270,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateTask,
       finishTask,
       setTasks,
+      reloadTasks,
       getClientProjects,
       getClientTasks,
       getProjectTasks,

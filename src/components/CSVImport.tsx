@@ -6,7 +6,7 @@ import { api } from '../services/api';
 import { Task } from '../types';
 
 export function CSVImport() {
-  const { clients, projects } = useApp();
+  const { clients, projects, reloadTasks } = useApp();
   const [selectedClient, setSelectedClient] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -72,6 +72,8 @@ export function CSVImport() {
           console.error('Error importing task:', err);
         }
       }
+
+      await reloadTasks();
 
       setSuccess(`Successfully imported ${successCount} tasks${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
       setPreview([]);
