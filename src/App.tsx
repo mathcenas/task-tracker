@@ -26,6 +26,7 @@ import { CompanySettings } from './components/CompanySettings';
 import { QuotesList } from './components/QuotesList';
 import { QuoteForm } from './components/QuoteForm';
 import { QuoteView } from './components/QuoteView';
+import { IdeasBoard } from './components/IdeasBoard';
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
                   <Route path="/monthly" element={<MonthlyDashboard />} />
                   <Route path="/tasks" element={<AllTasksPage />} />
                   <Route path="/kanban" element={<KanbanBoard />} />
+                  <Route path="/ideas" element={<IdeasBoard />} />
                   <Route path="/recurring-tasks" element={<RecurringTasksPage />} />
                   <Route path="/clients" element={<ClientDashboard />} />
                   <Route path="/projects" element={<ProjectsDashboard />} />
