@@ -80,24 +80,11 @@ export function AllTasksPage() {
     return true;
   });
 
-  // Sort tasks: pending first (by priority, then date), then completed (by date desc)
+  // Sort tasks: latest created first
   const sortedTasks = filteredTasks.sort((a, b) => {
-    // If one is finished and other isn't, pending comes first
-    if (a.finished !== b.finished) {
-      return a.finished ? 1 : -1;
-    }
-
-    // If both are pending, sort by priority then date
-    if (!a.finished && !b.finished) {
-      const priorityOrder = { high: 3, medium: 2, low: 1 };
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-      }
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
-    }
-
-    // If both are completed, sort by date descending
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
+    const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bCreated - aCreated;
   });
 
   const getRelativeDate = (date: string) => {
@@ -184,6 +171,7 @@ export function AllTasksPage() {
           </button>
           <Link
             to="/add-task"
+            state={{ from: '/tasks' }}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -511,6 +499,7 @@ export function AllTasksPage() {
                 </p>
                 <Link
                   to="/add-task"
+                  state={{ from: '/tasks' }}
                   className="inline-flex items-center mt-4 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-1" />

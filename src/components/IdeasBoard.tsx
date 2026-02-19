@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Lightbulb, Clock, AlertTriangle, Plus, Save, X, Edit2, Calendar, User, Tag } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 
@@ -203,12 +203,13 @@ export function IdeasBoard() {
                           </span>
                         )}
                       </div>
-                      <button
-                        onClick={() => navigate(`/edit-task/${task.id}`)}
+                      <Link
+                        to={`/edit-task/${task.id}`}
+                        state={{ from: '/ideas' }}
                         className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       >
                         <Edit2 className="w-4 h-4" />
-                      </button>
+                      </Link>
                     </div>
 
                     <div className="mb-4">

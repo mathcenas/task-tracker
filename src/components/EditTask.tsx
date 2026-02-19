@@ -10,7 +10,7 @@ export function EditTask() {
   const { taskId } = useParams<{ taskId: string }>();
   const { getTask, updateTask, deleteTask, getClient, getProject } = useApp();
 
-  const returnPath = (location.state as { from?: string })?.from || '/';
+  const returnPath = (location.state as { from?: string })?.from || (document.referrer ? -1 : '/') as any;
   
   const task = taskId ? getTask(taskId) : null;
   const [formData, setFormData] = useState({

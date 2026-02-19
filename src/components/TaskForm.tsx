@@ -8,7 +8,7 @@ export function TaskForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { clients, getClientProjects, addProject, addTask, tasks, getClient } = useApp();
-  const returnPath = (location.state as { from?: string })?.from || '/';
+  const returnPath = (location.state as { from?: string })?.from || (document.referrer ? -1 : '/') as any;
   const [selectedClient, setSelectedClient] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({

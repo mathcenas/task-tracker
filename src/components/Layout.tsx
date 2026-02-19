@@ -320,6 +320,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         <Link
                           key={task.id}
                           to={`/edit-task/${task.id}`}
+                          state={{ from: location.pathname }}
                           className="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm"
                           onClick={() => {
                             setShowSearchResults(false);
