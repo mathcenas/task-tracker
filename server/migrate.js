@@ -5,13 +5,16 @@ import fs from 'fs';
 const { verbose } = sqlite3;
 
 // Check for data directory
-let dataDir = './data';
-let dbPath = './data/tasktracker.db';
+let dataDir = './server';
+let dbPath = './server/tasktracker.db';
 
 // Check if running in Docker
 if (fs.existsSync('/app/data')) {
   dataDir = '/app/data';
   dbPath = '/app/data/tasktracker.db';
+} else if (fs.existsSync('./data/tasktracker.db')) {
+  dataDir = './data';
+  dbPath = './data/tasktracker.db';
 }
 
 console.log('Using database at:', dbPath);
@@ -61,6 +64,21 @@ const runMigrations = async () => {
     {
       name: 'Add quote_type to quotes',
       sql: `ALTER TABLE quotes ADD COLUMN quote_type TEXT DEFAULT 'standard'`
+    },
+    {
+      name: 'Create monitor_feeds table',
+      sql: `CREATE TABLE IF NOT EXISTS monitor_feeds (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        client_id TEXT,
+        project_id TEXT,
+        enabled INTEGER DEFAULT 1,
+        last_checked DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+      )`
     }
   ];
 

@@ -532,6 +532,31 @@ class ApiService {
     });
   }
 
+  // Monitor Feeds
+  async getMonitorFeeds() {
+    return this.request('/monitor-feeds');
+  }
+
+  async createMonitorFeed(data: any) {
+    return this.request('/monitor-feeds', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMonitorFeed(id: string, data: any) {
+    return this.request(`/monitor-feeds/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMonitorFeed(id: string) {
+    return this.request(`/monitor-feeds/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Activity Logs
   async getActivityLogs(limit: number = 100, offset: number = 0) {
     return this.request(`/activity-logs?limit=${limit}&offset=${offset}`);

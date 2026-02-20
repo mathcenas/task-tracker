@@ -17,9 +17,8 @@ import { AboutPage } from './components/AboutPage';
 import { AllTasksPage } from './components/AllTasksPage';
 import { RecurringTasksPage } from './components/RecurringTasksPage';
 import { KanbanBoard } from './components/KanbanBoard';
-import UptimeKumaSettings from './components/UptimeKumaSettings';
+import MonitorIntegration from './components/MonitorIntegration';
 import StatusPageSettings from './components/StatusPageSettings';
-import MonitorClientMapping from './components/MonitorClientMapping';
 import { CSVImport } from './components/CSVImport';
 import { ActivityLog } from './components/ActivityLog';
 import { CompanySettings } from './components/CompanySettings';
@@ -54,9 +53,8 @@ export default function App() {
                   <Route path="/projects" element={<ProjectsDashboard />} />
                   <Route path="/import-csv" element={<CSVImport />} />
                   <Route path="/activity-log" element={<ActivityLog />} />
-                  <Route path="/integrations/uptime-kuma" element={<UptimeKumaSettings />} />
+                  <Route path="/integrations/monitors" element={<MonitorIntegration />} />
                   <Route path="/integrations/status-pages" element={<StatusPageSettings />} />
-                  <Route path="/integrations/monitor-mapping" element={<MonitorClientMapping />} />
                   <Route path="/settings/company" element={<CompanySettings />} />
                   <Route path="/quotes" element={<QuotesList />} />
                   <Route path="/quotes/new" element={<QuoteForm />} />

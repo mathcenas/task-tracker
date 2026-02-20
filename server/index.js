@@ -1729,6 +1729,76 @@ app.delete('/api/quotes/:id', authenticateToken, (req, res) => {
   });
 });
 
+// Monitor Feeds
+app.get('/api/monitor-feeds', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM monitor_feeds ORDER BY created_at DESC', (err, rows) => {
+    if (err) {
+      console.error('Error fetching monitor feeds:', err);
+      return res.status(500).json({ error: 'Failed to fetch monitor feeds' });
+    }
+    res.json(rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      url: row.url,
+      clientId: row.client_id,
+      projectId: row.project_id,
+      enabled: row.enabled === 1,
+      lastChecked: row.last_checked,
+      createdAt: row.created_at
+    })));
+  });
+});
+
+app.post('/api/monitor-feeds', authenticateToken, (req, res) => {
+  const { name, url, clientId, projectId, enabled } = req.body;
+  const id = `feed-${Date.now()}`;
+  const createdAt = new Date().toISOString();
+
+  db.run(
+    `INSERT INTO monitor_feeds (id, name, url, client_id, project_id, enabled, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, url, clientId || null, projectId || null, enabled ? 1 : 0, createdAt],
+    function(err) {
+      if (err) {
+        console.error('Error creating monitor feed:', err);
+        return res.status(500).json({ error: 'Failed to create monitor feed' });
+      }
+      res.json({ id, name, url, clientId, projectId, enabled, createdAt });
+    }
+  );
+});
+
+app.put('/api/monitor-feeds/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { name, url, clientId, projectId, enabled } = req.body;
+
+  db.run(
+    `UPDATE monitor_feeds
+     SET name = ?, url = ?, client_id = ?, project_id = ?, enabled = ?
+     WHERE id = ?`,
+    [name, url, clientId || null, projectId || null, enabled ? 1 : 0, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating monitor feed:', err);
+        return res.status(500).json({ error: 'Failed to update monitor feed' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+app.delete('/api/monitor-feeds/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.run('DELETE FROM monitor_feeds WHERE id = ?', [id], function(err) {
+    if (err) {
+      console.error('Error deleting monitor feed:', err);
+      return res.status(500).json({ error: 'Failed to delete monitor feed' });
+    }
+    res.json({ success: true });
+  });
+});
+
 // Serve static files in production - MUST BE AFTER all API routes
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('/app/dist'));
