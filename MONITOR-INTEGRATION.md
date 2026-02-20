@@ -105,7 +105,31 @@ def status():
 ## Integration with Popular Services
 
 ### Uptime Kuma
-Uptime Kuma can expose a status page API. Configure your status page and use the JSON endpoint.
+
+Uptime Kuma provides a public status page API that works perfectly with this integration:
+
+**Step 1: Create a Status Page in Uptime Kuma**
+1. Log into your Uptime Kuma instance
+2. Click on "Status Pages" in the left sidebar
+3. Create a new status page or edit an existing one
+4. Enable "Public" access (required for the API)
+5. Add the monitors you want to track
+6. Save the status page
+
+**Step 2: Get the API Endpoint**
+- Your status page URL will be something like: `https://uptime.example.com/status/mypage`
+- The API endpoint is: `https://uptime.example.com/api/status-page/mypage`
+- Format: `{YOUR_KUMA_URL}/api/status-page/{YOUR_SLUG}`
+
+**Step 3: Add to Task Tracker**
+1. Go to Integrations > Monitors
+2. Click "Add Feed"
+3. Name: "Uptime Kuma Production"
+4. URL: `https://uptime.example.com/api/status-page/mypage`
+5. Optionally assign to a client/project
+6. Click "Add Feed"
+
+The system will automatically parse Uptime Kuma's JSON format and display all monitors with their status, uptime percentage, and average ping time.
 
 ### Custom Scripts
 Write simple monitoring scripts that output JSON:

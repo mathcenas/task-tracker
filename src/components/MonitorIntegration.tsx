@@ -66,21 +66,40 @@ export default function MonitorIntegration() {
       // Support multiple JSON formats
       let monitors: MonitorStatus[] = [];
 
-      if (Array.isArray(data)) {
+      // Uptime Kuma Status Page API format
+      if (data.publicGroupList && Array.isArray(data.publicGroupList)) {
+        data.publicGroupList.forEach((group: any) => {
+          if (group.monitorList && Array.isArray(group.monitorList)) {
+            group.monitorList.forEach((monitor: any) => {
+              monitors.push({
+                name: monitor.name || 'Unknown',
+                status: parseStatus(monitor.status),
+                lastCheck: monitor.lastCheck,
+                responseTime: monitor.avgPing || monitor.ping,
+                uptime: monitor.uptime24 || monitor.uptime
+              });
+            });
+          }
+        });
+      }
+      // Simple array format
+      else if (Array.isArray(data)) {
         monitors = data.map((item: any) => ({
           name: item.name || item.monitor || item.service || 'Unknown',
           status: parseStatus(item.status || item.state),
           lastCheck: item.lastCheck || item.checked_at || item.timestamp,
-          responseTime: item.responseTime || item.response_time || item.latency,
-          uptime: item.uptime || item.availability
+          responseTime: item.responseTime || item.response_time || item.latency || item.avgPing || item.ping,
+          uptime: item.uptime || item.availability || item.uptime24
         }));
-      } else if (data.monitors && Array.isArray(data.monitors)) {
+      }
+      // Object with monitors array
+      else if (data.monitors && Array.isArray(data.monitors)) {
         monitors = data.monitors.map((item: any) => ({
           name: item.name || item.monitor || 'Unknown',
           status: parseStatus(item.status || item.state),
           lastCheck: item.lastCheck || item.checked_at,
-          responseTime: item.responseTime || item.latency,
-          uptime: item.uptime
+          responseTime: item.responseTime || item.latency || item.avgPing || item.ping,
+          uptime: item.uptime || item.uptime24
         }));
       }
 
@@ -382,8 +401,19 @@ export default function MonitorIntegration() {
         </div>
 
         <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">
-            Supported JSON Formats
+          <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-3">
+            How to Connect Uptime Kuma
+          </h3>
+          <ol className="text-xs text-blue-800 dark:text-blue-400 space-y-2 list-decimal list-inside mb-4">
+            <li>In Uptime Kuma, go to <strong>Status Pages</strong></li>
+            <li>Create or edit a status page and enable <strong>Public</strong> access</li>
+            <li>Copy the status page URL (e.g., <code className="text-xs">https://your-kuma.com/status/mypage</code>)</li>
+            <li>Add <code className="text-xs">/api/status-page/mypage</code> to get the JSON endpoint</li>
+            <li>Paste the full URL here (e.g., <code className="text-xs">https://your-kuma.com/api/status-page/mypage</code>)</li>
+          </ol>
+
+          <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2 mt-4">
+            Other Supported JSON Formats
           </h3>
           <div className="text-xs text-blue-800 dark:text-blue-400 space-y-2 font-mono">
             <div>
