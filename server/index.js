@@ -1799,6 +1799,34 @@ app.delete('/api/monitor-feeds/:id', authenticateToken, (req, res) => {
   });
 });
 
+// Proxy endpoint to bypass CORS for external monitor feeds
+app.get('/api/monitor-proxy', authenticateToken, async (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL parameter is required' });
+  }
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: `Failed to fetch from ${url}: ${response.statusText}`
+      });
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Monitor proxy error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch monitor data',
+      details: error.message
+    });
+  }
+});
+
 // Serve static files in production - MUST BE AFTER all API routes
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('/app/dist'));

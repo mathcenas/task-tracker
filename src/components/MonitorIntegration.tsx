@@ -60,8 +60,9 @@ export default function MonitorIntegration() {
 
   const loadFeedStatus = async (feedId: string, url: string) => {
     try {
-      const response = await fetch(url);
-      const data = await response.json();
+      // Use our server proxy to bypass CORS
+      const proxyUrl = `/api/monitor-proxy?url=${encodeURIComponent(url)}`;
+      const data = await apiService.request(proxyUrl);
 
       // Support multiple JSON formats
       let monitors: MonitorStatus[] = [];
