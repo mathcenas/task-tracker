@@ -71,11 +71,14 @@ export default function MonitorIntegration() {
         data.publicGroupList.forEach((group: any) => {
           if (group.monitorList && Array.isArray(group.monitorList)) {
             group.monitorList.forEach((monitor: any) => {
+              // Get heartbeat data if available
+              const heartbeat = data.heartbeatList?.[monitor.id]?.at(-1);
+
               monitors.push({
                 name: monitor.name || 'Unknown',
-                status: parseStatus(monitor.status),
-                lastCheck: monitor.lastCheck,
-                responseTime: monitor.avgPing || monitor.ping,
+                status: parseStatus(heartbeat?.status ?? monitor.status),
+                lastCheck: heartbeat?.time || monitor.lastCheck,
+                responseTime: heartbeat?.ping || monitor.avgPing || monitor.ping,
                 uptime: monitor.uptime24 || monitor.uptime
               });
             });
@@ -111,7 +114,15 @@ export default function MonitorIntegration() {
   };
 
   const parseStatus = (status: any): 'up' | 'down' | 'unknown' => {
-    if (!status) return 'unknown';
+    if (status === null || status === undefined) return 'unknown';
+
+    // Handle numeric status codes (Uptime Kuma uses: 0=down, 1=up, 2=pending)
+    if (typeof status === 'number') {
+      if (status === 1) return 'up';
+      if (status === 0) return 'down';
+      return 'unknown';
+    }
+
     const statusStr = String(status).toLowerCase();
     if (statusStr === 'up' || statusStr === 'online' || statusStr === 'active' || statusStr === '1' || statusStr === 'true') {
       return 'up';
@@ -407,10 +418,14 @@ export default function MonitorIntegration() {
           <ol className="text-xs text-blue-800 dark:text-blue-400 space-y-2 list-decimal list-inside mb-4">
             <li>In Uptime Kuma, go to <strong>Status Pages</strong></li>
             <li>Create or edit a status page and enable <strong>Public</strong> access</li>
+            <li>In the status page settings, enable <strong>Show Heartbeats</strong> or <strong>Show Recent Pings</strong></li>
             <li>Copy the status page URL (e.g., <code className="text-xs">https://your-kuma.com/status/mypage</code>)</li>
             <li>Add <code className="text-xs">/api/status-page/mypage</code> to get the JSON endpoint</li>
             <li>Paste the full URL here (e.g., <code className="text-xs">https://your-kuma.com/api/status-page/mypage</code>)</li>
           </ol>
+          <p className="text-xs text-blue-700 dark:text-blue-400 italic">
+            Note: If monitors show as "unknown", make sure heartbeat data is enabled in your Uptime Kuma status page settings.
+          </p>
 
           <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2 mt-4">
             Other Supported JSON Formats
