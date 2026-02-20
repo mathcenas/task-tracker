@@ -106,6 +106,7 @@ export default function MonitorIntegration() {
         }));
       }
 
+      console.log(`Feed ${feedId}: Parsed ${monitors.length} monitors`, monitors);
       setStatuses(prev => ({ ...prev, [feedId]: monitors }));
     } catch (error) {
       console.error(`Failed to load status for feed ${feedId}:`, error);
