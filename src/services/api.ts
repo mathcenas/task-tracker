@@ -122,7 +122,15 @@ class ApiService {
       contactPerson: c.contact_person,
       email: c.email,
       phone: c.phone,
-      createdAt: c.created_at
+      createdAt: c.created_at,
+      yearlyRates: c.yearly_rates?.map((r: any) => ({
+        id: r.id,
+        clientId: r.client_id,
+        year: r.year,
+        hourlyRate: r.hourly_rate,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at
+      })) || []
     }));
   }
 
@@ -190,6 +198,37 @@ class ApiService {
 
   async deleteClient(id: string) {
     return this.request(`/clients/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Client Yearly Rates methods
+  async getClientYearlyRates(clientId: string) {
+    const rates = await this.request(`/clients/${clientId}/yearly-rates`);
+    return rates.map((r: any) => ({
+      id: r.id,
+      clientId: r.client_id,
+      year: r.year,
+      hourlyRate: r.hourly_rate,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at
+    }));
+  }
+
+  async saveClientYearlyRate(clientId: string, rate: any) {
+    const payload = {
+      id: rate.id,
+      year: rate.year,
+      hourlyRate: rate.hourlyRate
+    };
+    return this.request(`/clients/${clientId}/yearly-rates`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteClientYearlyRate(clientId: string, rateId: string) {
+    return this.request(`/clients/${clientId}/yearly-rates/${rateId}`, {
       method: 'DELETE',
     });
   }

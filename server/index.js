@@ -331,7 +331,31 @@ app.get('/api/clients', authenticateToken, (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(clients);
+
+    // Fetch yearly rates for each client
+    const clientsWithRates = [];
+    let processed = 0;
+
+    if (clients.length === 0) {
+      return res.json([]);
+    }
+
+    clients.forEach(client => {
+      db.all('SELECT * FROM client_yearly_rates WHERE client_id = ? ORDER BY year DESC',
+        [client.id],
+        (err, rates) => {
+          if (!err && rates) {
+            client.yearly_rates = rates;
+          }
+          clientsWithRates.push(client);
+          processed++;
+
+          if (processed === clients.length) {
+            res.json(clientsWithRates);
+          }
+        }
+      );
+    });
   });
 });
 
@@ -429,6 +453,91 @@ app.delete('/api/clients/:id', authenticateToken, (req, res) => {
     });
   });
 });
+
+// Client Yearly Rates routes
+app.get('/api/clients/:clientId/yearly-rates', authenticateToken, (req, res) => {
+  const { clientId } = req.params;
+
+  db.all('SELECT * FROM client_yearly_rates WHERE client_id = ? ORDER BY year DESC',
+    [clientId],
+    (err, rates) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(rates || []);
+    }
+  );
+});
+
+app.post('/api/clients/:clientId/yearly-rates', authenticateToken, (req, res) => {
+  const { clientId } = req.params;
+  const { id, year, hourlyRate } = req.body;
+
+  if (!id || !year || hourlyRate === undefined) {
+    return res.status(400).json({ error: 'Missing required fields: id, year, and hourlyRate' });
+  }
+
+  db.run(
+    `INSERT INTO client_yearly_rates (id, client_id, year, hourly_rate)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(client_id, year) DO UPDATE SET hourly_rate = ?, updated_at = CURRENT_TIMESTAMP`,
+    [id, clientId, year, hourlyRate, hourlyRate],
+    function(err) {
+      if (err) {
+        console.error('Error saving yearly rate:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      // Log activity
+      db.get('SELECT name FROM clients WHERE id = ?', [clientId], (err, client) => {
+        if (client) {
+          logActivity('updated', 'client_rate', clientId, client.name,
+            { year, hourlyRate }, req.user?.id);
+        }
+      });
+
+      res.json({ success: true, id });
+    }
+  );
+});
+
+app.delete('/api/clients/:clientId/yearly-rates/:rateId', authenticateToken, (req, res) => {
+  const { rateId } = req.params;
+
+  db.run('DELETE FROM client_yearly_rates WHERE id = ?', [rateId], function(err) {
+    if (err) {
+      console.error('Error deleting yearly rate:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Helper function to get hourly rate for a specific year
+function getHourlyRateForYear(clientId, year, callback) {
+  db.get(
+    `SELECT hourly_rate FROM client_yearly_rates
+     WHERE client_id = ? AND year = ?`,
+    [clientId, year],
+    (err, rate) => {
+      if (err) {
+        return callback(err, null);
+      }
+
+      if (rate) {
+        return callback(null, rate.hourly_rate);
+      }
+
+      // Fallback to client's default rate
+      db.get('SELECT hourly_rate FROM clients WHERE id = ?', [clientId], (err, client) => {
+        if (err || !client) {
+          return callback(err || new Error('Client not found'), null);
+        }
+        callback(null, client.hourly_rate);
+      });
+    }
+  );
+}
 
 // Project routes
 app.get('/api/projects', authenticateToken, (req, res) => {

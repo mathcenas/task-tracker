@@ -79,6 +79,30 @@ const runMigrations = async () => {
         FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
       )`
+    },
+    {
+      name: 'Create client_yearly_rates table',
+      sql: `CREATE TABLE IF NOT EXISTS client_yearly_rates (
+        id TEXT PRIMARY KEY,
+        client_id TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        hourly_rate REAL NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+        UNIQUE(client_id, year)
+      )`
+    },
+    {
+      name: 'Migrate existing hourly rates to yearly rates',
+      sql: `INSERT OR IGNORE INTO client_yearly_rates (id, client_id, year, hourly_rate)
+            SELECT
+              'rate-' || clients.id || '-' || strftime('%Y', 'now'),
+              clients.id,
+              CAST(strftime('%Y', 'now') AS INTEGER),
+              clients.hourly_rate
+            FROM clients
+            WHERE clients.hourly_rate > 0`
     }
   ];
 

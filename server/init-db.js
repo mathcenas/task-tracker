@@ -139,6 +139,17 @@ const initDB = async () => {
       user_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users (id)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS client_yearly_rates (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      hourly_rate REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
+      UNIQUE(client_id, year)
     )`
   ];
 

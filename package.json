@@ -10,6 +10,7 @@
     "build": "vite build",
     "build:server": "node server/init-db.js",
     "migrate": "node server/migrate.js",
+    "migrate:yearly-rates": "node server/migrate-yearly-rates.js",
     "clean:orphaned": "node server/clean-orphaned-tasks.js",
     "clean:duplicates": "node server/remove-duplicates.js",
     "fix:completed": "node server/fix-completed-tasks.js",

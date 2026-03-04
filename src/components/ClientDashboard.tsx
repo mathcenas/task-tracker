@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
-import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PDFExporter } from '../utils/pdfExport';
 import { apiService } from '../services/api';
+import { ClientYearlyRates } from './ClientYearlyRates';
 
 export function ClientDashboard() {
   const { clients, getClientTasks, getProject, deleteClient, projects, updateClient } = useApp();
@@ -20,6 +21,8 @@ export function ClientDashboard() {
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
   const [editClientData, setEditClientData] = useState({ name: '', email: '', hourlyRate: 0 });
+  const [showYearlyRatesModal, setShowYearlyRatesModal] = useState(false);
+  const [yearlyRatesClient, setYearlyRatesClient] = useState<any>(null);
   const navigate = useNavigate();
 
   const toggleClient = (clientId: string) => {
@@ -85,12 +88,27 @@ export function ClientDashboard() {
     }
   };
 
+  const openYearlyRates = (client: any) => {
+    setYearlyRatesClient(client);
+    setShowYearlyRatesModal(true);
+  };
+
   const getRelativeDate = (date: string) => {
     const taskDate = new Date(date);
     if (isToday(taskDate)) return 'Today';
     if (isTomorrow(taskDate)) return 'Tomorrow';
     if (isYesterday(taskDate)) return 'Yesterday';
     return format(taskDate, 'MMM d, yyyy');
+  };
+
+  const getHourlyRateForYear = (client: any, year: number): number => {
+    if (client.yearlyRates && client.yearlyRates.length > 0) {
+      const yearRate = client.yearlyRates.find((r: any) => r.year === year);
+      if (yearRate) {
+        return yearRate.hourlyRate;
+      }
+    }
+    return client.hourlyRate;
   };
 
   const exportMonthlyReport = async (clientData: any, clientTasks: any[], exportMonth = selectedMonth) => {
@@ -107,7 +125,8 @@ export function ClientDashboard() {
 
       const clientName = clientData.name;
       const monthYear = format(exportMonth, 'MMMM yyyy');
-      const hourlyRate = clientData.hourlyRate;
+      const exportYear = exportMonth.getFullYear();
+      const hourlyRate = getHourlyRateForYear(clientData, exportYear);
       const reportNumber = `RPT-${format(exportMonth, 'yyyyMM')}-${clientData.id.slice(-6)}`;
 
       await pdf.addHeader('Monthly Report');
@@ -468,31 +487,44 @@ export function ClientDashboard() {
 
       const clientName = multiMonthClient.name;
       const dateRange = `${format(start, 'MMM yyyy')} - ${format(end, 'MMM yyyy')}`;
-      const hourlyRate = multiMonthClient.hourlyRate;
       const reportNumber = `RPT-${format(start, 'yyyyMM')}-${format(end, 'yyyyMM')}-${multiMonthClient.id.slice(-6)}`;
 
+      const uniqueYears = [...new Set(filteredTasks.map(task => new Date(task.date).getFullYear()))].sort();
+      const yearlyRatesUsed = uniqueYears.map(year => ({
+        year,
+        rate: getHourlyRateForYear(multiMonthClient, year)
+      }));
+
       await pdf.addHeader('Multi-Month Report');
+
+      const ratesDisplay = yearlyRatesUsed.length > 1
+        ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
+        : `$${yearlyRatesUsed[0]?.rate.toFixed(2)}/hour`;
 
       pdf.addSection('Report Details', {
         'Report Number': reportNumber,
         'Client': clientName,
         'Period': dateRange,
         'Generated': format(new Date(), 'MMM dd, yyyy'),
-        'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
+        'Service Rate(s)': ratesDisplay
       });
 
       const servicesTasks = filteredTasks.filter(task => task.type !== 'insumos');
       const suppliesTasks = filteredTasks.filter(task => task.type === 'insumos');
 
       if (servicesTasks.length > 0) {
-        const servicesTableData = servicesTasks.map(task => [
-          format(new Date(task.date), 'MMM d, yyyy'),
-          getProject(task.projectId)?.name || '',
-          task.type.charAt(0).toUpperCase() + task.type.slice(1),
-          task.description,
-          task.hours?.toString() || '',
-          `$${(task.hours * hourlyRate).toFixed(2)}`
-        ]);
+        const servicesTableData = servicesTasks.map(task => {
+          const taskYear = new Date(task.date).getFullYear();
+          const taskRate = getHourlyRateForYear(multiMonthClient, taskYear);
+          return [
+            format(new Date(task.date), 'MMM d, yyyy'),
+            getProject(task.projectId)?.name || '',
+            task.type.charAt(0).toUpperCase() + task.type.slice(1),
+            task.description,
+            task.hours?.toString() || '',
+            `$${(task.hours * taskRate).toFixed(2)}`
+          ];
+        });
 
         pdf.addTable(
           ['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount'],
@@ -902,6 +934,17 @@ export function ClientDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          openYearlyRates(client);
+                        }}
+                        className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 dark:border-blue-700 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                        title="Manage yearly hourly rates"
+                      >
+                        <CalendarDays className="w-4 h-4 mr-2" />
+                        Yearly Rates
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           openEditClient(client);
                         }}
                         className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -1276,6 +1319,15 @@ export function ClientDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {showYearlyRatesModal && yearlyRatesClient && (
+        <ClientYearlyRates
+          clientId={yearlyRatesClient.id}
+          clientName={yearlyRatesClient.name}
+          defaultHourlyRate={yearlyRatesClient.hourlyRate}
+          onClose={() => setShowYearlyRatesModal(false)}
+        />
       )}
     </div>
   );

@@ -6,6 +6,16 @@ export interface Client {
   contactPerson?: string;
   email?: string;
   phone?: string;
+  yearlyRates?: ClientYearlyRate[];
+}
+
+export interface ClientYearlyRate {
+  id: string;
+  clientId: string;
+  year: number;
+  hourlyRate: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Project {
