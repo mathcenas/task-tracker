@@ -13,7 +13,7 @@ export function AllTasksPage() {
   const { tasks, getClient, getProject, updateTask, deleteTask, clients, projects } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
+  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
@@ -59,33 +59,44 @@ export function AllTasksPage() {
     filteredTasks = tasks.filter(task => !task.finished && task.status === 'in_progress');
   } else if (taskFilter === 'not_started') {
     filteredTasks = tasks.filter(task => !task.finished && task.status === 'not_started');
+  } else if (taskFilter === 'recently_added') {
+    // Show all tasks (including completed) for recently added filter
+    filteredTasks = [...tasks].sort((a, b) => {
+      const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bCreated - aCreated;
+    }).slice(0, 20);
   } else if (taskFilter === 'all') {
     filteredTasks = allUnfinishedTasks;
   }
 
-  // Apply other filters
-  filteredTasks = filteredTasks.filter(task => {
-    // Type filter
-    if (typeFilter !== 'all' && task.type !== typeFilter) return false;
+  // Apply other filters (skip if recently_added since it's already sorted and limited)
+  if (taskFilter !== 'recently_added') {
+    filteredTasks = filteredTasks.filter(task => {
+      // Type filter
+      if (typeFilter !== 'all' && task.type !== typeFilter) return false;
 
-    // Priority filter
-    if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+      // Priority filter
+      if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
 
-    // Client filter
-    if (clientFilter !== 'all' && task.clientId !== clientFilter) return false;
+      // Client filter
+      if (clientFilter !== 'all' && task.clientId !== clientFilter) return false;
 
-    // Project filter
-    if (projectFilter !== 'all' && task.projectId !== projectFilter) return false;
+      // Project filter
+      if (projectFilter !== 'all' && task.projectId !== projectFilter) return false;
 
-    return true;
-  });
+      return true;
+    });
+  }
 
-  // Sort tasks: latest created first
-  const sortedTasks = filteredTasks.sort((a, b) => {
-    const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return bCreated - aCreated;
-  });
+  // Sort tasks: latest created first (skip if recently_added since it's already sorted)
+  const sortedTasks = taskFilter === 'recently_added'
+    ? filteredTasks
+    : filteredTasks.sort((a, b) => {
+        const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bCreated - aCreated;
+      });
 
   const getRelativeDate = (date: string) => {
     const taskDate = parseISO(date);
@@ -181,7 +192,7 @@ export function AllTasksPage() {
       </div>
 
       {/* Task Status Filter Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div
           className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
             taskFilter === 'all'
@@ -199,6 +210,26 @@ export function AllTasksPage() {
               </p>
             </div>
             <FileText className="w-8 h-8 text-blue-500" />
+          </div>
+        </div>
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'recently_added'
+              ? 'border-cyan-500 shadow-lg'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('recently_added')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Recently Added</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">20</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Latest tasks
+              </p>
+            </div>
+            <Calendar className="w-8 h-8 text-cyan-500" />
           </div>
         </div>
 
@@ -371,7 +402,9 @@ export function AllTasksPage() {
       <div className="bg-white rounded-lg shadow dark:bg-gray-800">
         <div className="p-6">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
-            Tasks ({filteredTasks.length})
+            {taskFilter === 'recently_added'
+              ? `Recently Added Tasks (${filteredTasks.length})`
+              : `Tasks (${filteredTasks.length})`}
           </h3>
 
           <div className="space-y-3">
