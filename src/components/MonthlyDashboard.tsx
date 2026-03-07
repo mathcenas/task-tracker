@@ -50,6 +50,48 @@ export function MonthlyDashboard() {
 
   const totalRevenue = serviceRevenue - suppliesCost;
 
+  // Analytics calculations
+  const clientStats = monthlyTasks.reduce((acc, task) => {
+    const clientId = task.clientId;
+    const client = getClient(clientId);
+    if (!client) return acc;
+
+    if (!acc[clientId]) {
+      acc[clientId] = {
+        name: client.name,
+        hours: 0,
+        revenue: 0,
+        taskCount: 0
+      };
+    }
+
+    if (task.type !== 'insumos') {
+      acc[clientId].hours += task.hours || 0;
+      acc[clientId].revenue += (task.hours || 0) * client.hourlyRate;
+    } else {
+      acc[clientId].revenue -= task.cost || 0;
+    }
+    acc[clientId].taskCount += 1;
+
+    return acc;
+  }, {} as Record<string, { name: string; hours: number; revenue: number; taskCount: number }>);
+
+  const sortedByHours = Object.entries(clientStats)
+    .sort((a, b) => b[1].hours - a[1].hours)
+    .slice(0, 3);
+
+  const sortedByRevenue = Object.entries(clientStats)
+    .sort((a, b) => b[1].revenue - a[1].revenue)
+    .slice(0, 3);
+
+  const sortedByTasks = Object.entries(clientStats)
+    .sort((a, b) => b[1].taskCount - a[1].taskCount)
+    .slice(0, 3);
+
+  const incidentCount = monthlyTasks.filter(t => t.type === 'incident').length;
+  const requestCount = monthlyTasks.filter(t => t.type === 'request').length;
+  const suppliesCount = monthlyTasks.filter(t => t.type === 'insumos').length;
+
   const getRelativeDate = (date: string) => {
     const taskDate = new Date(date);
     if (isToday(taskDate)) return 'Today';
@@ -108,7 +150,8 @@ export function MonthlyDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Main Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20">
             <div className="flex items-center">
               <Clock className="w-8 h-8 text-blue-500 mr-3" />
@@ -136,6 +179,115 @@ export function MonthlyDashboard() {
               </div>
             </div>
           </div>
+          <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
+            <div className="flex items-center">
+              <CheckCircle className="w-8 h-8 text-gray-500 mr-3" />
+              <div>
+                <p className="text-sm text-gray-600 font-medium dark:text-gray-400">Completed Tasks</p>
+                <p className="text-xl font-semibold text-gray-900 dark:text-gray-300">{monthlyTasks.length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Client Analytics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Top by Hours */}
+          <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+              <Clock className="w-4 h-4 mr-2" />
+              Top Clients by Hours
+            </h3>
+            <div className="space-y-2">
+              {sortedByHours.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No data</p>
+              ) : (
+                sortedByHours.map(([_, stats], idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700 dark:text-gray-300 truncate mr-2">{stats.name}</span>
+                    <span className="font-semibold text-blue-600 dark:text-blue-400">{stats.hours.toFixed(1)}h</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Top by Revenue */}
+          <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+              <DollarSign className="w-4 h-4 mr-2" />
+              Top Clients by Revenue
+            </h3>
+            <div className="space-y-2">
+              {sortedByRevenue.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No data</p>
+              ) : (
+                sortedByRevenue.map(([_, stats], idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700 dark:text-gray-300 truncate mr-2">{stats.name}</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">${stats.revenue.toFixed(0)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Top by Task Count */}
+          <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Most Active Clients
+            </h3>
+            <div className="space-y-2">
+              {sortedByTasks.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No data</p>
+              ) : (
+                sortedByTasks.map(([_, stats], idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700 dark:text-gray-300 truncate mr-2">{stats.name}</span>
+                    <span className="font-semibold text-gray-600 dark:text-gray-400">{stats.taskCount} tasks</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Task Type Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+                <span className="text-sm font-medium text-red-700 dark:text-red-300">Incidents</span>
+              </div>
+              <span className="text-xl font-bold text-red-600 dark:text-red-400">{incidentCount}</span>
+            </div>
+          </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FileText className="w-6 h-6 text-blue-500 mr-2" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Requests</span>
+              </div>
+              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{requestCount}</span>
+            </div>
+          </div>
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Package className="w-6 h-6 text-purple-500 mr-2" />
+                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Supplies</span>
+              </div>
+              <span className="text-xl font-bold text-purple-600 dark:text-purple-400">{suppliesCount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Completed Tasks List */}
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Completed Tasks</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">View-only list of all completed tasks this month</p>
         </div>
 
         <div className="space-y-4">

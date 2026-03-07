@@ -687,39 +687,6 @@ export function ClientDashboard() {
         </Link>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Clients</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-2">{totalClients}</p>
-            </div>
-            <Users className="w-12 h-12 text-blue-500 opacity-20" />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active This Month</p>
-              <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400 mt-2">{activeClients}</p>
-            </div>
-            <TrendingUp className="w-12 h-12 text-blue-500 opacity-20" />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Monthly Revenue</p>
-              <p className="text-2xl font-semibold text-green-600 dark:text-green-400 mt-2">${totalMonthlyRevenue.toFixed(0)}</p>
-            </div>
-            <DollarSign className="w-12 h-12 text-green-500 opacity-20" />
-          </div>
-        </div>
-      </div>
-
       {/* Month Navigator */}
       <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between">
