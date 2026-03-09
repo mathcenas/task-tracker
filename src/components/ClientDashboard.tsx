@@ -113,6 +113,7 @@ export function ClientDashboard() {
 
   const exportMonthlyReport = async (clientData: any, clientTasks: any[], exportMonth = selectedMonth) => {
     try {
+      console.log('📄 Starting PDF export for client:', clientData.name);
       const exportMonthStart = startOfMonth(exportMonth);
       const exportMonthEnd = endOfMonth(exportMonth);
       const exportTasks = clientTasks.filter(task =>
@@ -120,8 +121,11 @@ export function ClientDashboard() {
         isWithinInterval(new Date(task.date), { start: exportMonthStart, end: exportMonthEnd })
       );
 
+      console.log('📊 Export tasks found:', exportTasks.length);
       const companySettings = await apiService.getCompanySettings();
+      console.log('⚙️ Company settings loaded:', companySettings);
       const pdf = new PDFExporter(companySettings);
+      console.log('✅ PDF Exporter initialized');
 
       const clientName = clientData.name;
       const monthYear = format(exportMonth, 'MMMM yyyy');
@@ -251,10 +255,13 @@ export function ClientDashboard() {
 
       pdf.addNotes('Thank you', 'Thank you for your business!');
 
-      pdf.save(`${clientName.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`);
+      const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`;
+      console.log('💾 Saving PDF as:', filename);
+      pdf.save(filename);
+      console.log('✅ PDF export completed successfully');
     } catch (error) {
-      console.error('Failed to generate monthly report:', error);
-      alert('Failed to generate PDF report');
+      console.error('❌ Failed to generate monthly report:', error);
+      alert(`Failed to generate PDF report: ${error.message || error}`);
     }
   };
 
