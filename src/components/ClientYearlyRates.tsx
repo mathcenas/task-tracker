@@ -109,14 +109,15 @@ export function ClientYearlyRates({ clientId, clientName, defaultHourlyRate, onC
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Year
                 </label>
-                <input
-                  type="number"
+                <select
                   value={newYear}
                   onChange={(e) => setNewYear(e.target.value)}
-                  min="2000"
-                  max="2100"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                />
+                >
+                  {Array.from({ length: 7 }, (_, i) => 2024 + i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
