@@ -579,9 +579,26 @@ export function ClientDashboard() {
       const requestTasks = servicesTasks.filter(task => task.type === 'request');
       const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
       const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-      const incidentTotal = incidentHours * hourlyRate;
-      const requestTotal = requestHours * hourlyRate;
-      const servicesTotal = servicesTasks.reduce((sum, task) => sum + ((task.hours || 0) * hourlyRate), 0);
+
+      // Calculate totals using year-specific rates
+      const incidentTotal = incidentTasks.reduce((sum, task) => {
+        const taskYear = new Date(task.date).getFullYear();
+        const taskRate = getHourlyRateForYear(multiMonthClient, taskYear);
+        return sum + ((task.hours || 0) * taskRate);
+      }, 0);
+
+      const requestTotal = requestTasks.reduce((sum, task) => {
+        const taskYear = new Date(task.date).getFullYear();
+        const taskRate = getHourlyRateForYear(multiMonthClient, taskYear);
+        return sum + ((task.hours || 0) * taskRate);
+      }, 0);
+
+      const servicesTotal = servicesTasks.reduce((sum, task) => {
+        const taskYear = new Date(task.date).getFullYear();
+        const taskRate = getHourlyRateForYear(multiMonthClient, taskYear);
+        return sum + ((task.hours || 0) * taskRate);
+      }, 0);
+
       const suppliesTotal = suppliesTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
       const totalAmount = servicesTotal + suppliesTotal;
 
