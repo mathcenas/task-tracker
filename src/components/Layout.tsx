@@ -72,7 +72,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!confirm('This will replace all existing data. Continue?')) {
+    if (!confirm('This will import all data from the backup. Continue?')) {
       event.target.value = '';
       return;
     }
@@ -82,22 +82,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
       const text = await file.text();
       const backup = JSON.parse(text);
 
-      if (!backup.data || !backup.data.clients || !backup.data.projects || !backup.data.tasks) {
-        throw new Error('Invalid backup file format');
+      const clients = backup.clients || backup.data?.clients || [];
+      const projects = backup.projects || backup.data?.projects || [];
+      const tasks = backup.tasks || backup.data?.tasks || [];
+      const recurringTasks = backup.recurringTasks || backup.data?.recurringTasks || [];
+      const taskTemplates = backup.taskTemplates || backup.data?.taskTemplates || [];
+
+      if (clients.length === 0 && projects.length === 0 && tasks.length === 0) {
+        throw new Error('Invalid backup file format or empty backup');
       }
 
-      // Show preview with metadata if available (v2.0+) or calculate counts (v1.0)
       const meta = backup.metadata || {
-        totalClients: backup.data.clients?.length || 0,
-        totalProjects: backup.data.projects?.length || 0,
-        totalTasks: backup.data.tasks?.length || 0,
-        totalRecurringTasks: backup.data.recurringTasks?.length || 0,
-        totalTaskTemplates: backup.data.taskTemplates?.length || 0,
-        totalRecords: (backup.data.clients?.length || 0) +
-                      (backup.data.projects?.length || 0) +
-                      (backup.data.tasks?.length || 0) +
-                      (backup.data.recurringTasks?.length || 0) +
-                      (backup.data.taskTemplates?.length || 0)
+        totalClients: clients.length,
+        totalProjects: projects.length,
+        totalTasks: tasks.length,
+        totalRecurringTasks: recurringTasks.length,
+        totalTaskTemplates: taskTemplates.length,
+        totalRecords: clients.length + projects.length + tasks.length + recurringTasks.length + taskTemplates.length
       };
 
       const confirmMsg = `Import backup with:\n\n` +
@@ -117,12 +118,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      await api.importBackup(backup);
+      const normalizedBackup = {
+        ...backup,
+        clients,
+        projects,
+        tasks,
+        recurringTasks,
+        taskTemplates
+      };
+
+      await api.importBackup(normalizedBackup);
       alert('✅ Backup imported successfully! Reloading...');
       window.location.reload();
     } catch (err) {
       console.error('Import error:', err);
-      alert('Failed to import backup. Please check the file format.');
+      alert(`Failed to import backup: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsImporting(false);
       event.target.value = '';
