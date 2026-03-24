@@ -4,8 +4,13 @@ import path from 'path';
 
 const { verbose } = sqlite3;
 
-const dbPath = '/app/data/tasktracker.db';
-const backupDir = '/app/data/backups';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const dbPath = process.env.NODE_ENV === 'production' ? '/app/data/tasktracker.db' : path.join(__dirname, 'tasktracker.db');
+const backupDir = process.env.NODE_ENV === 'production' ? '/app/data/backups' : path.join(__dirname, 'backups');
 
 // Ensure backup directory exists
 if (!fs.existsSync(backupDir)) {
@@ -28,7 +33,8 @@ const createBackup = () => {
 
   const backup = {
     exportDate: new Date().toISOString(),
-    version: '1.0',
+    version: '2.0',
+    metadata: {},
     data: {}
   };
 
@@ -77,6 +83,16 @@ const createBackup = () => {
             }
             backup.data.taskTemplates = taskTemplates;
 
+            // Add metadata
+            backup.metadata = {
+              totalClients: clients.length,
+              totalProjects: projects.length,
+              totalTasks: tasks.length,
+              totalRecurringTasks: recurringTasks.length,
+              totalTaskTemplates: taskTemplates.length,
+              totalRecords: clients.length + projects.length + tasks.length + recurringTasks.length + taskTemplates.length
+            };
+
             // Write backup to file
             try {
               fs.writeFileSync(backupPath, JSON.stringify(backup, null, 2));
@@ -90,7 +106,7 @@ const createBackup = () => {
                 taskTemplates: taskTemplates.length
             });
 
-            // Clean old backups (keep last 30 days)
+            // Clean old backups (keep last 7 days)
             cleanOldBackups();
 
             db.close();
@@ -118,8 +134,8 @@ const cleanOldBackups = () => {
     }))
     .sort((a, b) => b.time - a.time);
 
-  // Keep last 30 backups
-  const toDelete = backupFiles.slice(30);
+  // Keep last 7 backups
+  const toDelete = backupFiles.slice(7);
 
   toDelete.forEach(file => {
     try {

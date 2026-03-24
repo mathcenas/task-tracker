@@ -20,6 +20,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import MonitorIntegration from './components/MonitorIntegration';
 import StatusPageSettings from './components/StatusPageSettings';
 import { CSVImport } from './components/CSVImport';
+import { JSONImport } from './components/JSONImport';
 import { ActivityLog } from './components/ActivityLog';
 import { CompanySettings } from './components/CompanySettings';
 import { QuotesList } from './components/QuotesList';
@@ -52,6 +53,7 @@ export default function App() {
                   <Route path="/clients" element={<ClientDashboard />} />
                   <Route path="/projects" element={<ProjectsDashboard />} />
                   <Route path="/import-csv" element={<CSVImport />} />
+                  <Route path="/import-json" element={<JSONImport />} />
                   <Route path="/activity-log" element={<ActivityLog />} />
                   <Route path="/integrations/monitors" element={<MonitorIntegration />} />
                   <Route path="/integrations/status-pages" element={<StatusPageSettings />} />

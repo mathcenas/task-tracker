@@ -1,0 +1,19 @@
+{
+  "exportDate": "2026-03-24T09:51:45.932Z",
+  "version": "2.0",
+  "metadata": {
+    "totalClients": 0,
+    "totalProjects": 0,
+    "totalTasks": 0,
+    "totalRecurringTasks": 0,
+    "totalTaskTemplates": 0,
+    "totalRecords": 0
+  },
+  "data": {
+    "clients": [],
+    "projects": [],
+    "tasks": [],
+    "recurringTasks": [],
+    "taskTemplates": []
+  }
+}

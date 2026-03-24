@@ -18,6 +18,7 @@
     "test:recurring": "node server/set-recurring-due-today.js",
     "check:status-pages": "node server/check-status-pages.js",
     "clean:activity-log": "node server/clean-activity-log.js",
+    "backup": "node server/backup-cron.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
