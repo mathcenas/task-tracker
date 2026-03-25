@@ -1192,16 +1192,20 @@ app.post('/api/restore', authenticateToken, (req, res) => {
             (id, name, slug, hourly_rate, contact_person, email, phone, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
           data.clients.forEach(client => {
-            clientStmt.run([
-              client.id,
-              client.name,
-              client.slug,
-              client.hourly_rate || 0,
-              client.contact_person || null,
-              client.email || null,
-              client.phone || null,
-              client.created_at
-            ]);
+            try {
+              clientStmt.run([
+                client.id,
+                client.name,
+                client.slug,
+                client.hourly_rate || 0,
+                client.contact_person || null,
+                client.email || null,
+                client.phone || null,
+                client.created_at
+              ]);
+            } catch (err) {
+              console.error(`Error importing client "${client.name}":`, err);
+            }
           });
           clientStmt.finalize();
 
@@ -1210,15 +1214,19 @@ app.post('/api/restore', authenticateToken, (req, res) => {
             (id, client_id, name, description, start_date, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)`);
           data.projects.forEach(project => {
-            projectStmt.run([
-              project.id,
-              project.client_id,
-              project.name,
-              project.description || null,
-              project.start_date || null,
-              project.status || 'active',
-              project.created_at
-            ]);
+            try {
+              projectStmt.run([
+                project.id,
+                project.client_id,
+                project.name,
+                project.description || null,
+                project.start_date || null,
+                project.status || 'active',
+                project.created_at
+              ]);
+            } catch (err) {
+              console.error(`Error importing project "${project.name}":`, err);
+            }
           });
           projectStmt.finalize();
 
@@ -1230,35 +1238,39 @@ app.post('/api/restore', authenticateToken, (req, res) => {
              recurring_weekend_day, recurring_end_date, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
           data.tasks.forEach(task => {
-            // Backward compatibility: convert old status values to new workflow statuses
-            let taskStatus = task.status || 'in_progress';
-            if (taskStatus === 'pending') taskStatus = 'not_started';
-            if (taskStatus === 'in-progress') taskStatus = 'in_progress';
-            if (taskStatus === 'cancelled') taskStatus = 'completed';
+            try {
+              // Backward compatibility: convert old status values to new workflow statuses
+              let taskStatus = task.status || 'in_progress';
+              if (taskStatus === 'pending') taskStatus = 'not_started';
+              if (taskStatus === 'in-progress') taskStatus = 'in_progress';
+              if (taskStatus === 'cancelled') taskStatus = 'completed';
 
-            taskStmt.run([
-              task.id,
-              task.client_id || '',
-              task.project_id || '',
-              task.description,
-              task.hours || null,
-              task.cost || null,
-              task.date,
-              task.type || 'request',
-              taskStatus,
-              task.priority || 'medium',
-              task.finished ? 1 : 0,
-              task.notes || null,
-              task.completed_at || null,
-              task.assigned_to || null,
-              task.is_recurring ? 1 : 0,
-              task.recurring_day || null,
-              task.recurring_weekend ? 1 : 0,
-              task.recurring_weekend_type || null,
-              task.recurring_weekend_day || null,
-              task.recurring_end_date || null,
-              task.created_at
-            ]);
+              taskStmt.run([
+                task.id,
+                task.client_id || '',
+                task.project_id || '',
+                task.description,
+                task.hours || null,
+                task.cost || null,
+                task.date,
+                task.type || 'request',
+                taskStatus,
+                task.priority || 'medium',
+                task.finished ? 1 : 0,
+                task.notes || null,
+                task.completed_at || null,
+                task.assigned_to || null,
+                task.is_recurring ? 1 : 0,
+                task.recurring_day || null,
+                task.recurring_weekend ? 1 : 0,
+                task.recurring_weekend_type || null,
+                task.recurring_weekend_day || null,
+                task.recurring_end_date || null,
+                task.created_at
+              ]);
+            } catch (err) {
+              console.error(`Error importing task "${task.description}":`, err);
+            }
           });
           taskStmt.finalize(() => {
             // Insert recurring tasks (if present in backup)
@@ -1270,26 +1282,35 @@ app.post('/api/restore', authenticateToken, (req, res) => {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
               data.recurringTasks.forEach(rt => {
-                recurringStmt.run([
-                  rt.id,
-                  rt.name,
-                  rt.description,
-                  rt.type || 'request',
-                  rt.priority || 'medium',
-                  rt.client_id,
-                  rt.project_id,
-                  rt.day_of_month,
-                  rt.estimated_hours || null,
-                  rt.estimated_cost || null,
-                  rt.is_active !== undefined ? rt.is_active : 1,
-                  rt.last_generated || null,
-                  rt.next_due,
-                  rt.recurring_weekend ? 1 : 0,
-                  rt.recurring_weekend_type || null,
-                  rt.recurring_weekend_day || null,
-                  rt.recurring_end_date || null,
-                  rt.created_at || new Date().toISOString()
-                ]);
+                if (!rt.client_id || !rt.project_id) {
+                  console.warn(`Skipping recurring task "${rt.name}" - missing client_id or project_id`);
+                  return;
+                }
+
+                try {
+                  recurringStmt.run([
+                    rt.id,
+                    rt.name,
+                    rt.description,
+                    rt.type || 'request',
+                    rt.priority || 'medium',
+                    rt.client_id,
+                    rt.project_id,
+                    rt.day_of_month,
+                    rt.estimated_hours || null,
+                    rt.estimated_cost || null,
+                    rt.is_active !== undefined ? rt.is_active : 1,
+                    rt.last_generated || null,
+                    rt.next_due,
+                    rt.recurring_weekend ? 1 : 0,
+                    rt.recurring_weekend_type || null,
+                    rt.recurring_weekend_day || null,
+                    rt.recurring_end_date || null,
+                    rt.created_at || new Date().toISOString()
+                  ]);
+                } catch (err) {
+                  console.error(`Error importing recurring task "${rt.name}":`, err);
+                }
               });
               recurringStmt.finalize();
             }
@@ -1302,19 +1323,23 @@ app.post('/api/restore', authenticateToken, (req, res) => {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
               data.taskTemplates.forEach(tt => {
-                templateStmt.run([
-                  tt.id,
-                  tt.name,
-                  tt.description,
-                  tt.type || 'request',
-                  tt.priority || 'medium',
-                  tt.client_id || null,
-                  tt.project_id || null,
-                  tt.estimated_hours || null,
-                  tt.estimated_cost || null,
-                  tt.tags || null,
-                  tt.created_at || new Date().toISOString()
-                ]);
+                try {
+                  templateStmt.run([
+                    tt.id,
+                    tt.name,
+                    tt.description,
+                    tt.type || 'request',
+                    tt.priority || 'medium',
+                    tt.client_id || null,
+                    tt.project_id || null,
+                    tt.estimated_hours || null,
+                    tt.estimated_cost || null,
+                    tt.tags || null,
+                    tt.created_at || new Date().toISOString()
+                  ]);
+                } catch (err) {
+                  console.error(`Error importing task template "${tt.name}":`, err);
+                }
               });
               templateStmt.finalize();
             }
