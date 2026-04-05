@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, FileText, Users, Folder, CheckCircle, Edit, Trash2, Plus, RefreshCw } from 'lucide-react';
+import { Clock, FileText, Users, Folder, CheckCircle, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
 interface ActivityLog {
@@ -15,6 +16,7 @@ interface ActivityLog {
 }
 
 export function ActivityLog() {
+  const navigate = useNavigate();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'task' | 'client' | 'project'>('all');
@@ -85,6 +87,22 @@ export function ActivityLog() {
   const filteredLogs = filter === 'all'
     ? logs
     : logs.filter(log => log.entity_type === filter);
+
+  const handleLogClick = (log: ActivityLog) => {
+    if (log.entity_type === 'task' && log.action !== 'deleted') {
+      navigate(`/edit-task/${log.entity_id}`, { state: { from: '/activity-log' } });
+    } else if (log.entity_type === 'client') {
+      navigate('/clients');
+    } else if (log.entity_type === 'project') {
+      navigate('/projects');
+    }
+  };
+
+  const isClickable = (log: ActivityLog) => {
+    return (log.entity_type === 'task' && log.action !== 'deleted') ||
+           log.entity_type === 'client' ||
+           log.entity_type === 'project';
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
@@ -171,7 +189,10 @@ export function ActivityLog() {
                 {filteredLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="flex items-start space-x-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    onClick={() => isClickable(log) && handleLogClick(log)}
+                    className={`flex items-start space-x-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group ${
+                      isClickable(log) ? 'cursor-pointer hover:border-blue-400 dark:hover:border-blue-500' : ''
+                    }`}
                   >
                     {/* Icon */}
                     <div className={`flex-shrink-0 p-2 rounded-lg ${getActionColor(log.action)}`}>
@@ -187,6 +208,9 @@ export function ActivityLog() {
                         <span className={`text-sm font-medium ${getEntityColor(log.entity_type)}`}>
                           {log.entity_type}
                         </span>
+                        {isClickable(log) && (
+                          <ExternalLink className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        )}
                       </div>
 
                       <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white truncate">

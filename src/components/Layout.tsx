@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database, Package } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
@@ -176,6 +176,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/tasks', icon: CheckSquare, label: 'All Tasks', group: 'Tasks' },
     { path: '/kanban', icon: Columns, label: 'Kanban', group: 'Tasks' },
     { path: '/ideas', icon: Lightbulb, label: 'Ideas Board', group: 'Tasks' },
+    { path: '/supplies', icon: Package, label: 'Supplies', group: 'Tasks' },
     { path: '/recurring-tasks', icon: Repeat, label: 'Recurring', group: 'Tasks' },
     { path: '/clients', icon: Users, label: 'Clients', group: 'Management' },
     { path: '/projects', icon: Folders, label: 'Projects', group: 'Management' },
