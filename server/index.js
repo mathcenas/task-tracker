@@ -96,11 +96,16 @@ const initDB = () => {
       recurring_weekend_type TEXT,
       recurring_weekend_day TEXT,
       recurring_end_date DATE,
+      billed BOOLEAN DEFAULT 0,
+      billedAt DATETIME,
+      paid BOOLEAN DEFAULT 0,
+      paidAt DATETIME,
+      invoiceNumber TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS recurring_tasks (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,

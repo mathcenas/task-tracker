@@ -84,6 +84,11 @@ const initDB = async () => {
       recurring_end_date DATE,
       accepted BOOLEAN DEFAULT 0,
       accepted_at DATETIME,
+      billed BOOLEAN DEFAULT 0,
+      billedAt DATETIME,
+      paid BOOLEAN DEFAULT 0,
+      paidAt DATETIME,
+      invoiceNumber TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
