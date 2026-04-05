@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfMonth, endOfMonth, format, isWithinInterval, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp, Clock, DollarSign, CheckCircle, Plus, Download } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp, Clock, DollarSign, CheckCircle, Plus, Download, Calendar, CreditCard as Edit } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { exportTasksToCSV } from '../utils/csvExport';
 
 export function MonthlyDashboard() {
   const { tasks, getClient, getProject } = useApp();
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -108,6 +110,16 @@ export function MonthlyDashboard() {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1));
   };
 
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = new Date(e.target.value + '-01');
+    setCurrentDate(newDate);
+    setShowDatePicker(false);
+  };
+
   const getTaskIcon = (type: string) => {
     switch (type) {
       case 'incident':
@@ -122,31 +134,68 @@ export function MonthlyDashboard() {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Monthly Overview</h2>
-          <div className="flex items-center space-x-4">
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quick Jump to Today */}
+            <button
+              onClick={goToToday}
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-all"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Today
+            </button>
+
+            {/* Date Picker */}
+            <div className="relative">
+              <button
+                onClick={() => setShowDatePicker(!showDatePicker)}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
+              >
+                Jump to Date
+              </button>
+              {showDatePicker && (
+                <div className="absolute right-0 mt-2 z-10">
+                  <input
+                    type="month"
+                    value={format(currentDate, 'yyyy-MM')}
+                    onChange={handleDateChange}
+                    className="px-3 py-2 border border-gray-300 rounded-lg shadow-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Export Button */}
             <button
               onClick={() => exportTasksToCSV(monthlyTasks, getClient, getProject, `monthly-tasks-${format(currentDate, 'yyyy-MM')}.csv`)}
               className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
             >
               <Download className="w-4 h-4 mr-2" />
-              Export CSV
+              Export
             </button>
-            <button
-              onClick={previousMonth}
-              className="p-2 hover:bg-gray-100 rounded-full dark:hover:bg-gray-700"
-            >
-              <ChevronLeft className="w-5 h-5 dark:text-gray-400" />
-            </button>
-            <span className="text-lg font-medium dark:text-white">
-              {format(currentDate, 'MMMM yyyy')}
-            </span>
-            <button
-              onClick={nextMonth}
-              className="p-2 hover:bg-gray-100 rounded-full dark:hover:bg-gray-700"
-            >
-              <ChevronRight className="w-5 h-5 dark:text-gray-400" />
-            </button>
+
+            {/* Month Navigation */}
+            <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
+              <button
+                onClick={previousMonth}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg transition-colors"
+                title="Previous Month"
+              >
+                <ChevronLeft className="w-5 h-5 dark:text-gray-400" />
+              </button>
+              <span className="px-4 text-sm font-medium dark:text-white border-x border-gray-300 dark:border-gray-600">
+                {format(currentDate, 'MMM yyyy')}
+              </span>
+              <button
+                onClick={nextMonth}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg transition-colors"
+                title="Next Month"
+              >
+                <ChevronRight className="w-5 h-5 dark:text-gray-400" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -301,7 +350,7 @@ export function MonthlyDashboard() {
               : (task.hours || 0) * (client?.hourlyRate || 0);
             
             return (
-              <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md group">
+              <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md group relative">
                 <div className="flex justify-between items-start">
                   <div className="flex items-start space-x-3 flex-1">
                     {getTaskIcon(task.type)}
@@ -323,24 +372,33 @@ export function MonthlyDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right ml-4">
-                    {task.type === 'insumos' ? (
-                      <div>
-                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
-                          ${task.cost?.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Supply cost</p>
-                      </div>
-                    ) : (
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {task.hours?.toFixed(1)}h
-                        </p>
-                        <p className="text-sm text-green-600 dark:text-green-400">
-                          ${amount.toFixed(2)}
-                        </p>
-                      </div>
-                    )}
+                  <div className="flex items-start gap-3">
+                    <div className="text-right">
+                      {task.type === 'insumos' ? (
+                        <div>
+                          <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                            ${task.cost?.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Supply cost</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {task.hours?.toFixed(1)}h
+                          </p>
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            ${amount.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: '/monthly' } })}
+                      className="p-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                      title="Edit task"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>

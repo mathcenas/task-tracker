@@ -10,7 +10,14 @@ export function EditTask() {
   const { taskId } = useParams<{ taskId: string }>();
   const { getTask, updateTask, deleteTask, getClient, getProject } = useApp();
 
-  const returnPath = (location.state as { from?: string })?.from || (document.referrer ? -1 : '/') as any;
+  const returnPath = (location.state as { from?: string })?.from || '/';
+
+  // Store the return path in session storage as a fallback
+  React.useEffect(() => {
+    if (location.state?.from) {
+      sessionStorage.setItem('lastDashboardPath', location.state.from);
+    }
+  }, [location.state]);
   
   const task = taskId ? getTask(taskId) : null;
   const [formData, setFormData] = useState({
@@ -82,7 +89,9 @@ export function EditTask() {
     try {
       await updateTask(updatedTask);
       console.log('✅ Task updated, navigating to:', returnPath);
-      navigate(returnPath);
+      // Use the stored path from session storage if no state was passed
+      const finalPath = returnPath === '/' ? (sessionStorage.getItem('lastDashboardPath') || '/') : returnPath;
+      navigate(finalPath);
     } catch (error) {
       console.error('❌ Failed to update task:', error);
       alert('Failed to save changes. Please try again.');
@@ -92,7 +101,8 @@ export function EditTask() {
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
       deleteTask(task.id);
-      navigate(returnPath);
+      const finalPath = returnPath === '/' ? (sessionStorage.getItem('lastDashboardPath') || '/') : returnPath;
+      navigate(finalPath);
     }
   };
 

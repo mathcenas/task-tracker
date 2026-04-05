@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfWeek, endOfWeek, parseISO, format, isToday, isTomorrow, isYesterday, isThisWeek } from 'date-fns';
-import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays, Download } from 'lucide-react';
+import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, LayoutTemplate as Template, Repeat, CalendarDays, Download } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
 import { TaskTemplates } from './TaskTemplates';
@@ -488,6 +488,7 @@ export function WeeklyDashboard() {
                           <div className="flex space-x-2">
                             <Link
                               to={`/edit-task/${task.id}`}
+                              state={{ from: '/' }}
                               className="p-2 text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Edit Task"
                             >
@@ -852,6 +853,7 @@ export function WeeklyDashboard() {
                     <div className="flex items-center space-x-2">
                       <Link
                         to={`/edit-task/${task.id}`}
+                        state={{ from: '/' }}
                         className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"
                         title="Edit task"
                       >

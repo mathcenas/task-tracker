@@ -258,6 +258,7 @@ export function ProjectsDashboard() {
                                     <Link
                                       key={task.id}
                                       to={`/edit-task/${task.id}`}
+                                      state={{ from: '/projects' }}
                                       className={`block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition-all ${getPriorityColor(task.priority)}`}
                                     >
                                       <div className="flex items-start gap-2">
@@ -300,6 +301,7 @@ export function ProjectsDashboard() {
                                     <Link
                                       key={task.id}
                                       to={`/edit-task/${task.id}`}
+                                      state={{ from: '/projects' }}
                                       className={`block p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:shadow-md transition-all ${getPriorityColor(task.priority)}`}
                                     >
                                       <div className="flex items-start gap-2">
@@ -342,6 +344,7 @@ export function ProjectsDashboard() {
                                     <Link
                                       key={task.id}
                                       to={`/edit-task/${task.id}`}
+                                      state={{ from: '/projects' }}
                                       className="block p-3 bg-green-50 dark:bg-green-900/20 rounded-lg hover:shadow-md transition-all opacity-75"
                                     >
                                       <div className="flex items-start gap-2">
