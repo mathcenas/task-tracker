@@ -616,7 +616,9 @@ app.get('/api/tasks', authenticateToken, (req, res) => {
       ...task,
       finished: Boolean(task.finished),
       isRecurring: Boolean(task.is_recurring),
-      recurringWeekend: Boolean(task.recurring_weekend)
+      recurringWeekend: Boolean(task.recurring_weekend),
+      billed: Boolean(task.billed),
+      paid: Boolean(task.paid)
     })));
   });
 });
@@ -680,7 +682,8 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const {
     description, hours, cost, date, type, status, priority,
-    finished, notes, completedAt, accepted, acceptedAt
+    finished, notes, completedAt, accepted, acceptedAt,
+    billed, billedAt, paid, paidAt, invoiceNumber
   } = req.body;
 
   console.log('🔄 Updating task:', id, {
@@ -695,16 +698,23 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
     notes,
     completedAt,
     accepted,
-    acceptedAt
+    acceptedAt,
+    billed,
+    billedAt,
+    paid,
+    paidAt,
+    invoiceNumber
   });
 
   db.run(`UPDATE tasks SET
     description = ?, hours = ?, cost = ?, date = ?, type = ?,
     status = ?, priority = ?, finished = ?, notes = ?, completed_at = ?,
-    accepted = ?, accepted_at = ?
+    accepted = ?, accepted_at = ?,
+    billed = ?, billedAt = ?, paid = ?, paidAt = ?, invoiceNumber = ?
     WHERE id = ?`,
     [description, hours, cost, date, type, status, priority,
-     finished ? 1 : 0, notes, completedAt, accepted ? 1 : 0, acceptedAt, id],
+     finished ? 1 : 0, notes, completedAt, accepted ? 1 : 0, acceptedAt,
+     billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber, id],
     function(err) {
       if (err) {
         console.error('❌ Database error updating task:', err);

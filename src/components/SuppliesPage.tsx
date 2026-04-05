@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { useNavigate } from 'react-router-dom';
-import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare } from 'lucide-react';
 import { format, parseISO, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { exportTasksToCSV } from '../utils/csvExport';
+import { api } from '../services/api';
 
 export function SuppliesPage() {
-  const { tasks, clients, getClient, getProject } = useApp();
+  const { tasks, clients, getClient, getProject, refreshTasks } = useApp();
   const navigate = useNavigate();
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -106,6 +108,47 @@ export function SuppliesPage() {
     exportTasksToCSV(filteredTasks, getClient, getProject, filename);
   };
 
+  const handleToggleSelect = (taskId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.size === filteredTasks.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredTasks.map(t => t.id)));
+    }
+  };
+
+  const handleMarkSelectedAsBilled = async () => {
+    if (selectedItems.size === 0) return;
+
+    const invoiceNum = prompt('Enter invoice number (optional):');
+    if (invoiceNum === null) return; // User cancelled
+
+    try {
+      for (const taskId of Array.from(selectedItems)) {
+        await api.updateTask(taskId, {
+          billed: true,
+          billedAt: new Date().toISOString(),
+          invoiceNumber: invoiceNum || undefined
+        });
+      }
+      await refreshTasks();
+      setSelectedItems(new Set());
+      alert(`✅ Marked ${selectedItems.size} supplies as billed`);
+    } catch (error) {
+      console.error('Error marking as billed:', error);
+      alert('Failed to mark supplies as billed');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -122,14 +165,23 @@ export function SuppliesPage() {
               </div>
             </div>
 
-            <button
-              onClick={handleExport}
-              disabled={filteredTasks.length === 0}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </button>
+            <div className="flex items-center space-x-3">
+              <Link
+                to="/supplies/payments"
+                className="inline-flex items-center px-4 py-2 border border-blue-600 dark:border-blue-500 rounded-lg shadow-sm text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Payment Tracker
+              </Link>
+              <button
+                onClick={handleExport}
+                disabled={filteredTasks.length === 0}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -263,9 +315,36 @@ export function SuppliesPage() {
 
         {/* Supplies List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Supplies List ({filteredTasks.length})
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Supplies List ({filteredTasks.length})
+              {selectedItems.size > 0 && (
+                <span className="ml-2 text-sm font-normal text-blue-600 dark:text-blue-400">
+                  ({selectedItems.size} selected)
+                </span>
+              )}
+            </h3>
+
+            {filteredTasks.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleSelectAll}
+                  className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                >
+                  {selectedItems.size === filteredTasks.length ? 'Deselect All' : 'Select All'}
+                </button>
+                {selectedItems.size > 0 && (
+                  <button
+                    onClick={handleMarkSelectedAsBilled}
+                    className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                  >
+                    <CheckSquare className="w-4 h-4 mr-1" />
+                    Mark as Billed ({selectedItems.size})
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
           {filteredTasks.length === 0 ? (
             <div className="text-center py-12">
@@ -280,13 +359,24 @@ export function SuppliesPage() {
               {filteredTasks.map(task => {
                 const client = getClient(task.clientId);
                 const project = getProject(task.projectId);
+                const isSelected = selectedItems.has(task.id);
 
                 return (
                   <div
                     key={task.id}
-                    className="flex items-start justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+                    className={`flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group ${
+                      isSelected
+                        ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/10'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
                   >
                     <div className="flex items-start space-x-3 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelect(task.id)}
+                        className="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                      />
                       <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded">
                         <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                       </div>
