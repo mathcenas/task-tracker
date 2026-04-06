@@ -17,7 +17,7 @@ else
 fi
 
 # Check if container is running
-if ! $DOCKER_COMPOSE ps | grep -q tasktracker.*Up; then
+if ! $DOCKER_COMPOSE ps | grep -q "task-tracker-tasktracker-1"; then
     echo "❌ ERROR: TaskTracker container is not running."
     echo "Start it with: $DOCKER_COMPOSE up -d"
     exit 1
