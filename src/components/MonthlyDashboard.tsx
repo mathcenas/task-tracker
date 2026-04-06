@@ -5,9 +5,10 @@ import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp
 import { Link, useNavigate } from 'react-router-dom';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { exportMultiMonthPDF } from '../utils/multiMonthPdfExport';
+import { apiService } from '../services/api';
 
 export function MonthlyDashboard() {
-  const { tasks, getClient, getProject, companySettings } = useApp();
+  const { tasks, getClient, getProject } = useApp();
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
@@ -127,6 +128,7 @@ export function MonthlyDashboard() {
   const handlePdfExport = async () => {
     setIsExporting(true);
     try {
+      const companySettings = await apiService.getCompanySettings();
       const monthsData = [];
 
       for (let i = pdfMonthCount - 1; i >= 0; i--) {
