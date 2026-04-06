@@ -81,12 +81,12 @@ export async function exportMultiMonthPDF(
         fontStyle: 'bold'
       },
       columnStyles: {
-        0: { cellWidth: 35, fontStyle: 'bold' },
-        1: { cellWidth: 25, halign: 'center' },
-        2: { cellWidth: 25, halign: 'center' },
-        3: { cellWidth: 35, halign: 'right' },
-        4: { cellWidth: 35, halign: 'right' },
-        5: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
+        0: { cellWidth: 32, fontStyle: 'bold' },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 30, halign: 'right' },
+        5: { cellWidth: 33, halign: 'right', fontStyle: 'bold' }
       }
     }
   );
@@ -106,9 +106,9 @@ export async function exportMultiMonthPDF(
     {
       theme: 'striped',
       columnStyles: {
-        0: { cellWidth: 60, fontStyle: 'bold' },
-        1: { cellWidth: 50, halign: 'center' },
-        2: { cellWidth: 50, halign: 'center' }
+        0: { cellWidth: 55, fontStyle: 'bold' },
+        1: { cellWidth: 40, halign: 'center' },
+        2: { cellWidth: 40, halign: 'center' }
       }
     }
   );
@@ -170,12 +170,12 @@ export async function exportMultiMonthPDF(
         fillColor: [37, 99, 235]
       },
       columnStyles: {
-        0: { cellWidth: 50, fontStyle: 'bold' },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 25, halign: 'center' },
-        3: { cellWidth: 30, halign: 'right' },
-        4: { cellWidth: 30, halign: 'right' },
-        5: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
+        0: { cellWidth: 45, fontStyle: 'bold' },
+        1: { cellWidth: 18, halign: 'center' },
+        2: { cellWidth: 22, halign: 'center' },
+        3: { cellWidth: 28, halign: 'right' },
+        4: { cellWidth: 28, halign: 'right' },
+        5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
       }
     }
   );
@@ -256,12 +256,16 @@ export async function exportMultiMonthPDF(
             fontSize: 8
           },
           columnStyles: {
-            0: { cellWidth: 22 },
-            1: { cellWidth: 20 },
-            2: { cellWidth: 30 },
-            3: { cellWidth: 65 },
-            4: { cellWidth: 20, halign: 'center' },
-            5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
+            0: { cellWidth: 20 },
+            1: { cellWidth: 18 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 62, cellPadding: 2 },
+            4: { cellWidth: 18, halign: 'center' },
+            5: { cellWidth: 26, halign: 'right', fontStyle: 'bold' }
+          },
+          styles: {
+            overflow: 'linebreak',
+            cellWidth: 'wrap'
           }
         }
       );
