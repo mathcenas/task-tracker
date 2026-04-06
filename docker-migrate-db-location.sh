@@ -6,7 +6,7 @@
 echo "🔧 Fixing database location and payment columns..."
 echo "================================================="
 
-CONTAINER_ID="d87e1322a308"
+CONTAINER_ID="task-tracker-tasktracker-1"
 
 echo "✅ Using container: $CONTAINER_ID"
 echo ""
