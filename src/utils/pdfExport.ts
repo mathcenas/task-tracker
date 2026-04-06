@@ -148,13 +148,17 @@ export class PDFExporter {
   }
 
   addTable(headers: string[], rows: any[][], options?: any) {
+    const pageWidth = this.doc.internal.pageSize.getWidth();
+    const margins = 28;
+    const availableWidth = pageWidth - margins;
+
     (this.doc as any).autoTable({
       startY: this.currentY,
       head: [headers],
       body: rows,
       theme: 'striped',
       margin: { left: 14, right: 14 },
-      tableWidth: 'auto',
+      tableWidth: availableWidth,
       headStyles: {
         fillColor: [37, 99, 235],
         textColor: 255,
@@ -171,7 +175,8 @@ export class PDFExporter {
       styles: {
         overflow: 'linebreak',
         cellWidth: 'wrap',
-        cellPadding: 2
+        cellPadding: 2,
+        minCellWidth: 10
       },
       ...options
     });
