@@ -71,11 +71,42 @@ The PDF export was trying to access `companySettings` without fetching it from t
 - **Consistent Branding**: Company logo and details appear on all reports
 - **Mobile-Friendly**: PDFs render correctly on all devices
 
+### Client Dashboard Table Fixes
+
+Fixed all table widths in ClientDashboard.tsx:
+
+1. **Task Summary Tables**
+   - Reduced from 165 units to 152 units
+   - Task Type: 40 → 38
+   - Count: 25 → 22
+   - Hours: 30 → 28
+   - Revenue: 35 → 32
+   - % of Total: 35 → 32
+
+2. **Service Detail Tables**
+   - Reduced from 185 units to 172 units
+   - Date: 25 → 22
+   - Project: 30 → 28
+   - Type: 25 → 22
+   - Description: 60 → 58
+   - Hours: 20 → 18
+   - Amount: 25 → 24
+
+3. **Supplies Tables**
+   - Reduced from 185 units to 170 units
+   - Date: 25 → 22
+   - Project: 35 → 32
+   - Description: 100 → 92
+   - Cost: 25 → 24
+
+All tables now fit within the 182-unit usable page width (210mm page - 28mm margins).
+
 ## Testing
 
 The improvements have been tested with:
 - Single month reports
 - Multi-month reports (2, 3, 6, 12 months)
+- Client-specific reports
 - Reports with varying amounts of data
 - Long task descriptions that require wrapping
 
