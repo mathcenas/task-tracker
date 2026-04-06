@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FileText, ArrowLeft, Edit, Download, Printer } from 'lucide-react';
+import { FileText, ArrowLeft, CreditCard as Edit, Download, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiService } from '../services/api';
 import { PDFExporter } from '../utils/pdfExport';
@@ -109,12 +109,17 @@ export function QuoteView() {
 
       const columnStyles = isBOM
         ? {
-            0: { cellWidth: 140 },
-            1: { cellWidth: 40 }
+            0: { cellWidth: 110 },
+            1: { cellWidth: 30 }
           }
-        : undefined;
+        : {
+            0: { cellWidth: 70 },
+            1: { cellWidth: 20, halign: 'center' },
+            2: { cellWidth: 25, halign: 'right' },
+            3: { cellWidth: 25, halign: 'right' }
+          };
 
-      pdf.addTable(tableHeaders, tableData, columnStyles ? { columnStyles } : undefined);
+      pdf.addTable(tableHeaders, tableData, { columnStyles });
 
       if (!isBOM) {
         const totalsData = [
