@@ -154,6 +154,7 @@ export class PDFExporter {
       body: rows,
       theme: 'striped',
       margin: { left: 14, right: 14 },
+      tableWidth: 'auto',
       headStyles: {
         fillColor: [37, 99, 235],
         textColor: 255,
@@ -169,7 +170,8 @@ export class PDFExporter {
       },
       styles: {
         overflow: 'linebreak',
-        cellWidth: 'wrap'
+        cellWidth: 'wrap',
+        cellPadding: 2
       },
       ...options
     });

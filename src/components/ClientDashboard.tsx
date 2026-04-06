@@ -161,10 +161,10 @@ export function ClientDashboard() {
           servicesTableData,
           {
             columnStyles: {
-              0: { cellWidth: 22 },
-              3: { cellWidth: 58 },
-              4: { cellWidth: 18 },
-              5: { cellWidth: 24 }
+              0: { cellWidth: 20 },
+              3: { cellWidth: 54 },
+              4: { cellWidth: 16 },
+              5: { cellWidth: 22 }
             }
           }
         );
@@ -186,9 +186,9 @@ export function ClientDashboard() {
               fillColor: [156, 39, 176]
             },
             columnStyles: {
-              0: { cellWidth: 22 },
-              2: { cellWidth: 92 },
-              3: { cellWidth: 24 }
+              0: { cellWidth: 20 },
+              2: { cellWidth: 70 },
+              3: { cellWidth: 22 }
             }
           }
         );
@@ -234,11 +234,11 @@ export function ClientDashboard() {
               fillColor: [100, 100, 100]
             },
             columnStyles: {
-              0: { cellWidth: 38, fontStyle: 'bold' },
-              1: { cellWidth: 22, halign: 'center' },
-              2: { cellWidth: 28, halign: 'center' },
-              3: { cellWidth: 32, halign: 'right' },
-              4: { cellWidth: 32, halign: 'center' }
+              0: { cellWidth: 35, fontStyle: 'bold' },
+              1: { cellWidth: 20, halign: 'center' },
+              2: { cellWidth: 25, halign: 'center' },
+              3: { cellWidth: 30, halign: 'right' },
+              4: { cellWidth: 30, halign: 'center' }
             }
           }
         );
@@ -355,12 +355,12 @@ export function ClientDashboard() {
           servicesTableData,
           {
             columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 28 },
-              2: { cellWidth: 22 },
-              3: { cellWidth: 58 },
-              4: { cellWidth: 18, halign: 'center' },
-              5: { cellWidth: 24, halign: 'right' }
+              0: { cellWidth: 20 },
+              1: { cellWidth: 26 },
+              2: { cellWidth: 20 },
+              3: { cellWidth: 54 },
+              4: { cellWidth: 16, halign: 'center' },
+              5: { cellWidth: 22, halign: 'right' }
             }
           }
         );
@@ -383,10 +383,10 @@ export function ClientDashboard() {
               fillColor: [120, 53, 190]
             },
             columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 32 },
-              2: { cellWidth: 92 },
-              3: { cellWidth: 24, halign: 'right' }
+              0: { cellWidth: 20 },
+              1: { cellWidth: 30 },
+              2: { cellWidth: 70 },
+              3: { cellWidth: 22, halign: 'right' }
             }
           }
         );
@@ -432,11 +432,11 @@ export function ClientDashboard() {
               fillColor: [100, 100, 100]
             },
             columnStyles: {
-              0: { cellWidth: 38, fontStyle: 'bold' },
-              1: { cellWidth: 22, halign: 'center' },
-              2: { cellWidth: 28, halign: 'center' },
-              3: { cellWidth: 32, halign: 'right' },
-              4: { cellWidth: 32, halign: 'center' }
+              0: { cellWidth: 35, fontStyle: 'bold' },
+              1: { cellWidth: 20, halign: 'center' },
+              2: { cellWidth: 25, halign: 'center' },
+              3: { cellWidth: 30, halign: 'right' },
+              4: { cellWidth: 30, halign: 'center' }
             }
           }
         );
@@ -538,12 +538,12 @@ export function ClientDashboard() {
           servicesTableData,
           {
             columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 28 },
-              2: { cellWidth: 22 },
-              3: { cellWidth: 58 },
-              4: { cellWidth: 18, halign: 'center' },
-              5: { cellWidth: 24, halign: 'right' }
+              0: { cellWidth: 20 },
+              1: { cellWidth: 26 },
+              2: { cellWidth: 20 },
+              3: { cellWidth: 54 },
+              4: { cellWidth: 16, halign: 'center' },
+              5: { cellWidth: 22, halign: 'right' }
             }
           }
         );
@@ -566,10 +566,10 @@ export function ClientDashboard() {
               fillColor: [120, 53, 190]
             },
             columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 32 },
-              2: { cellWidth: 92 },
-              3: { cellWidth: 24, halign: 'right' }
+              0: { cellWidth: 20 },
+              1: { cellWidth: 30 },
+              2: { cellWidth: 70 },
+              3: { cellWidth: 22, halign: 'right' }
             }
           }
         );
@@ -632,11 +632,11 @@ export function ClientDashboard() {
               fillColor: [100, 100, 100]
             },
             columnStyles: {
-              0: { cellWidth: 38, fontStyle: 'bold' },
-              1: { cellWidth: 22, halign: 'center' },
-              2: { cellWidth: 28, halign: 'center' },
-              3: { cellWidth: 32, halign: 'right' },
-              4: { cellWidth: 32, halign: 'center' }
+              0: { cellWidth: 35, fontStyle: 'bold' },
+              1: { cellWidth: 20, halign: 'center' },
+              2: { cellWidth: 25, halign: 'center' },
+              3: { cellWidth: 30, halign: 'right' },
+              4: { cellWidth: 30, halign: 'center' }
             }
           }
         );
