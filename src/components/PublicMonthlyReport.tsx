@@ -290,10 +290,12 @@ export function PublicMonthlyReport() {
           servicesTableData,
           {
             columnStyles: {
-              0: { cellWidth: 25 },
-              3: { cellWidth: 60 },
-              4: { cellWidth: 20 },
-              5: { cellWidth: 25 }
+              0: { cellWidth: 22 },
+              1: { cellWidth: 'auto' },
+              2: { cellWidth: 22 },
+              3: { cellWidth: 'auto' },
+              4: { cellWidth: 18, halign: 'center' },
+              5: { cellWidth: 25, halign: 'right' }
             }
           }
         );
@@ -317,9 +319,10 @@ export function PublicMonthlyReport() {
               fillColor: [156, 39, 176]
             },
             columnStyles: {
-              0: { cellWidth: 25 },
-              2: { cellWidth: 100 },
-              3: { cellWidth: 25 }
+              0: { cellWidth: 22 },
+              1: { cellWidth: 'auto' },
+              2: { cellWidth: 'auto' },
+              3: { cellWidth: 25, halign: 'right' }
             }
           }
         );
@@ -367,11 +370,11 @@ export function PublicMonthlyReport() {
               fillColor: [100, 100, 100]
             },
             columnStyles: {
-              0: { cellWidth: 40, fontStyle: 'bold' },
-              1: { cellWidth: 25, halign: 'center' },
-              2: { cellWidth: 30, halign: 'center' },
-              3: { cellWidth: 35, halign: 'right' },
-              4: { cellWidth: 35, halign: 'center' }
+              0: { cellWidth: 'auto', fontStyle: 'bold' },
+              1: { cellWidth: 22, halign: 'center' },
+              2: { cellWidth: 25, halign: 'center' },
+              3: { cellWidth: 30, halign: 'right' },
+              4: { cellWidth: 30, halign: 'center' }
             }
           }
         );

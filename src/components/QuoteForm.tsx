@@ -219,14 +219,14 @@ export function QuoteForm() {
 
       const columnStyles = isBOM
         ? {
-            0: { cellWidth: 140 },
-            1: { cellWidth: 40 }
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 30, halign: 'center' }
           }
         : {
-            0: { cellWidth: 90 },
-            1: { cellWidth: 30 },
-            2: { cellWidth: 30 },
-            3: { cellWidth: 30 }
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 25, halign: 'center' },
+            2: { cellWidth: 30, halign: 'right' },
+            3: { cellWidth: 30, halign: 'right' }
           };
 
       pdf.addTable(tableHeaders, tableData, { columnStyles });
