@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { startOfMonth, endOfMonth, format, isWithinInterval, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp, Clock, DollarSign, CheckCircle, Plus, Download, Calendar, CreditCard as Edit } from 'lucide-react';
+import { startOfMonth, endOfMonth, format, isWithinInterval, isToday, isTomorrow, isYesterday, parseISO, subMonths } from 'date-fns';
+import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp, Clock, DollarSign, CheckCircle, Plus, Download, Calendar, CreditCard as Edit, FileDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { exportTasksToCSV } from '../utils/csvExport';
+import { exportMultiMonthPDF } from '../utils/multiMonthPdfExport';
 
 export function MonthlyDashboard() {
-  const { tasks, getClient, getProject } = useApp();
+  const { tasks, getClient, getProject, companySettings } = useApp();
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showPdfExport, setShowPdfExport] = useState(false);
+  const [pdfMonthCount, setPdfMonthCount] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -120,6 +124,63 @@ export function MonthlyDashboard() {
     setShowDatePicker(false);
   };
 
+  const handlePdfExport = async () => {
+    setIsExporting(true);
+    try {
+      const monthsData = [];
+
+      for (let i = pdfMonthCount - 1; i >= 0; i--) {
+        const monthDate = subMonths(currentDate, i);
+        const monthStart = startOfMonth(monthDate);
+        const monthEnd = endOfMonth(monthDate);
+
+        const monthTasks = tasks.filter(task =>
+          task.finished &&
+          isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
+        );
+
+        const monthTotalHours = monthTasks
+          .filter(task => task.type !== 'insumos')
+          .reduce((sum, task) => sum + (task.hours || 0), 0);
+
+        const monthServiceRevenue = monthTasks
+          .filter(task => task.type !== 'insumos')
+          .reduce((sum, task) => {
+            const client = getClient(task.clientId);
+            return sum + ((task.hours || 0) * (client?.hourlyRate || 0));
+          }, 0);
+
+        const monthSuppliesCost = monthTasks
+          .filter(task => task.type === 'insumos')
+          .reduce((sum, task) => sum + (task.cost || 0), 0);
+
+        monthsData.push({
+          month: format(monthDate, 'MMMM yyyy'),
+          tasks: monthTasks,
+          totalHours: monthTotalHours,
+          serviceRevenue: monthServiceRevenue,
+          suppliesCost: monthSuppliesCost,
+          netRevenue: monthServiceRevenue - monthSuppliesCost,
+          incidentCount: monthTasks.filter(t => t.type === 'incident').length,
+          requestCount: monthTasks.filter(t => t.type === 'request').length,
+          suppliesCount: monthTasks.filter(t => t.type === 'insumos').length
+        });
+      }
+
+      const filename = pdfMonthCount === 1
+        ? `monthly-report-${format(currentDate, 'yyyy-MM')}.pdf`
+        : `multi-month-report-${format(subMonths(currentDate, pdfMonthCount - 1), 'yyyy-MM')}-to-${format(currentDate, 'yyyy-MM')}.pdf`;
+
+      await exportMultiMonthPDF(monthsData, getClient, getProject, companySettings, filename);
+      setShowPdfExport(false);
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      alert('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const getTaskIcon = (type: string) => {
     switch (type) {
       case 'incident':
@@ -167,13 +228,23 @@ export function MonthlyDashboard() {
               )}
             </div>
 
-            {/* Export Button */}
+            {/* Export Buttons */}
             <button
               onClick={() => exportTasksToCSV(monthlyTasks, getClient, getProject, `monthly-tasks-${format(currentDate, 'yyyy-MM')}.csv`)}
               className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
+              title="Export to CSV"
             >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              CSV
+            </button>
+
+            <button
+              onClick={() => setShowPdfExport(true)}
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+              title="Export to PDF"
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              PDF
             </button>
 
             {/* Month Navigation */}
@@ -423,6 +494,90 @@ export function MonthlyDashboard() {
           )}
         </div>
       </div>
+
+      {/* PDF Export Modal */}
+      {showPdfExport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Export PDF Report
+              </h3>
+              <button
+                onClick={() => setShowPdfExport(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                disabled={isExporting}
+              >
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Number of months to include
+                </label>
+                <select
+                  value={pdfMonthCount}
+                  onChange={(e) => setPdfMonthCount(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  disabled={isExporting}
+                >
+                  <option value={1}>Current month only</option>
+                  <option value={2}>Last 2 months</option>
+                  <option value={3}>Last 3 months</option>
+                  <option value={6}>Last 6 months</option>
+                  <option value={12}>Last 12 months</option>
+                </select>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  {pdfMonthCount === 1 ? (
+                    <>Report will include <strong>{format(currentDate, 'MMMM yyyy')}</strong></>
+                  ) : (
+                    <>
+                      Report will include {pdfMonthCount} months from{' '}
+                      <strong>{format(subMonths(currentDate, pdfMonthCount - 1), 'MMM yyyy')}</strong>{' '}
+                      to <strong>{format(currentDate, 'MMM yyyy')}</strong>
+                    </>
+                  )}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                  Includes completed tasks, client analysis, revenue breakdown, and detailed month-by-month reports.
+                </p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowPdfExport(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  disabled={isExporting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePdfExport}
+                  disabled={isExporting}
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isExporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="w-4 h-4 mr-2" />
+                      Generate PDF
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
