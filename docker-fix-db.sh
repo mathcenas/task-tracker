@@ -1,75 +1,64 @@
 #!/bin/bash
 
-# TaskTracker Database Fix Script for Docker
-# Usage: ./docker-fix-db.sh [verify|fix|both]
+# Quick Database Fix Script for Docker
+# This adds the payment tracking columns to the existing database
 
-CONTAINER_NAME="tasktracker-app"
+echo "🔧 Adding payment tracking columns to database..."
+echo "================================================="
 
-echo "🐳 TaskTracker Database Fix Tool"
-echo "================================"
-echo ""
-
-# Check if container is running
-if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-    echo "❌ Container '${CONTAINER_NAME}' is not running"
-    echo ""
-    echo "Available containers:"
-    docker ps --format "  - {{.Names}}"
-    echo ""
-    echo "Please start the container first:"
-    echo "  docker-compose up -d"
+# Detect docker compose command
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+elif docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+else
+    echo "❌ ERROR: Docker Compose is not installed."
     exit 1
 fi
 
-echo "✅ Container '${CONTAINER_NAME}' is running"
+# Check if container is running
+if ! $DOCKER_COMPOSE ps | grep -q tasktracker.*Up; then
+    echo "❌ ERROR: TaskTracker container is not running."
+    echo "Start it with: $DOCKER_COMPOSE up -d"
+    exit 1
+fi
+
+echo "✅ Container is running"
 echo ""
+echo "Adding columns to database..."
 
-# Function to verify database
-verify_db() {
-    echo "🔍 Verifying database consistency..."
-    echo "-----------------------------------"
-    docker exec ${CONTAINER_NAME} npm run verify:status
-    return $?
-}
+# Add the columns directly using SQLite commands
+$DOCKER_COMPOSE exec -T tasktracker sqlite3 /app/server/tasktracker.db <<'EOF'
+-- Add payment tracking columns if they don't exist
+ALTER TABLE tasks ADD COLUMN billed BOOLEAN DEFAULT 0;
+ALTER TABLE tasks ADD COLUMN billedAt DATETIME;
+ALTER TABLE tasks ADD COLUMN paid BOOLEAN DEFAULT 0;
+ALTER TABLE tasks ADD COLUMN paidAt DATETIME;
+ALTER TABLE tasks ADD COLUMN invoiceNumber TEXT;
 
-# Function to fix database
-fix_db() {
-    echo "🔧 Fixing database issues..."
-    echo "---------------------------"
-    docker exec ${CONTAINER_NAME} npm run fix:completed
-    return $?
-}
+-- Verify columns were added
+.schema tasks
+EOF
 
-# Parse command
-case "${1:-both}" in
-    verify)
-        verify_db
-        ;;
-    fix)
-        fix_db
-        ;;
-    both)
-        verify_db
-        echo ""
-        read -p "Do you want to fix the issues? (y/N) " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            fix_db
-            echo ""
-            echo "✅ Running verification again..."
-            echo ""
-            verify_db
-        else
-            echo "Skipped fix. Run './docker-fix-db.sh fix' when ready."
-        fi
-        ;;
-    *)
-        echo "Usage: $0 [verify|fix|both]"
-        echo ""
-        echo "Commands:"
-        echo "  verify - Check database for issues"
-        echo "  fix    - Fix database issues"
-        echo "  both   - Verify, ask, then fix (default)"
-        exit 1
-        ;;
-esac
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "✅ Database columns added successfully!"
+    echo ""
+    echo "🔄 Restarting container..."
+    $DOCKER_COMPOSE restart tasktracker
+
+    echo ""
+    echo "✅ Done! Payment tracking is now active."
+    echo ""
+    echo "📋 New features:"
+    echo "  • Supplies page: /supplies - Select and mark as billed"
+    echo "  • Payment Tracker: /supplies/payments - Monitor payments"
+    echo ""
+else
+    echo ""
+    echo "⚠️  Some columns might already exist (this is OK)"
+    echo "🔄 Restarting container anyway..."
+    $DOCKER_COMPOSE restart tasktracker
+    echo ""
+    echo "✅ Container restarted. Try using the payment features."
+fi
