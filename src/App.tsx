@@ -33,7 +33,7 @@ import { SuppliesPaymentTracker } from './components/SuppliesPaymentTracker';
 export default function App() {
   return (
     <AppProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* Public routes - no authentication required */}
           <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
