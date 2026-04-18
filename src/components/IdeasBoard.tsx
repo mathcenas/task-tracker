@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lightbulb, Clock, AlertTriangle, Plus, Save, X, Edit2, Calendar, User, Tag } from 'lucide-react';
+import { Lightbulb, Clock, AlertTriangle, Plus, Save, X, CreditCard as Edit2, Calendar, User, Tag, FileText, Folder, ChevronDown } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
+import { apiService } from '../services/api';
+import { exportProjectIdeasPDF } from '../utils/projectIdeasPdfExport';
 
 export function IdeasBoard() {
   const { tasks, clients, projects, getClient, getProject, updateTask } = useApp();
@@ -11,6 +13,13 @@ export function IdeasBoard() {
   const [editNotes, setEditNotes] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'overdue' | 'in_progress'>('all');
   const [filterClient, setFilterClient] = useState<string>('all');
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const [exporting, setExporting] = useState(false);
+
+  const filteredProjects = useMemo(() => {
+    if (filterClient === 'all') return projects;
+    return projects.filter(p => p.clientId === filterClient);
+  }, [projects, filterClient]);
 
   const incompleteTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -24,10 +33,36 @@ export function IdeasBoard() {
       if (filterType === 'overdue' && !isOverdue) return false;
       if (filterType === 'in_progress' && !isInProgress) return false;
       if (filterClient !== 'all' && task.clientId !== filterClient) return false;
+      if (filterProject !== 'all' && task.projectId !== filterProject) return false;
 
       return true;
     });
-  }, [tasks, filterType, filterClient]);
+  }, [tasks, filterType, filterClient, filterProject]);
+
+  const canExport = filterProject !== 'all';
+
+  const handleExportPDF = async () => {
+    if (!canExport) return;
+
+    const project = projects.find(p => p.id === filterProject);
+    if (!project) return;
+
+    const client = clients.find(c => c.id === project.clientId);
+    if (!client) return;
+
+    const projectTasks = tasks.filter(t => t.projectId === filterProject && !t.finished);
+
+    setExporting(true);
+    try {
+      const companySettings = await apiService.getCompanySettings();
+      await exportProjectIdeasPDF(project, client, projectTasks, companySettings);
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleEditNotes = (task: any) => {
     setEditingTask(task.id);
@@ -86,6 +121,9 @@ export function IdeasBoard() {
     }
   };
 
+  const selectedProject = filterProject !== 'all' ? projects.find(p => p.id === filterProject) : null;
+  const selectedClient = selectedProject ? clients.find(c => c.id === selectedProject.clientId) : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -102,15 +140,46 @@ export function IdeasBoard() {
                 </p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {incompleteTasks.length}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                Active Tasks
+            <div className="flex items-center space-x-4">
+              {canExport && (
+                <button
+                  onClick={handleExportPDF}
+                  disabled={exporting}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{exporting ? 'Generating...' : 'Export Summary PDF'}</span>
+                </button>
+              )}
+              <div className="text-right">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {incompleteTasks.length}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Active Tasks
+                </div>
               </div>
             </div>
           </div>
+
+          {canExport && selectedProject && selectedClient && (
+            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div>
+                  <span className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                    {selectedProject.name}
+                  </span>
+                  <span className="text-sm text-blue-600 dark:text-blue-400 ml-2">
+                    — {selectedClient.name}
+                  </span>
+                </div>
+              </div>
+              <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                Rate: €{selectedClient.hourlyRate.toFixed(2)}/hr
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-4 items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
             <div className="flex items-center space-x-2">
@@ -149,12 +218,15 @@ export function IdeasBoard() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 flex-1 min-w-[200px]">
+            <div className="flex items-center space-x-2">
               <User className="w-4 h-4 text-gray-400" />
               <select
                 value={filterClient}
-                onChange={(e) => setFilterClient(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                onChange={(e) => {
+                  setFilterClient(e.target.value);
+                  setFilterProject('all');
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="all">All Clients</option>
                 {clients.map(client => (
@@ -162,6 +234,28 @@ export function IdeasBoard() {
                 ))}
               </select>
             </div>
+
+            <div className="flex items-center space-x-2">
+              <Folder className="w-4 h-4 text-gray-400" />
+              <select
+                value={filterProject}
+                onChange={(e) => setFilterProject(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="all">All Projects</option>
+                {filteredProjects.map(project => (
+                  <option key={project.id} value={project.id}>{project.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {canExport && (
+              <div className="ml-auto">
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-800">
+                  Project selected — PDF export available
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -234,6 +328,12 @@ export function IdeasBoard() {
                             {format(parseISO(task.date), 'MMM d, yyyy')}
                           </span>
                         </div>
+                        {task.hours !== undefined && task.hours > 0 && (
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-3 h-3" />
+                            <span>{task.hours}h estimated</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
