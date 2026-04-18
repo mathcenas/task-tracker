@@ -248,6 +248,31 @@ const initDB = () => {
 
 initDB();
 
+// Run migrations to add new columns to existing tables
+const runMigrations = () => {
+  const migrations = [
+    `ALTER TABLE tasks ADD COLUMN billed BOOLEAN DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN billedAt DATETIME`,
+    `ALTER TABLE tasks ADD COLUMN paid BOOLEAN DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN paidAt DATETIME`,
+    `ALTER TABLE tasks ADD COLUMN invoiceNumber TEXT`,
+    `ALTER TABLE tasks ADD COLUMN accepted BOOLEAN DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN accepted_at DATETIME`,
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`,
+    `ALTER TABLE quotes ADD COLUMN quote_type TEXT DEFAULT 'standard'`,
+  ];
+
+  migrations.forEach(sql => {
+    db.run(sql, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Migration error:', err.message, 'SQL:', sql);
+      }
+    });
+  });
+};
+
+runMigrations();
+
 // Activity logging helper function
 const logActivity = (action, entityType, entityId, entityName, details = null, userId = 'system') => {
   const id = `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
