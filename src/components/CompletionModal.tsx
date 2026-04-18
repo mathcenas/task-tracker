@@ -9,10 +9,11 @@ interface CompletionModalProps {
   taskDescription?: string;
   isRecurring?: boolean;
   isAccepted?: boolean;
+  existingHours?: number;
 }
 
-export function CompletionModal({ isOpen, onClose, onComplete, taskType, taskDescription, isRecurring, isAccepted }: CompletionModalProps) {
-  const [hours, setHours] = useState('');
+export function CompletionModal({ isOpen, onClose, onComplete, taskType, taskDescription, isRecurring, isAccepted, existingHours }: CompletionModalProps) {
+  const [hours, setHours] = useState(existingHours ? String(existingHours) : '');
   const [accepted, setAccepted] = useState(isAccepted || false);
 
   if (!isOpen) return null;
@@ -26,7 +27,7 @@ export function CompletionModal({ isOpen, onClose, onComplete, taskType, taskDes
       return;
     }
 
-    onComplete(taskType === 'insumos' ? 0 : Number(hours), accepted);
+    onComplete(taskType === 'insumos' ? 0 : Number(hours) || existingHours || 0, accepted);
     setHours('');
     setAccepted(false);
     onClose();
@@ -73,8 +74,8 @@ export function CompletionModal({ isOpen, onClose, onComplete, taskType, taskDes
                 <input
                   type="number"
                   id="hours"
-                  required
-                  min="0.25"
+                  required={!existingHours}
+                  min="0"
                   step="0.25"
                   className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm 
                            focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 

@@ -1071,6 +1071,7 @@ export function WeeklyDashboard() {
         taskDescription={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.description : undefined}
         isRecurring={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.isRecurring : false}
         isAccepted={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.accepted : false}
+        existingHours={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.hours ?? undefined : undefined}
       />
 
       <BulkTaskOperations
