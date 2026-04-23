@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2 } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, MinusSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
-import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
+import { BulkTaskOperations } from './BulkTaskOperations';
 import { exportTasksToCSV } from '../utils/csvExport';
 
 export function AllTasksPage() {
@@ -20,11 +20,13 @@ export function AllTasksPage() {
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Force refresh when tasks change
+  // Selection state
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+
   React.useEffect(() => {
     setRefreshKey(prev => prev + 1);
   }, [tasks.length]);
-
 
   // Categorize tasks
   const allUnfinishedTasks = tasks.filter(task => !task.finished);
@@ -60,7 +62,6 @@ export function AllTasksPage() {
   } else if (taskFilter === 'not_started') {
     filteredTasks = tasks.filter(task => !task.finished && task.status === 'not_started');
   } else if (taskFilter === 'recently_added') {
-    // Show all tasks (including completed) for recently added filter
     filteredTasks = [...tasks].sort((a, b) => {
       const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -70,26 +71,17 @@ export function AllTasksPage() {
     filteredTasks = allUnfinishedTasks;
   }
 
-  // Apply other filters (skip if recently_added since it's already sorted and limited)
+  // Apply other filters
   if (taskFilter !== 'recently_added') {
     filteredTasks = filteredTasks.filter(task => {
-      // Type filter
       if (typeFilter !== 'all' && task.type !== typeFilter) return false;
-
-      // Priority filter
       if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
-
-      // Client filter
       if (clientFilter !== 'all' && task.clientId !== clientFilter) return false;
-
-      // Project filter
       if (projectFilter !== 'all' && task.projectId !== projectFilter) return false;
-
       return true;
     });
   }
 
-  // Sort tasks: latest created first (skip if recently_added since it's already sorted)
   const sortedTasks = taskFilter === 'recently_added'
     ? filteredTasks
     : filteredTasks.sort((a, b) => {
@@ -97,6 +89,28 @@ export function AllTasksPage() {
         const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return bCreated - aCreated;
       });
+
+  // Selection helpers
+  const filteredIds = sortedTasks.map(t => t.id);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedTasks.includes(id));
+  const someFilteredSelected = filteredIds.some(id => selectedTasks.includes(id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedTasks(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      setSelectedTasks(prev => {
+        const set = new Set([...prev, ...filteredIds]);
+        return Array.from(set);
+      });
+    }
+  };
+
+  const toggleSelectTask = (taskId: string) => {
+    setSelectedTasks(prev =>
+      prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
+    );
+  };
 
   const getRelativeDate = (date: string) => {
     const taskDate = parseISO(date);
@@ -152,16 +166,6 @@ export function AllTasksPage() {
     }
   };
 
-  const clearFilters = () => {
-    setTaskFilter('all');
-    setTypeFilter('all');
-    setPriorityFilter('all');
-  };
-
-  const pendingCount = allUnfinishedTasks.length;
-  const completedCount = completedTasks.length;
-  const overdueCount = overdueTasks.length;
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -205,9 +209,7 @@ export function AllTasksPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Click to view all
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Click to view all</p>
             </div>
             <FileText className="w-8 h-8 text-blue-500" />
           </div>
@@ -225,9 +227,7 @@ export function AllTasksPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Recently Added</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">20</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Latest tasks
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Latest tasks</p>
             </div>
             <Calendar className="w-8 h-8 text-cyan-500" />
           </div>
@@ -247,9 +247,7 @@ export function AllTasksPage() {
               <p className="text-3xl font-bold text-gray-900 dark:text-white">
                 {tasks.filter(t => !t.finished && t.status === 'in_progress').length}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Active tasks
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Active tasks</p>
             </div>
             <Clock className="w-8 h-8 text-yellow-500" />
           </div>
@@ -269,9 +267,7 @@ export function AllTasksPage() {
               <p className="text-3xl font-bold text-gray-900 dark:text-white">
                 {tasks.filter(t => !t.finished && t.status === 'not_started').length}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Pending tasks
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Pending tasks</p>
             </div>
             <AlertTriangle className="w-8 h-8 text-orange-500" />
           </div>
@@ -289,44 +285,32 @@ export function AllTasksPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{completedTasks.length}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Finished tasks
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Finished tasks</p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
         </div>
       </div>
 
-
       {/* Additional Filters */}
       <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Client
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
             <select
               value={clientFilter}
-              onChange={(e) => {
-                setClientFilter(e.target.value);
-                setProjectFilter('all');
-              }}
+              onChange={(e) => { setClientFilter(e.target.value); setProjectFilter('all'); }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="all">All Clients</option>
               {clients.map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
+                <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Project
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project</label>
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
@@ -337,17 +321,13 @@ export function AllTasksPage() {
               {projects
                 .filter(p => clientFilter === 'all' || p.clientId === clientFilter)
                 .map(project => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
+                  <option key={project.id} value={project.id}>{project.name}</option>
                 ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Type
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
@@ -361,9 +341,7 @@ export function AllTasksPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Priority
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Priority</label>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value as any)}
@@ -398,27 +376,71 @@ export function AllTasksPage() {
         )}
       </div>
 
+      {/* Selection bar */}
+      {selectedTasks.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center space-x-3">
+            <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm font-medium text-blue-900 dark:text-blue-200">
+              {selectedTasks.length} task{selectedTasks.length !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={() => setSelectedTasks([])}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Clear selection
+            </button>
+          </div>
+          <button
+            onClick={() => setIsBulkOpen(true)}
+            className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Bulk Actions
+          </button>
+        </div>
+      )}
+
       {/* Tasks List */}
       <div className="bg-white rounded-lg shadow dark:bg-gray-800">
         <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
-            {taskFilter === 'recently_added'
-              ? `Recently Added Tasks (${filteredTasks.length})`
-              : `Tasks (${filteredTasks.length})`}
-          </h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              {taskFilter === 'recently_added'
+                ? `Recently Added Tasks (${filteredTasks.length})`
+                : `Tasks (${filteredTasks.length})`}
+            </h3>
+            {sortedTasks.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center space-x-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                {allFilteredSelected ? (
+                  <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                ) : someFilteredSelected ? (
+                  <MinusSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+                <span>{allFilteredSelected ? 'Deselect All' : 'Select All'}</span>
+              </button>
+            )}
+          </div>
 
           <div className="space-y-3">
             {sortedTasks.map(task => {
               const client = getClient(task.clientId);
               const project = getProject(task.projectId);
               const isOverdue = !task.finished && new Date(task.date) < new Date();
-              
+              const isSelected = selectedTasks.includes(task.id);
+
               return (
-                <div 
-                  key={task.id} 
+                <div
+                  key={task.id}
                   className={`border rounded-lg p-4 transition-all duration-200 hover:shadow-md ${
-                    task.finished 
-                      ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
+                    isSelected
+                      ? 'bg-blue-50 border-blue-300 dark:bg-blue-900/20 dark:border-blue-700 ring-1 ring-blue-300 dark:ring-blue-700'
+                      : task.finished
+                      ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800'
                       : isOverdue
                       ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800'
                       : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700'
@@ -426,18 +448,29 @@ export function AllTasksPage() {
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex items-start space-x-3 flex-1">
+                      {/* Checkbox */}
+                      <button
+                        onClick={() => toggleSelectTask(task.id)}
+                        className="mt-0.5 flex-shrink-0"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                        )}
+                      </button>
                       {getTaskIcon(task.type)}
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <h4 className="font-medium text-gray-900 dark:text-white">{client?.name}</h4>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">•</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">-</span>
                           <p className="text-sm text-gray-500 dark:text-gray-400">{project?.name}</p>
                           {task.finished && (
                             <CheckCircle className="w-4 h-4 text-green-500" />
                           )}
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{task.description}</p>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 flex-wrap gap-y-1">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                             task.type === 'insumos' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
@@ -525,7 +558,7 @@ export function AllTasksPage() {
                 <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">No tasks found</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                  {tasks.length === 0 
+                  {tasks.length === 0
                     ? "Add your first task to get started"
                     : "Try adjusting your filters or search terms"
                   }
@@ -554,6 +587,13 @@ export function AllTasksPage() {
         taskType={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.type || 'request' : 'request'}
         taskDescription={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.description : undefined}
         existingHours={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.hours ?? undefined : undefined}
+      />
+
+      <BulkTaskOperations
+        selectedTasks={selectedTasks}
+        onSelectionChange={setSelectedTasks}
+        isOpen={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
       />
     </div>
   );
