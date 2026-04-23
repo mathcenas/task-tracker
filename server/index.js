@@ -1128,6 +1128,49 @@ function calculateUptime(monitor) {
   return monitor.active === 1 ? 99.9 : 95.0;
 }
 
+// System stats - record counts and build info
+app.get('/api/system-stats', authenticateToken, (req, res) => {
+  const queries = {
+    clients: 'SELECT COUNT(*) as count FROM clients',
+    projects: 'SELECT COUNT(*) as count FROM projects',
+    tasks: 'SELECT COUNT(*) as count FROM tasks',
+    recurringTasks: 'SELECT COUNT(*) as count FROM recurring_tasks',
+    taskTemplates: 'SELECT COUNT(*) as count FROM task_templates'
+  };
+
+  const stats = {};
+  const keys = Object.keys(queries);
+  let completed = 0;
+
+  keys.forEach(key => {
+    db.get(queries[key], (err, row) => {
+      stats[key] = err ? 0 : row.count;
+      completed++;
+
+      if (completed === keys.length) {
+        stats.totalRecords = keys.reduce((sum, k) => sum + (stats[k] || 0), 0);
+
+        let buildInfo = null;
+        try {
+          const buildInfoPath = process.env.NODE_ENV === 'production'
+            ? '/app/dist/build-info.json'
+            : path.join(__dirname, '..', 'dist', 'build-info.json');
+          if (fs.existsSync(buildInfoPath)) {
+            buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, 'utf8'));
+          }
+        } catch (e) {
+          // build-info.json not available outside Docker builds
+        }
+
+        res.json({
+          ...stats,
+          buildTime: buildInfo?.buildTime || null
+        });
+      }
+    });
+  });
+});
+
 // Backup - Export all data
 app.get('/api/backup', authenticateToken, (req, res) => {
   console.log('📦 Exporting database backup...');

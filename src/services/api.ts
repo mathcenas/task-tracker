@@ -490,6 +490,11 @@ class ApiService {
     });
   }
 
+  // System Stats
+  async getSystemStats() {
+    return this.request('/system-stats');
+  }
+
   // Backup & Restore
   async exportBackup() {
     console.log('📦 [ApiService] Exporting database backup...');
