@@ -711,12 +711,15 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
 app.put('/api/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const {
+    clientId, projectId,
     description, hours, cost, date, type, status, priority,
     finished, notes, completedAt, accepted, acceptedAt,
     billed, billedAt, paid, paidAt, invoiceNumber
   } = req.body;
 
   console.log('🔄 Updating task:', id, {
+    clientId,
+    projectId,
     description,
     hours,
     cost,
@@ -736,15 +739,20 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
     invoiceNumber
   });
 
+  const isRecurring = req.body.isRecurring;
+
   db.run(`UPDATE tasks SET
+    client_id = COALESCE(?, client_id), project_id = COALESCE(?, project_id),
     description = ?, hours = ?, cost = ?, date = ?, type = ?,
     status = ?, priority = ?, finished = ?, notes = ?, completed_at = ?,
     accepted = ?, accepted_at = ?,
-    billed = ?, billedAt = ?, paid = ?, paidAt = ?, invoiceNumber = ?
+    billed = ?, billedAt = ?, paid = ?, paidAt = ?, invoiceNumber = ?,
+    is_recurring = ?
     WHERE id = ?`,
-    [description, hours, cost, date, type, status, priority,
+    [clientId, projectId, description, hours, cost, date, type, status, priority,
      finished ? 1 : 0, notes, completedAt, accepted ? 1 : 0, acceptedAt,
-     billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber, id],
+     billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber,
+     isRecurring ? 1 : 0, id],
     function(err) {
       if (err) {
         console.error('❌ Database error updating task:', err);
@@ -982,8 +990,11 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
       return res.status(404).json({ error: 'Client not found' });
     }
 
-    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-    const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+    const y = parseInt(year);
+    const m = parseInt(month);
+    const startDateStr = `${y}-${String(m).padStart(2, '0')}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDateStr = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     db.all(
       `SELECT * FROM tasks
@@ -992,7 +1003,7 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
        AND date <= ?
        AND finished = 1
        ORDER BY date DESC`,
-      [client.id, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]],
+      [client.id, startDateStr, endDateStr],
       (err, tasks) => {
         if (err) {
           console.error('Error fetching tasks:', err);

@@ -317,6 +317,8 @@ class ApiService {
 
   async updateTask(id: string, task: any) {
     const payload = {
+      clientId: task.clientId,
+      projectId: task.projectId,
       description: task.description,
       hours: task.hours,
       cost: task.cost,
@@ -328,7 +330,8 @@ class ApiService {
       notes: task.notes,
       completedAt: task.completedAt,
       accepted: task.accepted,
-      acceptedAt: task.acceptedAt
+      acceptedAt: task.acceptedAt,
+      isRecurring: task.isRecurring
     };
     return this.request(`/tasks/${id}`, {
       method: 'PUT',

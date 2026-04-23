@@ -1,26 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { format } from 'date-fns';
-import { ArrowLeft, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, RefreshCw } from 'lucide-react';
 
 export function EditTask() {
   const navigate = useNavigate();
   const location = useLocation();
   const { taskId } = useParams<{ taskId: string }>();
-  const { getTask, updateTask, deleteTask, getClient, getProject } = useApp();
+  const { getTask, updateTask, deleteTask, clients, projects, getClient, getProject } = useApp();
 
   const returnPath = (location.state as { from?: string })?.from || '/';
 
-  // Store the return path in session storage as a fallback
   React.useEffect(() => {
     if (location.state?.from) {
       sessionStorage.setItem('lastDashboardPath', location.state.from);
     }
   }, [location.state]);
-  
+
   const task = taskId ? getTask(taskId) : null;
   const [formData, setFormData] = useState({
+    clientId: '',
+    projectId: '',
     description: '',
     hours: '',
     cost: '',
@@ -29,12 +30,15 @@ export function EditTask() {
     status: 'in_progress' as 'not_started' | 'in_progress' | 'review' | 'completed',
     priority: 'medium' as 'low' | 'medium' | 'high',
     notes: '',
-    finished: false
+    finished: false,
+    isRecurring: false
   });
 
   useEffect(() => {
     if (task) {
       setFormData({
+        clientId: task.clientId,
+        projectId: task.projectId,
         description: task.description,
         hours: task.hours?.toString() || '',
         cost: task.cost?.toString() || '',
@@ -43,10 +47,16 @@ export function EditTask() {
         status: task.status,
         priority: task.priority,
         notes: task.notes || '',
-        finished: task.finished
+        finished: task.finished,
+        isRecurring: task.isRecurring || false
       });
     }
   }, [task]);
+
+  const availableProjects = useMemo(() => {
+    if (!formData.clientId) return [];
+    return projects.filter(p => p.clientId === formData.clientId);
+  }, [projects, formData.clientId]);
 
   if (!task) {
     return (
@@ -65,8 +75,8 @@ export function EditTask() {
     );
   }
 
-  const client = getClient(task.clientId);
-  const project = getProject(task.projectId);
+  const client = getClient(formData.clientId || task.clientId);
+  const project = getProject(formData.projectId || task.projectId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +85,8 @@ export function EditTask() {
 
     const updatedTask = {
       ...task,
+      clientId: formData.clientId,
+      projectId: formData.projectId,
       description: formData.description,
       hours: formData.type !== 'insumos' ? (formData.hours ? Number(formData.hours) : undefined) : undefined,
       cost: formData.type === 'insumos' ? Number(formData.cost) : undefined,
@@ -83,17 +95,16 @@ export function EditTask() {
       status: isFinished ? 'completed' : formData.status,
       priority: formData.priority,
       notes: formData.notes,
-      finished: isFinished
+      finished: isFinished,
+      isRecurring: formData.isRecurring
     };
 
     try {
       await updateTask(updatedTask);
-      console.log('✅ Task updated, navigating to:', returnPath);
-      // Use the stored path from session storage if no state was passed
       const finalPath = returnPath === '/' ? (sessionStorage.getItem('lastDashboardPath') || '/') : returnPath;
       navigate(finalPath);
     } catch (error) {
-      console.error('❌ Failed to update task:', error);
+      console.error('Failed to update task:', error);
       alert('Failed to save changes. Please try again.');
     }
   };
@@ -128,15 +139,52 @@ export function EditTask() {
           </button>
         </div>
 
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            <span className="font-medium">Client:</span> {client?.name}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            <span className="font-medium">Project:</span> {project?.name}
-          </p>
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="clientId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Client
+            </label>
+            <select
+              id="clientId"
+              required
+              className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+              value={formData.clientId}
+              onChange={(e) => {
+                const newClientId = e.target.value;
+                const clientProjects = projects.filter(p => p.clientId === newClientId);
+                setFormData(prev => ({
+                  ...prev,
+                  clientId: newClientId,
+                  projectId: clientProjects.length > 0 ? clientProjects[0].id : prev.projectId
+                }));
+              }}
+            >
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Project
+            </label>
+            <select
+              id="projectId"
+              required
+              className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+              value={formData.projectId}
+              onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
+            >
+              {availableProjects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+              {availableProjects.length === 0 && project && (
+                <option value={project.id}>{project.name}</option>
+              )}
+            </select>
+          </div>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -182,9 +230,9 @@ export function EditTask() {
                   checked={formData.type === 'insumos'}
                   onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' }))}
                 />
-                <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-purple-900/20 dark:peer-checked:border-purple-500">
+                <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-teal-500 peer-checked:bg-teal-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-teal-900/20 dark:peer-checked:border-teal-500">
                   <div className="text-center">
-                    <div className="text-purple-500 font-medium">Supplies</div>
+                    <div className="text-teal-600 font-medium">Supplies</div>
                   </div>
                 </div>
               </label>
@@ -222,32 +270,54 @@ export function EditTask() {
                 placeholder="Enter hours worked"
               />
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {formData.finished 
+                {formData.finished
                   ? 'This task is marked as completed'
                   : 'Leave empty to complete later from the dashboard'
                 }
               </p>
             </div>
           ) : (
-            <div>
-              <label htmlFor="cost" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Cost
-              </label>
-              <div className="mt-1 relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm dark:text-gray-400">$</span>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="cost" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Cost
+                </label>
+                <div className="mt-1 relative rounded-lg shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm dark:text-gray-400">$</span>
+                  </div>
+                  <input
+                    type="number"
+                    id="cost"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    className="pl-7 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                    value={formData.cost}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
+                    placeholder="0.00"
+                  />
                 </div>
-                <input
-                  type="number"
-                  id="cost"
-                  required
-                  min="0.01"
-                  step="0.01"
-                  className="pl-7 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
-                  value={formData.cost}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
-                  placeholder="0.00"
-                />
+              </div>
+
+              <div
+                onClick={() => setFormData(prev => ({ ...prev, isRecurring: !prev.isRecurring }))}
+                className={`flex items-center space-x-3 p-3 border-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 ${formData.isRecurring ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 dark:border-teal-500' : ''}`}
+              >
+                <div className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${formData.isRecurring ? 'bg-teal-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${formData.isRecurring ? 'left-[22px]' : 'left-0.5'}`} />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className={`w-4 h-4 transition-colors ${formData.isRecurring ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400'}`} />
+                  <div>
+                    <span className={`text-sm font-medium ${formData.isRecurring ? 'text-teal-700 dark:text-teal-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                      Fixed monthly cost
+                    </span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Mark this as a recurring bill (e.g., cloud subscription, hosting)
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
