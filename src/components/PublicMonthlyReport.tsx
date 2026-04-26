@@ -224,10 +224,6 @@ export function PublicMonthlyReport() {
     if (task.type === 'insumos') {
       stats.suppliesCost += task.cost || 0;
       stats.suppliesCount += 1;
-      if (task.isRecurring || (task as any).is_recurring) {
-        stats.fixedCost += task.cost || 0;
-        stats.fixedCount += 1;
-      }
     } else {
       stats.totalHours += task.hours || 0;
       stats.serviceRevenue += (task.hours || 0) * client.hourlyRate;
@@ -246,8 +242,6 @@ export function PublicMonthlyReport() {
     serviceRevenue: 0,
     suppliesCost: 0,
     suppliesCount: 0,
-    fixedCost: 0,
-    fixedCount: 0,
     incidentHours: 0,
     incidentCount: 0,
     requestHours: 0,
@@ -574,10 +568,7 @@ export function PublicMonthlyReport() {
                       <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supplies Cost</p>
                       <p className="text-2xl font-semibold text-purple-900 dark:text-purple-300">${clientStats.suppliesCost.toFixed(0)}</p>
                       <p className="text-xs text-purple-600 dark:text-purple-400">
-                        {clientStats.suppliesCount} supply item{clientStats.suppliesCount !== 1 ? 's' : ''}
-                        {clientStats.fixedCount > 0 && (
-                          <span className="ml-1">({clientStats.fixedCount} fixed monthly)</span>
-                        )}
+                        {clientStats.suppliesCount} supply items
                       </p>
                     </div>
                   </div>
@@ -806,11 +797,6 @@ export function PublicMonthlyReport() {
                                   }`}>
                                     {task.type === 'incident' ? 'Incident' : task.type === 'insumos' ? 'Supplies' : 'Request'}
                                   </span>
-                                  {task.type === 'insumos' && (task.isRecurring || (task as any).is_recurring) && (
-                                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
-                                      Fixed monthly
-                                    </span>
-                                  )}
                                   {task.priority && (
                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                       task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
@@ -834,9 +820,7 @@ export function PublicMonthlyReport() {
                                   <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
                                     ${task.cost?.toFixed(2)}
                                   </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {(task.isRecurring || (task as any).is_recurring) ? 'Fixed monthly cost' : 'Supply cost'}
-                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">Supply cost</p>
                                 </div>
                               ) : (
                                 <div>
@@ -895,7 +879,7 @@ export function PublicMonthlyReport() {
               </div>
               
               {/* Show if there are any completed tasks in other months */}
-              {allTasks.filter(t => t.finished || (t as any).finished === 1).length > 0 && (
+              {clientTasks.filter(t => t.finished).length > 0 && (
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
                     📊 You have completed tasks in other months. Use the navigation above to view them.

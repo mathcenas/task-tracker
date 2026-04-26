@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database, Package, HardDrive } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database, Package } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
@@ -29,13 +29,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [systemStats, setSystemStats] = useState<{
-    totalRecords: number;
-    clients: number;
-    projects: number;
-    tasks: number;
-    buildTime: string | null;
-  } | null>(null);
   const session = getSession();
   const [currentUser] = useState(session ? {
     username: session.username,
@@ -151,19 +144,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     setRefreshKey(prev => prev + 1);
   }, [tasks.length, clients.length, projects.length]);
 
-  // Fetch system stats
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const stats = await api.getSystemStats();
-        setSystemStats(stats);
-      } catch {
-        // silently fail
-      }
-    };
-    fetchStats();
-  }, [tasks.length, clients.length, projects.length]);
-
   // Search functionality
   const searchResults = searchQuery.length > 2 ? {
     tasks: tasks.filter(task => 
@@ -277,46 +257,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {isSidebarOpen && (
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 mb-2">
               Data Management
-            </div>
-          )}
-
-          {isSidebarOpen && systemStats && (
-            <div className="mx-2 mb-2 p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <div className="flex items-center space-x-2 mb-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  {systemStats.totalRecords.toLocaleString()} records
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-1 text-center">
-                <div className="bg-white dark:bg-gray-700 rounded px-1 py-0.5">
-                  <div className="text-xs font-bold text-gray-900 dark:text-white">{systemStats.clients}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-gray-400">Clients</div>
-                </div>
-                <div className="bg-white dark:bg-gray-700 rounded px-1 py-0.5">
-                  <div className="text-xs font-bold text-gray-900 dark:text-white">{systemStats.projects}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-gray-400">Projects</div>
-                </div>
-                <div className="bg-white dark:bg-gray-700 rounded px-1 py-0.5">
-                  <div className="text-xs font-bold text-gray-900 dark:text-white">{systemStats.tasks}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-gray-400">Tasks</div>
-                </div>
-              </div>
-              {systemStats.buildTime && (
-                <div className="mt-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-600">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                    Last build: {new Date(systemStats.buildTime).toLocaleDateString()} {new Date(systemStats.buildTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {!isSidebarOpen && systemStats && (
-            <div className="flex justify-center mb-1" title={`${systemStats.totalRecords} records${systemStats.buildTime ? ` | Built: ${new Date(systemStats.buildTime).toLocaleDateString()}` : ''}`}>
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-full px-2 py-0.5">
-                <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{systemStats.totalRecords}</span>
-              </div>
             </div>
           )}
 

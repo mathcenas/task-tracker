@@ -17,9 +17,6 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Record the build timestamp
-RUN echo "{\"buildTime\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > /app/dist/build-info.json
-
 # Production stage with Node.js
 FROM node:20-alpine
 

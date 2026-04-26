@@ -711,15 +711,12 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
 app.put('/api/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const {
-    clientId, projectId,
     description, hours, cost, date, type, status, priority,
     finished, notes, completedAt, accepted, acceptedAt,
     billed, billedAt, paid, paidAt, invoiceNumber
   } = req.body;
 
   console.log('🔄 Updating task:', id, {
-    clientId,
-    projectId,
     description,
     hours,
     cost,
@@ -739,20 +736,15 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
     invoiceNumber
   });
 
-  const isRecurring = req.body.isRecurring;
-
   db.run(`UPDATE tasks SET
-    client_id = COALESCE(?, client_id), project_id = COALESCE(?, project_id),
     description = ?, hours = ?, cost = ?, date = ?, type = ?,
     status = ?, priority = ?, finished = ?, notes = ?, completed_at = ?,
     accepted = ?, accepted_at = ?,
-    billed = ?, billedAt = ?, paid = ?, paidAt = ?, invoiceNumber = ?,
-    is_recurring = ?
+    billed = ?, billedAt = ?, paid = ?, paidAt = ?, invoiceNumber = ?
     WHERE id = ?`,
-    [clientId, projectId, description, hours, cost, date, type, status, priority,
+    [description, hours, cost, date, type, status, priority,
      finished ? 1 : 0, notes, completedAt, accepted ? 1 : 0, acceptedAt,
-     billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber,
-     isRecurring ? 1 : 0, id],
+     billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber, id],
     function(err) {
       if (err) {
         console.error('❌ Database error updating task:', err);
@@ -990,11 +982,8 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
       return res.status(404).json({ error: 'Client not found' });
     }
 
-    const y = parseInt(year);
-    const m = parseInt(month);
-    const startDateStr = `${y}-${String(m).padStart(2, '0')}-01`;
-    const lastDay = new Date(y, m, 0).getDate();
-    const endDateStr = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
 
     db.all(
       `SELECT * FROM tasks
@@ -1003,7 +992,7 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
        AND date <= ?
        AND finished = 1
        ORDER BY date DESC`,
-      [client.id, startDateStr, endDateStr],
+      [client.id, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]],
       (err, tasks) => {
         if (err) {
           console.error('Error fetching tasks:', err);
@@ -1127,49 +1116,6 @@ function calculateUptime(monitor) {
   // Default to 100% if no data or monitor is up
   return monitor.active === 1 ? 99.9 : 95.0;
 }
-
-// System stats - record counts and build info
-app.get('/api/system-stats', authenticateToken, (req, res) => {
-  const queries = {
-    clients: 'SELECT COUNT(*) as count FROM clients',
-    projects: 'SELECT COUNT(*) as count FROM projects',
-    tasks: 'SELECT COUNT(*) as count FROM tasks',
-    recurringTasks: 'SELECT COUNT(*) as count FROM recurring_tasks',
-    taskTemplates: 'SELECT COUNT(*) as count FROM task_templates'
-  };
-
-  const stats = {};
-  const keys = Object.keys(queries);
-  let completed = 0;
-
-  keys.forEach(key => {
-    db.get(queries[key], (err, row) => {
-      stats[key] = err ? 0 : row.count;
-      completed++;
-
-      if (completed === keys.length) {
-        stats.totalRecords = keys.reduce((sum, k) => sum + (stats[k] || 0), 0);
-
-        let buildInfo = null;
-        try {
-          const buildInfoPath = process.env.NODE_ENV === 'production'
-            ? '/app/dist/build-info.json'
-            : path.join(__dirname, '..', 'dist', 'build-info.json');
-          if (fs.existsSync(buildInfoPath)) {
-            buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, 'utf8'));
-          }
-        } catch (e) {
-          // build-info.json not available outside Docker builds
-        }
-
-        res.json({
-          ...stats,
-          buildTime: buildInfo?.buildTime || null
-        });
-      }
-    });
-  });
-});
 
 // Backup - Export all data
 app.get('/api/backup', authenticateToken, (req, res) => {

@@ -317,8 +317,6 @@ class ApiService {
 
   async updateTask(id: string, task: any) {
     const payload = {
-      clientId: task.clientId,
-      projectId: task.projectId,
       description: task.description,
       hours: task.hours,
       cost: task.cost,
@@ -330,8 +328,7 @@ class ApiService {
       notes: task.notes,
       completedAt: task.completedAt,
       accepted: task.accepted,
-      acceptedAt: task.acceptedAt,
-      isRecurring: task.isRecurring
+      acceptedAt: task.acceptedAt
     };
     return this.request(`/tasks/${id}`, {
       method: 'PUT',
@@ -488,11 +485,6 @@ class ApiService {
     return this.request(`/task-templates/${id}`, {
       method: 'DELETE',
     });
-  }
-
-  // System Stats
-  async getSystemStats() {
-    return this.request('/system-stats');
   }
 
   // Backup & Restore
