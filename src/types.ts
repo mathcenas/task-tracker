@@ -51,9 +51,13 @@ export interface Task {
   accepted?: boolean; // Whether the recurring task has been accepted
   acceptedAt?: string; // When the recurring task was accepted
   createdAt?: string;
-  billed?: boolean; // Whether this supply has been billed/exported
-  billedAt?: string; // When it was billed
-  paid?: boolean; // Whether payment has been received
-  paidAt?: string; // When payment was received
-  invoiceNumber?: string; // Invoice/export reference number
+  billed?: boolean;
+  billedAt?: string;
+  paid?: boolean;
+  paidAt?: string;
+  invoiceNumber?: string;
+  approvedBy?: string;
+  vendor?: string;
+  receiptRef?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
 }

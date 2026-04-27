@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2 } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { exportTasksToCSV } from '../utils/csvExport';
+import { BulkTaskOperations } from './BulkTaskOperations';
 
 export function AllTasksPage() {
   const location = useLocation();
   const { tasks, getClient, getProject, updateTask, deleteTask, clients, projects } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
@@ -156,6 +159,26 @@ export function AllTasksPage() {
     setTaskFilter('all');
     setTypeFilter('all');
     setPriorityFilter('all');
+  };
+
+  const toggleTaskSelection = (taskId: string) => {
+    setSelectedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedTasks(new Set(sortedTasks.map(t => t.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedTasks(new Set());
   };
 
   const pendingCount = allUnfinishedTasks.length;
@@ -398,6 +421,47 @@ export function AllTasksPage() {
         )}
       </div>
 
+      {/* Selection bar */}
+      {sortedTasks.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={selectedTasks.size === sortedTasks.length ? deselectAll : selectAll}
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              {selectedTasks.size === sortedTasks.length
+                ? <CheckSquare className="w-4 h-4 text-blue-500" />
+                : <Square className="w-4 h-4" />
+              }
+              {selectedTasks.size === sortedTasks.length ? 'Deselect All' : 'Select All'}
+            </button>
+            {selectedTasks.size > 0 && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {selectedTasks.size} of {sortedTasks.length} selected
+              </span>
+            )}
+          </div>
+          {selectedTasks.size > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsBulkOpen(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <CheckSquare className="w-4 h-4 mr-2" />
+                Bulk Actions ({selectedTasks.size})
+              </button>
+              <button
+                onClick={deselectAll}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                title="Clear selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tasks List */}
       <div className="bg-white rounded-lg shadow dark:bg-gray-800">
         <div className="p-6">
@@ -412,13 +476,16 @@ export function AllTasksPage() {
               const client = getClient(task.clientId);
               const project = getProject(task.projectId);
               const isOverdue = !task.finished && new Date(task.date) < new Date();
-              
+              const isSelected = selectedTasks.has(task.id);
+
               return (
-                <div 
-                  key={task.id} 
+                <div
+                  key={task.id}
                   className={`border rounded-lg p-4 transition-all duration-200 hover:shadow-md ${
-                    task.finished 
-                      ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
+                    isSelected
+                      ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/10'
+                      : task.finished
+                      ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800'
                       : isOverdue
                       ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800'
                       : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700'
@@ -426,6 +493,13 @@ export function AllTasksPage() {
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex items-start space-x-3 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleTaskSelection(task.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                      />
                       {getTaskIcon(task.type)}
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
@@ -554,6 +628,13 @@ export function AllTasksPage() {
         taskType={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.type || 'request' : 'request'}
         taskDescription={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.description : undefined}
         existingHours={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.hours ?? undefined : undefined}
+      />
+
+      <BulkTaskOperations
+        selectedTasks={Array.from(selectedTasks)}
+        onSelectionChange={(ids) => setSelectedTasks(new Set(ids))}
+        isOpen={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
       />
     </div>
   );

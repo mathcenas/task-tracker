@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare } from 'lucide-react';
+import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw } from 'lucide-react';
 import { format, parseISO, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { api } from '../services/api';
@@ -13,6 +13,7 @@ export function SuppliesPage() {
 
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedApprovalStatus, setSelectedApprovalStatus] = useState<string>('all');
 
   // Get all supplies tasks
   const suppliesTasks = tasks.filter(task => task.type === 'insumos');
@@ -45,13 +46,24 @@ export function SuppliesPage() {
       );
     }
 
+    // Filter by approval status
+    if (selectedApprovalStatus !== 'all') {
+      if (selectedApprovalStatus === 'none') {
+        filtered = filtered.filter(task => !task.approvalStatus || task.approvalStatus === 'pending');
+      } else {
+        filtered = filtered.filter(task => task.approvalStatus === selectedApprovalStatus);
+      }
+    }
+
     // Sort by date (newest first)
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [suppliesTasks, selectedClient, selectedYear]);
+  }, [suppliesTasks, selectedClient, selectedYear, selectedApprovalStatus]);
 
   // Calculate statistics
   const totalCost = filteredTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
   const averageCost = filteredTasks.length > 0 ? totalCost / filteredTasks.length : 0;
+  const fixedCount = filteredTasks.filter(t => t.isRecurring).length;
+  const pendingApprovalCount = filteredTasks.filter(t => !t.approvalStatus || t.approvalStatus === 'pending').length;
 
   // Group by client for summary
   const clientSummary = useMemo(() => {
@@ -185,7 +197,7 @@ export function SuppliesPage() {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="client-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <Filter className="w-4 h-4 inline mr-1" />
@@ -225,11 +237,29 @@ export function SuppliesPage() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label htmlFor="approval-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <CheckSquare className="w-4 h-4 inline mr-1" />
+                Approval Status
+              </label>
+              <select
+                id="approval-filter"
+                value={selectedApprovalStatus}
+                onChange={(e) => setSelectedApprovalStatus(e.target.value)}
+                className="block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="none">Pending / No Status</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -237,9 +267,12 @@ export function SuppliesPage() {
                 <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                   {filteredTasks.length}
                 </p>
+                {fixedCount > 0 && (
+                  <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">{fixedCount} fixed monthly</p>
+                )}
               </div>
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="p-3 bg-slate-100 dark:bg-slate-900/30 rounded-lg">
+                <ShoppingCart className="w-6 h-6 text-slate-600 dark:text-slate-400" />
               </div>
             </div>
           </div>
@@ -268,6 +301,23 @@ export function SuppliesPage() {
               </div>
               <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                 <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Approval</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-2">
+                  {pendingApprovalCount}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {filteredTasks.length - pendingApprovalCount} approved/rejected
+                </p>
+              </div>
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/20 rounded-lg">
+                <CheckSquare className="w-6 h-6 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </div>
@@ -361,6 +411,16 @@ export function SuppliesPage() {
                 const project = getProject(task.projectId);
                 const isSelected = selectedItems.has(task.id);
 
+                const approvalBadge = () => {
+                  if (task.approvalStatus === 'approved') {
+                    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Approved</span>;
+                  }
+                  if (task.approvalStatus === 'rejected') {
+                    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Rejected</span>;
+                  }
+                  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Pending</span>;
+                };
+
                 return (
                   <div
                     key={task.id}
@@ -370,28 +430,56 @@ export function SuppliesPage() {
                         : 'border-gray-200 dark:border-gray-700'
                     }`}
                   >
-                    <div className="flex items-start space-x-3 flex-1">
+                    <div className="flex items-start space-x-3 flex-1 min-w-0">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => handleToggleSelect(task.id)}
-                        className="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                        className="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                       />
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded">
-                        <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      <div className="p-2 bg-slate-100 dark:bg-slate-900/30 rounded flex-shrink-0">
+                        <Package className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center flex-wrap gap-2 mb-1">
                           <h4 className="font-medium text-gray-900 dark:text-white">{client?.name}</h4>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">•</span>
+                          <span className="text-sm text-gray-400">•</span>
                           <p className="text-sm text-gray-500 dark:text-gray-400">{project?.name}</p>
+                          {approvalBadge()}
+                          {task.isRecurring && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400">
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                              Fixed Monthly
+                            </span>
+                          )}
+                          {task.billed && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Billed</span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{task.description}</p>
-                        <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                           <span className="flex items-center">
                             <Calendar className="w-3 h-3 mr-1" />
                             {format(parseISO(task.date), 'MMM d, yyyy')}
                           </span>
+                          {task.vendor && (
+                            <span className="flex items-center">
+                              <Store className="w-3 h-3 mr-1" />
+                              {task.vendor}
+                            </span>
+                          )}
+                          {task.approvedBy && (
+                            <span className="flex items-center">
+                              <User className="w-3 h-3 mr-1" />
+                              Approved by: {task.approvedBy}
+                            </span>
+                          )}
+                          {task.receiptRef && (
+                            <span className="flex items-center">
+                              <Receipt className="w-3 h-3 mr-1" />
+                              Ref: {task.receiptRef}
+                            </span>
+                          )}
                           {task.notes && (
                             <span className="truncate max-w-xs" title={task.notes}>
                               Note: {task.notes}
@@ -401,9 +489,9 @@ export function SuppliesPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-3 ml-4">
+                    <div className="flex items-center space-x-3 ml-4 flex-shrink-0">
                       <div className="text-right">
-                        <p className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                        <p className="text-lg font-semibold text-green-600 dark:text-green-400">
                           ${task.cost?.toFixed(2)}
                         </p>
                       </div>

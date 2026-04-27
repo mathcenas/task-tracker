@@ -89,6 +89,10 @@ const initDB = async () => {
       paid BOOLEAN DEFAULT 0,
       paidAt DATETIME,
       invoiceNumber TEXT,
+      approved_by TEXT,
+      vendor TEXT,
+      receipt_ref TEXT,
+      approval_status TEXT DEFAULT 'pending',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -178,6 +182,11 @@ const initDB = async () => {
     // Add accepted and accepted_at to tasks table
     `ALTER TABLE tasks ADD COLUMN accepted BOOLEAN DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN accepted_at DATETIME`,
+    // Supply approval & vendor tracking fields
+    `ALTER TABLE tasks ADD COLUMN approved_by TEXT`,
+    `ALTER TABLE tasks ADD COLUMN vendor TEXT`,
+    `ALTER TABLE tasks ADD COLUMN receipt_ref TEXT`,
+    `ALTER TABLE tasks ADD COLUMN approval_status TEXT DEFAULT 'pending'`,
     // Add recurring_start_date to recurring_tasks table
     `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`,
     // Update old status values to new workflow statuses

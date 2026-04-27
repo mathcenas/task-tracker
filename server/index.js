@@ -644,11 +644,16 @@ app.get('/api/tasks', authenticateToken, (req, res) => {
     }
     res.json(tasks.map(task => ({
       ...task,
+      clientId: task.client_id,
+      projectId: task.project_id,
       finished: Boolean(task.finished),
       isRecurring: Boolean(task.is_recurring),
       recurringWeekend: Boolean(task.recurring_weekend),
       billed: Boolean(task.billed),
-      paid: Boolean(task.paid)
+      paid: Boolean(task.paid),
+      approvedBy: task.approved_by,
+      receiptRef: task.receipt_ref,
+      approvalStatus: task.approval_status || 'pending'
     })));
   });
 });
@@ -711,40 +716,32 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
 app.put('/api/tasks/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const {
+    clientId, projectId,
     description, hours, cost, date, type, status, priority,
     finished, notes, completedAt, accepted, acceptedAt,
-    billed, billedAt, paid, paidAt, invoiceNumber
+    billed, billedAt, paid, paidAt, invoiceNumber,
+    isRecurring, approvedBy, vendor, receiptRef, approvalStatus
   } = req.body;
 
-  console.log('🔄 Updating task:', id, {
-    description,
-    hours,
-    cost,
-    date,
-    type,
-    status,
-    priority,
-    finished,
-    notes,
-    completedAt,
-    accepted,
-    acceptedAt,
-    billed,
-    billedAt,
-    paid,
-    paidAt,
-    invoiceNumber
-  });
-
   db.run(`UPDATE tasks SET
+    client_id = COALESCE(?, client_id), project_id = COALESCE(?, project_id),
     description = ?, hours = ?, cost = ?, date = ?, type = ?,
     status = ?, priority = ?, finished = ?, notes = ?, completed_at = ?,
     accepted = ?, accepted_at = ?,
-    billed = ?, billedAt = ?, paid = ?, paidAt = ?, invoiceNumber = ?
+    billed = ?, billedAt = ?, paid = ?, paidAt = ?, invoiceNumber = ?,
+    is_recurring = ?,
+    approved_by = COALESCE(?, approved_by),
+    vendor = COALESCE(?, vendor),
+    receipt_ref = COALESCE(?, receipt_ref),
+    approval_status = COALESCE(?, approval_status)
     WHERE id = ?`,
-    [description, hours, cost, date, type, status, priority,
+    [clientId || null, projectId || null,
+     description, hours, cost, date, type, status, priority,
      finished ? 1 : 0, notes, completedAt, accepted ? 1 : 0, acceptedAt,
-     billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber, id],
+     billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber,
+     isRecurring ? 1 : 0,
+     approvedBy || null, vendor || null, receiptRef || null, approvalStatus || null,
+     id],
     function(err) {
       if (err) {
         console.error('❌ Database error updating task:', err);

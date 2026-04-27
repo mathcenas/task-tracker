@@ -237,7 +237,7 @@ export async function exportMultiMonthPDF(
           format(new Date(task.date), 'MMM dd'),
           taskType,
           project?.name || 'General',
-          task.title,
+          task.description,
           task.type === 'insumos' ? '-' : `${(task.hours || 0).toFixed(1)}h`,
           amount
         ];
@@ -280,6 +280,48 @@ export async function exportMultiMonthPDF(
       const clientSupplies = clientTasks
         .filter(t => t.type === 'insumos')
         .reduce((sum, t) => sum + (t.cost || 0), 0);
+
+      // Supplies detail sub-table if client has any supply tasks
+      const clientSupplyTasks = clientTasks.filter(t => t.type === 'insumos');
+      if (clientSupplyTasks.length > 0) {
+        pdf.addSectionTitle(`${client.name} — Supplies Detail`);
+
+        const supplyRows = clientSupplyTasks.map(task => {
+          const approvalLabel = task.approvalStatus === 'approved' ? 'Approved' :
+                                task.approvalStatus === 'rejected' ? 'Rejected' : 'Pending';
+          return [
+            format(new Date(task.date), 'MMM dd'),
+            task.description,
+            (task as any).vendor || '-',
+            (task as any).approvedBy || '-',
+            (task as any).receiptRef || '-',
+            task.isRecurring ? 'Fixed' : 'One-time',
+            approvalLabel,
+            `$${(task.cost || 0).toFixed(2)}`
+          ];
+        });
+
+        pdf.addTable(
+          ['Date', 'Description', 'Vendor', 'Approved By', 'Ref', 'Type', 'Status', 'Cost'],
+          supplyRows,
+          {
+            theme: 'striped',
+            headStyles: { fillColor: [20, 120, 100], fontSize: 8 },
+            bodyStyles: { fontSize: 7.5 },
+            columnStyles: {
+              0: { cellWidth: 14 },
+              1: { cellWidth: 38, cellPadding: 2 },
+              2: { cellWidth: 24 },
+              3: { cellWidth: 24 },
+              4: { cellWidth: 20 },
+              5: { cellWidth: 14, halign: 'center' },
+              6: { cellWidth: 16, halign: 'center' },
+              7: { cellWidth: 18, halign: 'right', fontStyle: 'bold' }
+            },
+            styles: { overflow: 'linebreak' }
+          }
+        );
+      }
 
       pdf.addTotals([
         { label: 'Service Hours:', value: `${clientHours.toFixed(1)}h` },
