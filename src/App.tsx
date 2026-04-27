@@ -29,6 +29,7 @@ import { QuoteView } from './components/QuoteView';
 import { IdeasBoard } from './components/IdeasBoard';
 import { SuppliesPage } from './components/SuppliesPage';
 import { SuppliesPaymentTracker } from './components/SuppliesPaymentTracker';
+import { OverviewDashboard } from './components/OverviewDashboard';
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
                   <Route path="/" element={<WeeklyDashboard />} />
                   <Route path="/fortnight" element={<ForthnightDashboard />} />
                   <Route path="/monthly" element={<MonthlyDashboard />} />
+                  <Route path="/overview" element={<OverviewDashboard />} />
                   <Route path="/tasks" element={<AllTasksPage />} />
                   <Route path="/kanban" element={<KanbanBoard />} />
                   <Route path="/ideas" element={<IdeasBoard />} />

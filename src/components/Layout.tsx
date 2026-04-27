@@ -173,6 +173,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/', icon: LayoutDashboard, label: 'Weekly', group: 'Dashboards' },
     { path: '/fortnight', icon: Calendar, label: '15 Days', group: 'Dashboards' },
     { path: '/monthly', icon: Calendar, label: 'Monthly', group: 'Dashboards' },
+    { path: '/overview', icon: BarChart3, label: 'Overview', group: 'Dashboards' },
     { path: '/tasks', icon: CheckSquare, label: 'All Tasks', group: 'Tasks' },
     { path: '/kanban', icon: Columns, label: 'Kanban', group: 'Tasks' },
     { path: '/ideas', icon: Lightbulb, label: 'Ideas Board', group: 'Tasks' },
