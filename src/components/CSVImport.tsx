@@ -1,9 +1,30 @@
 import React, { useState } from 'react';
-import { Upload, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, X, Pencil, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { parseCSV, transformCSVToTasks, generateImportSummary } from '../utils/csvImport';
 import { api } from '../services/api';
 import { Task } from '../types';
+
+type TaskType = 'incident' | 'request' | 'insumos';
+
+const TYPE_LABELS: Record<TaskType, string> = {
+  incident: 'incident',
+  request: 'request',
+  insumos: 'insumos',
+};
+
+const TYPE_STYLES: Record<TaskType, string> = {
+  incident: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
+  request: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
+  insumos: 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400',
+};
+
+interface EditState {
+  type: TaskType;
+  hours: string;
+  cost: string;
+  description: string;
+}
 
 export function CSVImport() {
   const { clients, projects, reloadTasks } = useApp();
@@ -17,6 +38,10 @@ export function CSVImport() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Inline editing state: key = row index, value = draft fields
+  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<EditState | null>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -25,6 +50,8 @@ export function CSVImport() {
       setSummary('');
       setError('');
       setSuccess('');
+      setEditingRow(null);
+      setEditDraft(null);
     }
   };
 
@@ -36,6 +63,8 @@ export function CSVImport() {
 
     setIsProcessing(true);
     setError('');
+    setEditingRow(null);
+    setEditDraft(null);
 
     try {
       const content = await file.text();
@@ -50,6 +79,38 @@ export function CSVImport() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const startEdit = (index: number) => {
+    const task = preview[index];
+    setEditingRow(index);
+    setEditDraft({
+      type: (task.type as TaskType) || 'request',
+      hours: task.hours?.toString() ?? '0',
+      cost: task.cost?.toString() ?? '0',
+      description: task.description ?? '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingRow(null);
+    setEditDraft(null);
+  };
+
+  const saveEdit = (index: number) => {
+    if (!editDraft) return;
+    const updated = [...preview];
+    updated[index] = {
+      ...updated[index],
+      type: editDraft.type,
+      hours: editDraft.type === 'insumos' ? 0 : parseFloat(editDraft.hours) || 0,
+      cost: parseFloat(editDraft.cost) || 0,
+      description: editDraft.description,
+    };
+    setPreview(updated);
+    setSummary(generateImportSummary(updated));
+    setEditingRow(null);
+    setEditDraft(null);
   };
 
   const handleImport = async () => {
@@ -221,42 +282,136 @@ export function CSVImport() {
             {/* Preview Table */}
             {preview.length > 0 && (
               <>
+                <p className="text-xs text-gray-500 dark:text-gray-400 -mb-2">
+                  Click the edit icon on any row to adjust its type, hours, cost, or description before importing.
+                </p>
                 <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
-                  <div className="max-h-96 overflow-auto">
+                  <div className="max-h-[480px] overflow-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                      <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Description</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Hours</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cost</th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase w-28">Date</th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase w-28">Type</th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Description</th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase w-16">Hours</th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase w-20">Cost</th>
+                          <th className="px-3 py-3 w-16" />
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {preview.slice(0, 20).map((task, index) => (
-                          <tr key={index}>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">{task.date}</td>
-                            <td className="px-4 py-3 text-sm">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
-                                task.type === 'insumos' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400' :
-                                'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-                              }`}>
-                                {task.type}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white truncate max-w-xs">{task.description}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">{task.hours?.toFixed(2) || '0.00'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">${task.cost?.toFixed(2) || '0.00'}</td>
-                          </tr>
-                        ))}
+                        {preview.map((task, index) => {
+                          const isEditing = editingRow === index;
+
+                          if (isEditing && editDraft) {
+                            return (
+                              <tr key={index} className="bg-blue-50 dark:bg-blue-900/10">
+                                {/* Date — not editable */}
+                                <td className="px-3 py-2 text-sm text-gray-900 dark:text-white whitespace-nowrap align-top pt-3">
+                                  {task.date}
+                                </td>
+
+                                {/* Type */}
+                                <td className="px-3 py-2 align-top">
+                                  <select
+                                    value={editDraft.type}
+                                    onChange={e => setEditDraft({ ...editDraft, type: e.target.value as TaskType })}
+                                    className="w-full text-xs px-2 py-1.5 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
+                                  >
+                                    <option value="request">request</option>
+                                    <option value="incident">incident</option>
+                                    <option value="insumos">insumos</option>
+                                  </select>
+                                </td>
+
+                                {/* Description */}
+                                <td className="px-3 py-2 align-top">
+                                  <textarea
+                                    value={editDraft.description}
+                                    onChange={e => setEditDraft({ ...editDraft, description: e.target.value })}
+                                    rows={2}
+                                    className="w-full text-xs px-2 py-1.5 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 resize-none"
+                                  />
+                                </td>
+
+                                {/* Hours */}
+                                <td className="px-3 py-2 align-top">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.25"
+                                    value={editDraft.hours}
+                                    onChange={e => setEditDraft({ ...editDraft, hours: e.target.value })}
+                                    disabled={editDraft.type === 'insumos'}
+                                    className="w-full text-xs px-2 py-1.5 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 disabled:opacity-40"
+                                  />
+                                </td>
+
+                                {/* Cost */}
+                                <td className="px-3 py-2 align-top">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={editDraft.cost}
+                                    onChange={e => setEditDraft({ ...editDraft, cost: e.target.value })}
+                                    className="w-full text-xs px-2 py-1.5 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </td>
+
+                                {/* Save / Cancel */}
+                                <td className="px-3 py-2 align-top">
+                                  <div className="flex flex-col gap-1">
+                                    <button
+                                      onClick={() => saveEdit(index)}
+                                      className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                                      title="Save"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={cancelEdit}
+                                      className="p-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return (
+                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+                              <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">{task.date}</td>
+                              <td className="px-3 py-3 text-sm">
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${TYPE_STYLES[task.type as TaskType] ?? TYPE_STYLES.request}`}>
+                                  {task.type}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 text-sm text-gray-900 dark:text-white truncate max-w-xs" title={task.description}>
+                                {task.description}
+                              </td>
+                              <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">{task.hours?.toFixed(2) || '0.00'}</td>
+                              <td className="px-3 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">${task.cost?.toFixed(2) || '0.00'}</td>
+                              <td className="px-3 py-3">
+                                <button
+                                  onClick={() => startEdit(index)}
+                                  className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                  title="Edit this row"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                   {preview.length > 20 && (
                     <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 text-sm text-gray-600 dark:text-gray-400">
-                      Showing first 20 of {preview.length} tasks
+                      Showing all {preview.length} tasks
                     </div>
                   )}
                 </div>
@@ -264,10 +419,14 @@ export function CSVImport() {
                 {/* Import Button */}
                 <button
                   onClick={handleImport}
-                  disabled={isImporting}
+                  disabled={isImporting || editingRow !== null}
                   className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                 >
-                  {isImporting ? 'Importing...' : `Import ${preview.length} Tasks to ${selectedClientName}`}
+                  {isImporting
+                    ? 'Importing...'
+                    : editingRow !== null
+                    ? 'Finish editing before importing'
+                    : `Import ${preview.length} Tasks to ${selectedClientName}`}
                 </button>
               </>
             )}
