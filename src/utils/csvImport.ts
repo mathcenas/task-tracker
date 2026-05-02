@@ -42,55 +42,28 @@ function parseDate(dateStr: string): string {
 
   dateStr = dateStr.trim();
 
-  // Try ISO format first: YYYY-MM-DD
+  // ISO format: YYYY-MM-DD
   if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
     const [year, month, day] = dateStr.split('-').map(n => parseInt(n, 10));
     const date = new Date(year, month - 1, day);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
+    if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
   }
 
-  // Try MM/DD/YYYY (American format)
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
-    const [month, day, year] = dateStr.split('/').map(n => parseInt(n, 10));
-    const date = new Date(year, month - 1, day);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-  }
-
-  // Try DD/MM/YYYY (European format)
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
-    const parts = dateStr.split('/').map(n => parseInt(n, 10));
-    // Heuristic: if first number > 12, it's likely DD/MM/YYYY
-    if (parts[0] > 12) {
-      const [day, month, year] = parts;
-      const date = new Date(year, month - 1, day);
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0];
-      }
-    }
-  }
-
-  // Try YYYY/MM/DD
+  // YYYY/MM/DD
   if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(dateStr)) {
     const [year, month, day] = dateStr.split('/').map(n => parseInt(n, 10));
     const date = new Date(year, month - 1, day);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
+    if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
   }
 
-  // Try DD-MM-YYYY
-  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(dateStr)) {
-    const parts = dateStr.split('-').map(n => parseInt(n, 10));
-    if (parts[0] > 12) {
-      const [day, month, year] = parts;
+  // DD/MM/YYYY or DD-MM-YYYY (preferred for Spanish/European locale)
+  const slashOrDash = /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(dateStr);
+  if (slashOrDash) {
+    const sep = dateStr.includes('/') ? '/' : '-';
+    const [day, month, year] = dateStr.split(sep).map(n => parseInt(n, 10));
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       const date = new Date(year, month - 1, day);
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0];
-      }
+      if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
     }
   }
 
