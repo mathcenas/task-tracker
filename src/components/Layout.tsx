@@ -29,6 +29,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [dbStats, setDbStats] = useState<{ total: number; tasks: number; clients: number; projects: number } | null>(null);
   const session = getSession();
   const [currentUser] = useState(session ? {
     username: session.username,
@@ -144,6 +145,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     setRefreshKey(prev => prev + 1);
   }, [tasks.length, clients.length, projects.length]);
 
+  useEffect(() => {
+    api.getStats().then(setDbStats).catch(() => {});
+  }, [tasks.length, clients.length, projects.length]);
+
   // Search functionality
   const searchResults = searchQuery.length > 2 ? {
     tasks: tasks.filter(task => 
@@ -252,6 +257,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
+
+        {/* DB Stats Box */}
+        {isSidebarOpen && dbStats && (
+          <div className="mx-3 mb-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700">
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Database</p>
+            <div className="grid grid-cols-3 gap-1 text-center mb-1.5">
+              {[
+                { label: 'Tasks', value: dbStats.tasks },
+                { label: 'Clients', value: dbStats.clients },
+                { label: 'Projects', value: dbStats.projects },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white dark:bg-gray-800 rounded px-1 py-1">
+                  <p className="text-xs font-bold text-gray-800 dark:text-gray-200 leading-none">{value}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
+              Built {new Date(__BUILD_DATE__).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        )}
 
         {/* Backup Section */}
         <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
