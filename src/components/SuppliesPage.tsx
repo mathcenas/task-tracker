@@ -424,11 +424,10 @@ export function SuppliesPage() {
                 return (
                   <div
                     key={task.id}
-                    onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: '/supplies' } })}
-                    className={`flex items-start justify-between p-4 border rounded-lg cursor-pointer hover:shadow-sm transition-all group ${
+                    className={`flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group ${
                       isSelected
                         ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/10'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        : 'border-gray-200 dark:border-gray-700'
                     }`}
                   >
                     <div className="flex items-start space-x-3 flex-1 min-w-0">
@@ -436,7 +435,6 @@ export function SuppliesPage() {
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => handleToggleSelect(task.id)}
-                        onClick={e => e.stopPropagation()}
                         className="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                       />
                       <div className="p-2 bg-slate-100 dark:bg-slate-900/30 rounded flex-shrink-0">
@@ -497,13 +495,13 @@ export function SuppliesPage() {
                           ${task.cost?.toFixed(2)}
                         </p>
                       </div>
-                      <div
-                        onClick={e => e.stopPropagation()}
-                        className="p-2 text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors"
-                        title="Click row to edit"
+                      <button
+                        onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: '/supplies' } })}
+                        className="p-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                        title="Edit supply"
                       >
                         <Edit className="w-4 h-4" />
-                      </div>
+                      </button>
                     </div>
                   </div>
                 );

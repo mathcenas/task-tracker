@@ -159,7 +159,9 @@ export function transformCSVToTasks(
 
       const finalHours = type === 'insumos' ? 0 : hours;
 
-      const taskDescription = row.Description || row.Activity;
+      const taskDescription = row.Description ?
+        `${row.Activity}\n${row.Description}` :
+        row.Activity;
 
       return {
         id: `import-${Date.now()}-${index}`,

@@ -1400,27 +1400,6 @@ app.post('/api/restore', authenticateToken, (req, res) => {
   });
 });
 
-// Stats summary (used by sidebar info box)
-app.get('/api/stats', authenticateToken, (req, res) => {
-  db.all(`
-    SELECT
-      (SELECT COUNT(*) FROM tasks)            AS tasks,
-      (SELECT COUNT(*) FROM clients)          AS clients,
-      (SELECT COUNT(*) FROM projects)         AS projects,
-      (SELECT COUNT(*) FROM recurring_tasks)  AS recurring
-  `, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    const r = rows[0];
-    res.json({
-      tasks:     r.tasks,
-      clients:   r.clients,
-      projects:  r.projects,
-      recurring: r.recurring,
-      total:     r.tasks + r.clients + r.projects + r.recurring
-    });
-  });
-});
-
 // Health check
 app.get('/api/health', (req, res) => {
   // Check database connectivity

@@ -67,88 +67,35 @@ export function QuoteView() {
     try {
       const companySettings = await apiService.getCompanySettings();
       const pdf = new PDFExporter(companySettings);
-      const doc = pdf.getDoc();
       const isBOM = quote.quote_type === 'bom';
-      const docLabel = isBOM ? 'Bill of Materials' : 'Quote';
 
-      // Standard header with logo + company info
-      await pdf.addHeader(docLabel);
+      await pdf.addHeader(isBOM ? 'Bill of Materials (BOM)' : 'Quote');
 
-      // ── Document identity block ──────────────────────────────────────
-      // Status pill color
-      const statusColors: Record<string, [number, number, number]> = {
-        draft:    [107, 114, 128],
-        sent:     [37,  99,  235],
-        accepted: [22,  163, 74],
-        rejected: [220, 38,  38],
-        expired:  [202, 138, 4],
+      const detailsSection: Record<string, string> = {
+        [isBOM ? 'BOM Number' : 'Quote Number']: quote.quote_number,
+        'Date': format(new Date(quote.date), 'MMM d, yyyy'),
+        'Status': quote.status.toUpperCase()
       };
-      const pillColor = statusColors[quote.status] ?? statusColors.draft;
 
-      // Two-column meta block: left = document number/date, right = client/status
-      const boxTop = (pdf as any).currentY;
-      const boxH = 28;
+      if (quote.expiry_date) {
+        detailsSection['Valid Until'] = format(new Date(quote.expiry_date), 'MMM d, yyyy');
+      }
 
-      doc.setFillColor(248, 250, 252);
-      doc.setDrawColor(226, 232, 240);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(14, boxTop, 182, boxH, 2, 2, 'FD');
+      pdf.addSection(isBOM ? 'BOM Details' : 'Quote Details', detailsSection);
 
-      // Left column — document ref
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 100, 100);
-      doc.text(isBOM ? 'BOM Number' : 'Quote Number', 20, boxTop + 7);
-      doc.text('Date', 20, boxTop + 13);
-      if (quote.expiry_date) doc.text('Valid Until', 20, boxTop + 19);
+      pdf.addSection('Client Information', {
+        'Client': quote.client_name
+      });
 
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 30, 30);
-      doc.text(quote.quote_number, 60, boxTop + 7);
-      doc.text(format(new Date(quote.date), 'MMM d, yyyy'), 60, boxTop + 13);
-      if (quote.expiry_date) doc.text(format(new Date(quote.expiry_date), 'MMM d, yyyy'), 60, boxTop + 19);
+      pdf.addSection('Description', {
+        'Project': quote.title
+      });
 
-      // Divider
-      doc.setDrawColor(226, 232, 240);
-      doc.setLineWidth(0.2);
-      doc.line(105, boxTop + 4, 105, boxTop + boxH - 4);
-
-      // Right column — client + status
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 100, 100);
-      doc.text('Client', 110, boxTop + 7);
-      doc.text('Status', 110, boxTop + 16);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 30, 30);
-      doc.text(quote.client_name, 135, boxTop + 7);
-
-      // Status pill
-      const statusLabel = quote.status.charAt(0).toUpperCase() + quote.status.slice(1);
-      const pillW = 22;
-      const pillH = 6;
-      const pillX = 135;
-      const pillY = boxTop + 12;
-      doc.setFillColor(...pillColor);
-      doc.roundedRect(pillX, pillY, pillW, pillH, 1.5, 1.5, 'F');
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(255, 255, 255);
-      doc.text(statusLabel, pillX + pillW / 2, pillY + 4, { align: 'center' });
-
-      (pdf as any).currentY = boxTop + boxH + 8;
-
-      // ── Project title ────────────────────────────────────────────────
-      doc.setFontSize(13);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 30, 30);
-      doc.text(quote.title, 15, (pdf as any).currentY);
-      (pdf as any).currentY += 10;
-
-      // ── Line items table ─────────────────────────────────────────────
       const tableData = isBOM
-        ? quote.line_items.map(item => [item.description, item.quantity.toString()])
+        ? quote.line_items.map(item => [
+            item.description,
+            item.quantity.toString()
+          ])
         : quote.line_items.map(item => [
             item.description,
             item.quantity.toString(),
@@ -157,48 +104,50 @@ export function QuoteView() {
           ]);
 
       const tableHeaders = isBOM
-        ? ['Description', 'Qty']
-        : ['Description', 'Qty', 'Unit Price', 'Total'];
+        ? ['Description', 'Quantity']
+        : ['Description', 'Quantity', 'Unit Price', 'Total'];
 
       const columnStyles = isBOM
-        ? { 0: { cellWidth: 'auto' }, 1: { cellWidth: 25, halign: 'center' } }
+        ? {
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 30, halign: 'center' }
+          }
         : {
             0: { cellWidth: 'auto' },
-            1: { cellWidth: 20, halign: 'center' },
-            2: { cellWidth: 32, halign: 'right' },
-            3: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
+            1: { cellWidth: 25, halign: 'center' },
+            2: { cellWidth: 30, halign: 'right' },
+            3: { cellWidth: 30, halign: 'right' }
           };
 
-      pdf.addTable(tableHeaders, tableData, {
-        theme: 'grid',
-        headStyles: {
-          fillColor: [37, 99, 235],
-          textColor: 255,
-          fontStyle: 'bold',
-          fontSize: 9,
-        },
-        bodyStyles: { fontSize: 9 },
-        columnStyles,
-        styles: { overflow: 'linebreak', cellPadding: 3 }
-      });
+      pdf.addTable(tableHeaders, tableData, { columnStyles });
 
-      // ── Totals ───────────────────────────────────────────────────────
       if (!isBOM) {
-        const totalsData: { label: string; value: string; bold?: boolean }[] = [
+        const totalsData = [
           { label: 'Subtotal:', value: `$${quote.subtotal.toFixed(2)}` }
         ];
+
         if (quote.tax_rate > 0) {
           totalsData.push({ label: `Tax (${quote.tax_rate}%):`, value: `$${quote.tax_amount.toFixed(2)}` });
         }
+
         totalsData.push({ label: 'Total:', value: `$${quote.total.toFixed(2)}`, bold: true });
+
         pdf.addTotals(totalsData);
       }
 
-      // ── Notes & Terms ────────────────────────────────────────────────
-      if (quote.notes) pdf.addNotes('Notes', quote.notes);
-      if (quote.terms) pdf.addNotes('Terms & Conditions', quote.terms);
+      if (quote.notes) {
+        pdf.addNotes('Notes', quote.notes);
+      }
 
-      pdf.save(isBOM ? `BOM-${quote.quote_number}.pdf` : `Quote-${quote.quote_number}.pdf`);
+      if (quote.terms) {
+        pdf.addNotes('Terms & Conditions', quote.terms);
+      }
+
+      const fileName = isBOM
+        ? `BOM-${quote.quote_number}.pdf`
+        : `Quote-${quote.quote_number}.pdf`;
+
+      pdf.save(fileName);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       alert('Failed to generate PDF');

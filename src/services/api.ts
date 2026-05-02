@@ -653,10 +653,6 @@ class ApiService {
       method: 'DELETE',
     });
   }
-
-  async getStats(): Promise<{ tasks: number; clients: number; projects: number; recurring: number; total: number }> {
-    return this.request('/stats');
-  }
 }
 
 export const apiService = new ApiService();
