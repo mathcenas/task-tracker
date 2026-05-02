@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, FileText, Users, Folder, CheckCircle, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink } from 'lucide-react';
+import { Clock, FileText, Users, Folder, CheckCircle, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink, Calendar, DollarSign, Timer } from 'lucide-react';
 import { format } from 'date-fns';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useApp } from '../context/AppContext';
 
 interface ActivityLog {
   id: string;
@@ -17,9 +18,13 @@ interface ActivityLog {
 
 export function ActivityLog() {
   const navigate = useNavigate();
+  const { clients, projects } = useApp();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'task' | 'client' | 'project'>('all');
+
+  const clientName = (id: string) => clients.find(c => c.id === id)?.name ?? id;
+  const projectName = (id: string) => projects.find(p => p.id === id)?.name ?? id;
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -71,17 +76,44 @@ export function ActivityLog() {
     }
   };
 
-  const formatDetails = (details: any) => {
+  const formatDetails = (details: any, entityType: string) => {
     if (!details) return null;
 
-    const items = [];
-    if (details.hours !== undefined) items.push(`${details.hours}h`);
-    if (details.cost !== undefined) items.push(`$${details.cost}`);
-    if (details.status) items.push(details.status);
-    if (details.type) items.push(details.type);
-    if (details.hourlyRate !== undefined) items.push(`Rate: $${details.hourlyRate}/h`);
+    if (entityType === 'task') {
+      const chips: { label: string; value: string; icon?: React.ReactNode }[] = [];
 
-    return items.length > 0 ? items.join(' • ') : null;
+      if (details.date) chips.push({ label: 'Date', value: format(new Date(details.date), 'dd MMM yyyy'), icon: <Calendar className="w-3 h-3" /> });
+      if (details.clientId) chips.push({ label: 'Client', value: clientName(details.clientId), icon: <Users className="w-3 h-3" /> });
+      if (details.projectId) chips.push({ label: 'Project', value: projectName(details.projectId), icon: <Folder className="w-3 h-3" /> });
+      if (details.type) chips.push({ label: 'Type', value: details.type });
+      if (details.hours !== undefined && details.hours !== null) chips.push({ label: 'Hours', value: `${details.hours}h`, icon: <Timer className="w-3 h-3" /> });
+      if (details.cost !== undefined && details.cost !== null) chips.push({ label: 'Cost', value: `$${details.cost}`, icon: <DollarSign className="w-3 h-3" /> });
+      if (details.status) chips.push({ label: 'Status', value: details.status });
+
+      if (chips.length === 0) return null;
+
+      return (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {chips.map(({ label, value, icon }) => (
+            <span key={label} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
+              {icon}
+              <span className="font-medium text-gray-400 dark:text-gray-500">{label}:</span>
+              {value}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    // clients / projects
+    const items: string[] = [];
+    if (details.hourlyRate !== undefined) items.push(`Rate: $${details.hourlyRate}/h`);
+    if (details.email) items.push(details.email);
+    if (details.status) items.push(details.status);
+
+    return items.length > 0 ? (
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{items.join(' • ')}</p>
+    ) : null;
   };
 
   const filteredLogs = filter === 'all'
@@ -217,11 +249,7 @@ export function ActivityLog() {
                         {log.entity_name}
                       </p>
 
-                      {formatDetails(log.details) && (
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          {formatDetails(log.details)}
-                        </p>
-                      )}
+                      {formatDetails(log.details, log.entity_type)}
 
                       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                         {format(new Date(log.created_at), 'MMM d, yyyy • h:mm a')}

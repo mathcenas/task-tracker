@@ -694,7 +694,10 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
         hours,
         cost,
         status,
-        finished
+        finished,
+        date,
+        clientId,
+        projectId
       }, req.user?.id);
 
       // Verify the task was saved by reading it back
@@ -754,10 +757,14 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
       console.log('✅ Task updated successfully:', id);
       // Log activity
       logActivity('updated', 'task', id, description || 'Untitled Task', {
+        type,
         hours,
         cost,
         status,
-        finished
+        finished,
+        date,
+        clientId,
+        projectId
       }, req.user?.id);
       res.json({ success: true });
     }
