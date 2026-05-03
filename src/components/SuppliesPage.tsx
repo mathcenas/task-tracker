@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw } from 'lucide-react';
-import { format, parseISO, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
+import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw, BarChart2, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { format, parseISO, startOfYear, endOfYear, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { api } from '../services/api';
 
@@ -114,6 +114,44 @@ export function SuppliesPage() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([_, data]) => data);
   }, [filteredTasks, selectedYear]);
+
+  // Current-month running cost (always against all supplies, not filtered)
+  const now = new Date();
+  const thisMonthStart = startOfMonth(now);
+  const thisMonthEnd = endOfMonth(now);
+  const lastMonthStart = startOfMonth(subMonths(now, 1));
+  const lastMonthEnd = endOfMonth(subMonths(now, 1));
+
+  const thisMonthTasks = useMemo(() => suppliesTasks.filter(t =>
+    isWithinInterval(parseISO(t.date), { start: thisMonthStart, end: thisMonthEnd }) &&
+    (selectedClient === 'all' || t.clientId === selectedClient)
+  ), [suppliesTasks, selectedClient]);
+
+  const lastMonthTasks = useMemo(() => suppliesTasks.filter(t =>
+    isWithinInterval(parseISO(t.date), { start: lastMonthStart, end: lastMonthEnd }) &&
+    (selectedClient === 'all' || t.clientId === selectedClient)
+  ), [suppliesTasks, selectedClient]);
+
+  const thisMonthCost = thisMonthTasks.reduce((s, t) => s + (t.cost || 0), 0);
+  const lastMonthCost = lastMonthTasks.reduce((s, t) => s + (t.cost || 0), 0);
+  const thisMonthFixed = thisMonthTasks.filter(t => t.isRecurring).reduce((s, t) => s + (t.cost || 0), 0);
+  const thisMonthOneOff = thisMonthCost - thisMonthFixed;
+
+  // % change vs last month
+  const monthDelta = lastMonthCost > 0 ? ((thisMonthCost - lastMonthCost) / lastMonthCost) * 100 : null;
+
+  // Per-client breakdown for current month
+  const thisMonthByClient = useMemo(() => {
+    const map: Record<string, { name: string; cost: number; count: number }> = {};
+    thisMonthTasks.forEach(t => {
+      const client = getClient(t.clientId);
+      if (!client) return;
+      if (!map[t.clientId]) map[t.clientId] = { name: client.name, cost: 0, count: 0 };
+      map[t.clientId].cost += t.cost || 0;
+      map[t.clientId].count += 1;
+    });
+    return Object.values(map).sort((a, b) => b.cost - a.cost);
+  }, [thisMonthTasks, getClient]);
 
   const handleExport = () => {
     const filename = `supplies-${selectedClient === 'all' ? 'all' : getClient(selectedClient)?.name || 'unknown'}-${selectedYear}.csv`;
@@ -321,6 +359,107 @@ export function SuppliesPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Current Month Running Cost */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <BarChart2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {format(now, 'MMMM yyyy')} — Running Cost
+              </h3>
+            </div>
+            {monthDelta !== null && (
+              <div className={`flex items-center space-x-1 text-sm font-medium px-2.5 py-1 rounded-full ${
+                monthDelta > 0
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                  : monthDelta < 0
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+              }`}>
+                {monthDelta > 0 ? <ArrowUp className="w-3.5 h-3.5" /> : monthDelta < 0 ? <ArrowDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+                <span>{Math.abs(monthDelta).toFixed(1)}% vs last month</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Total This Month</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">${thisMonthCost.toFixed(2)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{thisMonthTasks.length} purchase{thisMonthTasks.length !== 1 ? 's' : ''}</p>
+            </div>
+            <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+              <p className="text-xs font-medium text-teal-600 dark:text-teal-400 uppercase tracking-wide mb-1">Fixed / Recurring</p>
+              <p className="text-2xl font-bold text-teal-700 dark:text-teal-300">${thisMonthFixed.toFixed(2)}</p>
+              <p className="text-xs text-teal-600 dark:text-teal-500 mt-1">{thisMonthTasks.filter(t => t.isRecurring).length} items</p>
+            </div>
+            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+              <p className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide mb-1">One-off</p>
+              <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">${thisMonthOneOff.toFixed(2)}</p>
+              <p className="text-xs text-orange-600 dark:text-orange-500 mt-1">{thisMonthTasks.filter(t => !t.isRecurring).length} items</p>
+            </div>
+          </div>
+
+          {/* vs last month bar */}
+          {(thisMonthCost > 0 || lastMonthCost > 0) && (
+            <div className="mb-4">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <span>This month</span>
+                <span>Last month: ${lastMonthCost.toFixed(2)}</span>
+              </div>
+              {(() => {
+                const max = Math.max(thisMonthCost, lastMonthCost, 0.01);
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 text-xs text-right text-gray-500 dark:text-gray-400 shrink-0">{format(now, 'MMM')}</div>
+                      <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                          style={{ width: `${(thisMonthCost / max) * 100}%` }}
+                        />
+                      </div>
+                      <div className="w-20 text-xs text-gray-700 dark:text-gray-300 font-medium shrink-0">${thisMonthCost.toFixed(2)}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 text-xs text-right text-gray-500 dark:text-gray-400 shrink-0">{format(subMonths(now, 1), 'MMM')}</div>
+                      <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-full bg-gray-400 dark:bg-gray-500 rounded-full transition-all duration-500"
+                          style={{ width: `${(lastMonthCost / max) * 100}%` }}
+                        />
+                      </div>
+                      <div className="w-20 text-xs text-gray-500 dark:text-gray-400 shrink-0">${lastMonthCost.toFixed(2)}</div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Per-client breakdown */}
+          {thisMonthByClient.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">By Client</p>
+              <div className="space-y-2">
+                {thisMonthByClient.map(c => (
+                  <div key={c.name} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700 dark:text-gray-300 font-medium">{c.name}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400">{c.count} item{c.count !== 1 ? 's' : ''}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white w-20 text-right">${c.cost.toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {thisMonthTasks.length === 0 && (
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No supplies recorded this month yet.</p>
+          )}
         </div>
 
         {/* Client Summary */}

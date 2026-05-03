@@ -21,6 +21,10 @@ export function TaskForm() {
     status: 'in_progress' as 'not_started' | 'in_progress' | 'review' | 'completed',
     priority: 'medium' as 'low' | 'medium' | 'high',
     cost: '',
+    vendor: '',
+    approvedBy: '',
+    receiptRef: '',
+    approvalStatus: 'pending' as 'pending' | 'approved' | 'rejected',
     isRecurring: false,
     recurringDay: 1,
     recurringWeekend: false,
@@ -257,7 +261,13 @@ export function TaskForm() {
       priority: formData.priority,
       finished: formData.type === 'insumos' ? true : (formData.hours && Number(formData.hours) > 0),
       createdAt: new Date().toISOString(),
-      completedAt: (formData.type === 'insumos' || (formData.hours && Number(formData.hours) > 0)) ? new Date().toISOString() : undefined
+      completedAt: (formData.type === 'insumos' || (formData.hours && Number(formData.hours) > 0)) ? new Date().toISOString() : undefined,
+      ...(formData.type === 'insumos' && {
+        vendor: formData.vendor || undefined,
+        approvedBy: formData.approvedBy || undefined,
+        receiptRef: formData.receiptRef || undefined,
+        approvalStatus: formData.approvalStatus,
+      }),
     };
 
     try {
@@ -469,25 +479,89 @@ export function TaskForm() {
               </p>
             </div>
           ) : (
-            <div>
-              <label htmlFor="cost" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Supply Cost *
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm dark:text-gray-400">$</span>
+            <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div>
+                <label htmlFor="cost" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Supply Cost *
+                </label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm dark:text-gray-400">$</span>
+                  </div>
+                  <input
+                    type="number"
+                    id="cost"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    className="pl-7 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                    value={formData.cost}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
+                    placeholder="0.00"
+                  />
                 </div>
-                <input
-                  type="number"
-                  id="cost"
-                  required
-                  min="0.01"
-                  step="0.01"
-                  className="pl-7 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
-                  value={formData.cost}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
-                  placeholder="0.00"
-                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="vendor" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Vendor / Store
+                  </label>
+                  <input
+                    type="text"
+                    id="vendor"
+                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                    value={formData.vendor}
+                    onChange={(e) => setFormData(prev => ({ ...prev, vendor: e.target.value }))}
+                    placeholder="e.g. Amazon, MercadoLibre"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="receiptRef" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Receipt / Reference #
+                  </label>
+                  <input
+                    type="text"
+                    id="receiptRef"
+                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                    value={formData.receiptRef}
+                    onChange={(e) => setFormData(prev => ({ ...prev, receiptRef: e.target.value }))}
+                    placeholder="e.g. INV-0042"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="approvedBy" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Approved By
+                  </label>
+                  <input
+                    type="text"
+                    id="approvedBy"
+                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                    value={formData.approvedBy}
+                    onChange={(e) => setFormData(prev => ({ ...prev, approvedBy: e.target.value }))}
+                    placeholder="Name of approver"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="approvalStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Approval Status
+                  </label>
+                  <select
+                    id="approvalStatus"
+                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                    value={formData.approvalStatus}
+                    onChange={(e) => setFormData(prev => ({ ...prev, approvalStatus: e.target.value as 'pending' | 'approved' | 'rejected' }))}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
