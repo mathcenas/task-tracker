@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
 import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
@@ -11,22 +11,45 @@ import { BulkTaskOperations } from './BulkTaskOperations';
 
 export function AllTasksPage() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { tasks, getClient, getProject, updateTask, deleteTask, clients, projects } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [isBulkOpen, setIsBulkOpen] = useState(false);
-  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [clientFilter, setClientFilter] = useState<string>('all');
-  const [projectFilter, setProjectFilter] = useState<string>('all');
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Force refresh when tasks change
-  React.useEffect(() => {
-    setRefreshKey(prev => prev + 1);
-  }, [tasks.length]);
+  // Read filter state from URL so it survives navigation away and back
+  const taskFilter = (searchParams.get('status') || 'all') as 'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added';
+  const typeFilter = (searchParams.get('type') || 'all') as 'all' | 'incident' | 'request' | 'insumos';
+  const priorityFilter = (searchParams.get('priority') || 'all') as 'all' | 'high' | 'medium' | 'low';
+  const clientFilter = searchParams.get('client') || 'all';
+  const projectFilter = searchParams.get('project') || 'all';
+
+  const setFilter = (key: string, value: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value === 'all' || value === '') {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+      }
+      return next;
+    }, { replace: true });
+  };
+
+  const setTaskFilter = (v: typeof taskFilter) => setFilter('status', v);
+  const setTypeFilter = (v: typeof typeFilter) => setFilter('type', v);
+  const setPriorityFilter = (v: typeof priorityFilter) => setFilter('priority', v);
+  const setClientFilter = (v: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (v === 'all') { next.delete('client'); } else { next.set('client', v); }
+      next.delete('project');
+      return next;
+    }, { replace: true });
+  };
+  const setProjectFilter = (v: string) => setFilter('project', v);
 
 
   // Categorize tasks
@@ -156,9 +179,7 @@ export function AllTasksPage() {
   };
 
   const clearFilters = () => {
-    setTaskFilter('all');
-    setTypeFilter('all');
-    setPriorityFilter('all');
+    setSearchParams({}, { replace: true });
   };
 
   const toggleTaskSelection = (taskId: string) => {
@@ -401,12 +422,7 @@ export function AllTasksPage() {
 
           <div className="flex items-end">
             <button
-              onClick={() => {
-                setPriorityFilter('all');
-                setTypeFilter('all');
-                setClientFilter('all');
-                setProjectFilter('all');
-              }}
+              onClick={clearFilters}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               Clear Filters
@@ -565,7 +581,7 @@ export function AllTasksPage() {
                       <div className="flex items-center space-x-1">
                         <Link
                           to={`/edit-task/${task.id}`}
-                          state={{ from: location.pathname + location.search }}
+                          state={{ from: `${location.pathname}${location.search}` }}
                           className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-600 transition-colors"
                           title="Edit task"
                         >
