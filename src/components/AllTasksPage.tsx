@@ -106,10 +106,10 @@ export function AllTasksPage() {
       if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
 
       // Client filter
-      if (clientFilter !== 'all' && task.clientId !== clientFilter) return false;
+      if (clientFilter !== 'all' && String(task.clientId) !== String(clientFilter)) return false;
 
       // Project filter
-      if (projectFilter !== 'all' && task.projectId !== projectFilter) return false;
+      if (projectFilter !== 'all' && String(task.projectId) !== String(projectFilter)) return false;
 
       return true;
     });
