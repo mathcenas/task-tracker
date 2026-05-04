@@ -52,73 +52,59 @@ export function AllTasksPage() {
   const setProjectFilter = (v: string) => setFilter('project', v);
 
 
-  // Categorize tasks
-  const allUnfinishedTasks = tasks.filter(task => !task.finished);
+  // Helper: apply secondary filters (client, project, type, priority) to any task list
+  const applySecondaryFilters = (list: typeof tasks) =>
+    list.filter(task => {
+      if (typeFilter !== 'all' && task.type !== typeFilter) return false;
+      if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+      if (clientFilter !== 'all' && String(task.clientId) !== String(clientFilter)) return false;
+      if (projectFilter !== 'all' && String(task.projectId) !== String(projectFilter)) return false;
+      return true;
+    });
+
+  // Base categorised pools (secondary filters applied for consistent counts)
+  const allUnfinishedTasks = applySecondaryFilters(tasks.filter(task => !task.finished));
+  const completedTasks = applySecondaryFilters(tasks.filter(task => task.finished));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const overdueTasks = allUnfinishedTasks.filter(task => {
-    const taskDate = parseISO(task.date + 'T00:00:00');
-    taskDate.setHours(0, 0, 0, 0);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    return taskDate < todayDate;
+    const d = parseISO(task.date + 'T00:00:00');
+    d.setHours(0, 0, 0, 0);
+    return d < today;
   });
   const todayTasks = allUnfinishedTasks.filter(task => isToday(parseISO(task.date + 'T00:00:00')));
   const upcomingTasks = allUnfinishedTasks.filter(task => {
-    const taskDate = parseISO(task.date + 'T00:00:00');
-    taskDate.setHours(0, 0, 0, 0);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    return taskDate > todayDate;
+    const d = parseISO(task.date + 'T00:00:00');
+    d.setHours(0, 0, 0, 0);
+    return d > today;
   });
-  const completedTasks = tasks.filter(task => task.finished);
-
-  // Apply status filter
-  let filteredTasks = [...tasks];
-  if (taskFilter === 'overdue') {
-    filteredTasks = overdueTasks;
-  } else if (taskFilter === 'today') {
-    filteredTasks = todayTasks;
-  } else if (taskFilter === 'upcoming') {
-    filteredTasks = upcomingTasks;
-  } else if (taskFilter === 'completed') {
-    filteredTasks = completedTasks;
-  } else if (taskFilter === 'in_progress') {
-    filteredTasks = tasks.filter(task => !task.finished && task.status === 'in_progress');
-  } else if (taskFilter === 'not_started') {
-    filteredTasks = tasks.filter(task => !task.finished && task.status === 'not_started');
-  } else if (taskFilter === 'recently_added') {
-    // Show all tasks (including completed) for recently added filter
-    filteredTasks = [...tasks].sort((a, b) => {
+  const inProgressTasks = allUnfinishedTasks.filter(task => task.status === 'in_progress');
+  const notStartedTasks = allUnfinishedTasks.filter(task => task.status === 'not_started');
+  const recentlyAddedTasks = applySecondaryFilters([...tasks])
+    .sort((a, b) => {
       const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return bCreated - aCreated;
-    }).slice(0, 20);
-  } else if (taskFilter === 'all') {
-    filteredTasks = allUnfinishedTasks;
-  }
+    })
+    .slice(0, 20);
 
-  // Apply other filters (skip if recently_added since it's already sorted and limited)
-  if (taskFilter !== 'recently_added') {
-    filteredTasks = filteredTasks.filter(task => {
-      // Type filter
-      if (typeFilter !== 'all' && task.type !== typeFilter) return false;
+  // Apply status filter
+  let filteredTasks: typeof tasks;
+  if (taskFilter === 'overdue') filteredTasks = overdueTasks;
+  else if (taskFilter === 'today') filteredTasks = todayTasks;
+  else if (taskFilter === 'upcoming') filteredTasks = upcomingTasks;
+  else if (taskFilter === 'completed') filteredTasks = completedTasks;
+  else if (taskFilter === 'in_progress') filteredTasks = inProgressTasks;
+  else if (taskFilter === 'not_started') filteredTasks = notStartedTasks;
+  else if (taskFilter === 'recently_added') filteredTasks = recentlyAddedTasks;
+  else filteredTasks = allUnfinishedTasks; // 'all'
 
-      // Priority filter
-      if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
-
-      // Client filter
-      if (clientFilter !== 'all' && String(task.clientId) !== String(clientFilter)) return false;
-
-      // Project filter
-      if (projectFilter !== 'all' && String(task.projectId) !== String(projectFilter)) return false;
-
-      return true;
-    });
-  }
-
-  // Sort tasks: latest created first (skip if recently_added since it's already sorted)
+  // Sort tasks: latest created first (recently_added already sorted)
   const sortedTasks = taskFilter === 'recently_added'
     ? filteredTasks
-    : filteredTasks.sort((a, b) => {
+    : [...filteredTasks].sort((a, b) => {
         const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return bCreated - aCreated;
@@ -202,10 +188,6 @@ export function AllTasksPage() {
     setSelectedTasks(new Set());
   };
 
-  const pendingCount = allUnfinishedTasks.length;
-  const completedCount = completedTasks.length;
-  const overdueCount = overdueTasks.length;
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -249,9 +231,7 @@ export function AllTasksPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{allUnfinishedTasks.length}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Click to view all
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Click to view all</p>
             </div>
             <FileText className="w-8 h-8 text-blue-500" />
           </div>
@@ -268,10 +248,8 @@ export function AllTasksPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Recently Added</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">20</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Latest tasks
-              </p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{recentlyAddedTasks.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Latest tasks</p>
             </div>
             <Calendar className="w-8 h-8 text-cyan-500" />
           </div>
@@ -288,12 +266,8 @@ export function AllTasksPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {tasks.filter(t => !t.finished && t.status === 'in_progress').length}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Active tasks
-              </p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{inProgressTasks.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Active tasks</p>
             </div>
             <Clock className="w-8 h-8 text-yellow-500" />
           </div>
@@ -310,12 +284,8 @@ export function AllTasksPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Not Started</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {tasks.filter(t => !t.finished && t.status === 'not_started').length}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Pending tasks
-              </p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{notStartedTasks.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Pending tasks</p>
             </div>
             <AlertTriangle className="w-8 h-8 text-orange-500" />
           </div>
@@ -333,9 +303,7 @@ export function AllTasksPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{completedTasks.length}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Finished tasks
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Finished tasks</p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
@@ -379,7 +347,7 @@ export function AllTasksPage() {
             >
               <option value="all">All Projects</option>
               {projects
-                .filter(p => clientFilter === 'all' || p.clientId === clientFilter)
+                .filter(p => clientFilter === 'all' || String(p.clientId) === String(clientFilter))
                 .map(project => (
                   <option key={project.id} value={project.id}>
                     {project.name}
