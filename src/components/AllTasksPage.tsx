@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { BulkTaskOperations } from './BulkTaskOperations';
+import { api } from '../services/api';
 
 export function AllTasksPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { tasks, getClient, getProject, updateTask, deleteTask, clients, projects } = useApp();
+  const { tasks, getClient, getProject, updateTask, deleteTask, clients, projects, reloadTasks } = useApp();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
@@ -26,30 +27,24 @@ export function AllTasksPage() {
   const clientFilter = searchParams.get('client') || 'all';
   const projectFilter = searchParams.get('project') || 'all';
 
-  const setFilter = (key: string, value: string) => {
+  // Single point of truth for URL param updates — avoids race conditions from
+  // multiple setSearchParams calls in the same event handler.
+  const setFilters = (updates: Record<string, string>) => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
-      if (value === 'all' || value === '') {
-        next.delete(key);
-      } else {
-        next.set(key, value);
-      }
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === 'all' || value === '') next.delete(key);
+        else next.set(key, value);
+      });
       return next;
     }, { replace: true });
   };
 
-  const setTaskFilter = (v: typeof taskFilter) => setFilter('status', v);
-  const setTypeFilter = (v: typeof typeFilter) => setFilter('type', v);
-  const setPriorityFilter = (v: typeof priorityFilter) => setFilter('priority', v);
-  const setClientFilter = (v: string) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (v === 'all') { next.delete('client'); } else { next.set('client', v); }
-      next.delete('project');
-      return next;
-    }, { replace: true });
-  };
-  const setProjectFilter = (v: string) => setFilter('project', v);
+  const setTaskFilter = (v: typeof taskFilter) => setFilters({ status: v });
+  const setTypeFilter = (v: typeof typeFilter) => setFilters({ type: v });
+  const setPriorityFilter = (v: typeof priorityFilter) => setFilters({ priority: v });
+  const setClientFilter = (v: string) => setFilters({ client: v, project: 'all' });
+  const setProjectFilter = (v: string) => setFilters({ project: v });
 
 
   // Helper: apply secondary filters (client, project, type, priority) to any task list
@@ -161,6 +156,18 @@ export function AllTasksPage() {
         console.error('Error deleting task:', error);
         alert('Failed to delete task. Please try again.');
       }
+    }
+  };
+
+  const handleApprovalToggle = async (taskId: string, newStatus: 'approved' | 'rejected') => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const approvalStatus = task.approvalStatus === newStatus ? 'pending' : newStatus;
+    try {
+      await api.updateTask(taskId, { ...task, approvalStatus });
+      await reloadTasks();
+    } catch (error) {
+      console.error('Error updating approval status:', error);
     }
   };
 
@@ -320,10 +327,7 @@ export function AllTasksPage() {
             </label>
             <select
               value={clientFilter}
-              onChange={(e) => {
-                setClientFilter(e.target.value);
-                setProjectFilter('all');
-              }}
+              onChange={(e) => setClientFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="all">All Clients</option>
@@ -525,11 +529,34 @@ export function AllTasksPage() {
                     <div className="flex items-center space-x-2 ml-4">
                       <div className="text-right">
                         {task.type === 'insumos' ? (
-                          <div>
-                            <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                          <div className="flex flex-col items-end gap-1">
+                            <p className="text-sm font-medium text-green-600 dark:text-green-400">
                               ${task.cost?.toFixed(2)}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Supply cost</p>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleApprovalToggle(task.id, 'approved')}
+                                className={`p-1 rounded transition-colors ${
+                                  task.approvalStatus === 'approved'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400'
+                                }`}
+                                title={task.approvalStatus === 'approved' ? 'Approved (click to undo)' : 'Approve cost'}
+                              >
+                                <ThumbsUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleApprovalToggle(task.id, 'rejected')}
+                                className={`p-1 rounded transition-colors ${
+                                  task.approvalStatus === 'rejected'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                    : 'text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400'
+                                }`}
+                                title={task.approvalStatus === 'rejected' ? 'Rejected (click to undo)' : 'Reject cost'}
+                              >
+                                <ThumbsDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         ) : task.finished ? (
                           <div>

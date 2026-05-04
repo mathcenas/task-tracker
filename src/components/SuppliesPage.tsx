@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Minus, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { format, parseISO, startOfYear, endOfYear, isWithinInterval, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { api } from '../services/api';
@@ -124,6 +124,18 @@ export function SuppliesPage() {
 
   const handleSelectAll = () => {
     setSelectedItems(selectedItems.size === filteredTasks.length ? new Set() : new Set(filteredTasks.map(t => t.id)));
+  };
+
+  const handleApprovalToggle = async (taskId: string, newStatus: 'approved' | 'rejected') => {
+    const task = suppliesTasks.find(t => t.id === taskId);
+    if (!task) return;
+    const approvalStatus = task.approvalStatus === newStatus ? 'pending' : newStatus;
+    try {
+      await api.updateTask(taskId, { ...task, approvalStatus });
+      await refreshTasks();
+    } catch (error) {
+      console.error('Error updating approval status:', error);
+    }
   };
 
   const handleMarkSelectedAsBilled = async () => {
@@ -531,10 +543,36 @@ export function SuppliesPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3 ml-4 flex-shrink-0">
-                      <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                        ${task.cost?.toFixed(2)}
-                      </p>
+                    <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-1">
+                        <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                          ${task.cost?.toFixed(2)}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleApprovalToggle(task.id, 'approved')}
+                            className={`p-1 rounded transition-colors ${
+                              task.approvalStatus === 'approved'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : 'text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400'
+                            }`}
+                            title={task.approvalStatus === 'approved' ? 'Approved (click to undo)' : 'Approve cost'}
+                          >
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleApprovalToggle(task.id, 'rejected')}
+                            className={`p-1 rounded transition-colors ${
+                              task.approvalStatus === 'rejected'
+                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                : 'text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400'
+                            }`}
+                            title={task.approvalStatus === 'rejected' ? 'Rejected (click to undo)' : 'Reject cost'}
+                          >
+                            <ThumbsDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                       <button
                         onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: '/supplies' } })}
                         className="p-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all"
