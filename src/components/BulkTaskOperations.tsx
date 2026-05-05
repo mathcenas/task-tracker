@@ -24,6 +24,8 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
   const [editPriority, setEditPriority] = useState(UNCHANGED);
   const [editType, setEditType] = useState(UNCHANGED);
   const [editHours, setEditHours] = useState('');
+  const [editApprovalStatus, setEditApprovalStatus] = useState(UNCHANGED);
+  const [editCost, setEditCost] = useState('');
 
   if (!isOpen) return null;
 
@@ -90,6 +92,8 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
       if (editPriority !== UNCHANGED) patch.priority = editPriority;
       if (editType !== UNCHANGED) patch.type = editType;
       if (editHours !== '') patch.hours = parseFloat(editHours);
+      if (editApprovalStatus !== UNCHANGED) patch.approvalStatus = editApprovalStatus;
+      if (editCost !== '') patch.cost = parseFloat(editCost);
 
       if (Object.keys(patch).length > 0) {
         await updateTask({ ...task, ...patch });
@@ -106,7 +110,12 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
     editStatus !== UNCHANGED ||
     editPriority !== UNCHANGED ||
     editType !== UNCHANGED ||
-    editHours !== '';
+    editHours !== '' ||
+    editApprovalStatus !== UNCHANGED ||
+    editCost !== '';
+
+  const hasSupplies = selectedTaskObjects.some(t => t.type === 'insumos');
+  const hasServiceTasks = selectedTaskObjects.some(t => t.type !== 'insumos');
 
   return (
     <div className="fixed inset-0 z-50">
@@ -283,18 +292,51 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours (service tasks)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      placeholder="No change"
-                      value={editHours}
-                      onChange={(e) => setEditHours(e.target.value)}
-                      className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
+                  {hasServiceTasks && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours (service tasks)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        placeholder="No change"
+                        value={editHours}
+                        onChange={(e) => setEditHours(e.target.value)}
+                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+
+                  {hasSupplies && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost (supply tasks)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="No change"
+                        value={editCost}
+                        onChange={(e) => setEditCost(e.target.value)}
+                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+
+                  {hasSupplies && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Approval Status (supply tasks)</label>
+                      <select
+                        value={editApprovalStatus}
+                        onChange={(e) => setEditApprovalStatus(e.target.value)}
+                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value={UNCHANGED}>No change</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 pt-2">

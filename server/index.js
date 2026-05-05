@@ -994,7 +994,7 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
        WHERE client_id = ?
        AND date >= ?
        AND date <= ?
-       AND finished = 1
+       AND (finished = 1 OR type = 'insumos')
        ORDER BY date DESC`,
       [client.id, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]],
       (err, tasks) => {
@@ -1018,7 +1018,6 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
               projects: projects.length
             });
 
-            // Transform client field names from snake_case to camelCase
             const clientData = {
               id: client.id,
               name: client.name,
@@ -1029,10 +1028,42 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
               phone: client.phone
             };
 
+            // Map tasks to camelCase so frontend fields work correctly
+            const mappedTasks = tasks.map(t => ({
+              id: t.id,
+              clientId: t.client_id,
+              projectId: t.project_id,
+              description: t.description,
+              hours: t.hours,
+              cost: t.cost,
+              date: t.date,
+              type: t.type,
+              status: t.status,
+              priority: t.priority,
+              finished: Boolean(t.finished),
+              notes: t.notes,
+              completedAt: t.completed_at,
+              isRecurring: Boolean(t.is_recurring),
+              vendor: t.vendor,
+              approvedBy: t.approved_by,
+              receiptRef: t.receipt_ref,
+              approvalStatus: t.approval_status || 'pending',
+              createdAt: t.created_at
+            }));
+
+            const mappedProjects = projects.map(p => ({
+              id: p.id,
+              clientId: p.client_id,
+              name: p.name,
+              description: p.description,
+              startDate: p.start_date,
+              status: p.status
+            }));
+
             res.json({
               client: clientData,
-              tasks,
-              projects,
+              tasks: mappedTasks,
+              projects: mappedProjects,
               month: parseInt(month),
               year: parseInt(year)
             });

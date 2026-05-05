@@ -1,15 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Minus, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Minus, ThumbsUp, ThumbsDown, Settings2 } from 'lucide-react';
 import { format, parseISO, startOfYear, endOfYear, isWithinInterval, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { api } from '../services/api';
+import { BulkTaskOperations } from './BulkTaskOperations';
 
 export function SuppliesPage() {
   const { tasks, clients, getClient, getProject, refreshTasks } = useApp();
   const navigate = useNavigate();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
 
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -244,54 +246,78 @@ export function SuppliesPage() {
           </div>
         </div>
 
-        {/* Summary stat cards */}
+        {/* Summary stat cards — clickable to quick-filter */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5">
+          {/* Total Supplies — click to clear all filters */}
+          <button
+            onClick={() => { setSelectedClient('all'); setSelectedYear(new Date().getFullYear().toString()); setSelectedApprovalStatus('all'); }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 text-left hover:shadow-md hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600 transition-all"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Supplies</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{filteredTasks.length}</p>
                 {fixedCount > 0 && <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">{fixedCount} fixed monthly</p>}
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Click to reset filters</p>
               </div>
               <div className="p-2.5 bg-slate-100 dark:bg-slate-900/30 rounded-lg">
                 <ShoppingCart className="w-5 h-5 text-slate-600 dark:text-slate-400" />
               </div>
             </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5">
+          </button>
+
+          {/* Total Cost — click to show all years */}
+          <button
+            onClick={() => setSelectedYear('all')}
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 text-left hover:shadow-md transition-all ${selectedYear === 'all' ? 'ring-2 ring-green-400 dark:ring-green-500' : 'hover:ring-2 hover:ring-green-300 dark:hover:ring-green-700'}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Cost</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">${totalCost.toFixed(2)}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{selectedYear === 'all' ? 'All years' : `Year ${selectedYear}`}</p>
               </div>
               <div className="p-2.5 bg-green-100 dark:bg-green-900/20 rounded-lg">
                 <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
             </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5">
+          </button>
+
+          {/* Avg Cost — click to toggle all-years */}
+          <button
+            onClick={() => setSelectedYear(selectedYear === 'all' ? new Date().getFullYear().toString() : 'all')}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 text-left hover:shadow-md hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-700 transition-all"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Cost</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">${averageCost.toFixed(2)}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">per supply item</p>
               </div>
               <div className="p-2.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5">
+          </button>
+
+          {/* Pending Approval — click to filter pending */}
+          <button
+            onClick={() => setSelectedApprovalStatus(selectedApprovalStatus === 'none' ? 'all' : 'none')}
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 text-left hover:shadow-md transition-all ${selectedApprovalStatus === 'none' ? 'ring-2 ring-amber-400 dark:ring-amber-500' : 'hover:ring-2 hover:ring-amber-300 dark:hover:ring-amber-700'}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pending Approval</p>
                 <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">{pendingApprovalCount}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{filteredTasks.length - pendingApprovalCount} resolved</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {selectedApprovalStatus === 'none' ? 'Filtered — click to clear' : 'Click to filter pending'}
+                </p>
               </div>
               <div className="p-2.5 bg-amber-100 dark:bg-amber-900/20 rounded-lg">
                 <CheckSquare className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Unified Analytics Panel */}
@@ -448,13 +474,22 @@ export function SuppliesPage() {
                   {selectedItems.size === filteredTasks.length ? 'Deselect All' : 'Select All'}
                 </button>
                 {selectedItems.size > 0 && (
-                  <button
-                    onClick={handleMarkSelectedAsBilled}
-                    className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                  >
-                    <CheckSquare className="w-4 h-4 mr-1" />
-                    Mark as Billed ({selectedItems.size})
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setIsBulkOpen(true)}
+                      className="inline-flex items-center px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded transition-colors"
+                    >
+                      <Settings2 className="w-4 h-4 mr-1" />
+                      Bulk Edit ({selectedItems.size})
+                    </button>
+                    <button
+                      onClick={handleMarkSelectedAsBilled}
+                      className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                    >
+                      <CheckSquare className="w-4 h-4 mr-1" />
+                      Mark as Billed ({selectedItems.size})
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -588,6 +623,13 @@ export function SuppliesPage() {
           )}
         </div>
       </div>
+
+      <BulkTaskOperations
+        selectedTasks={Array.from(selectedItems)}
+        onSelectionChange={(ids) => setSelectedItems(new Set(ids))}
+        isOpen={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
+      />
     </div>
   );
 }
