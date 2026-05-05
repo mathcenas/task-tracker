@@ -187,9 +187,9 @@ export function PublicMonthlyReport() {
     const trendMonthStart = startOfMonth(trendDate);
     const trendMonthEnd = endOfMonth(trendDate);
 
-    // Filter tasks for this specific month
+    // Filter tasks for this specific month — use parseISO to avoid UTC timezone shifts
     const monthTasks = allTasks.filter(task => {
-      const taskDate = new Date(task.date);
+      const taskDate = parseISO(task.date);
       return isWithinInterval(taskDate, { start: trendMonthStart, end: trendMonthEnd });
     });
 

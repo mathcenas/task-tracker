@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { Package, DollarSign, Calendar, Filter, CreditCard as Edit, Download, TrendingUp, ShoppingCart, CheckSquare, User, Store, Receipt, RefreshCw, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Minus, ThumbsUp, ThumbsDown, Settings2 } from 'lucide-react';
 import { format, parseISO, startOfYear, endOfYear, isWithinInterval, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { exportTasksToCSV } from '../utils/csvExport';
@@ -10,12 +10,32 @@ import { BulkTaskOperations } from './BulkTaskOperations';
 export function SuppliesPage() {
   const { tasks, clients, getClient, getProject, refreshTasks } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isBulkOpen, setIsBulkOpen] = useState(false);
 
-  const [selectedClient, setSelectedClient] = useState<string>('all');
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [selectedApprovalStatus, setSelectedApprovalStatus] = useState<string>('all');
+  // Filters stored in URL so they survive navigating to EditTask and back
+  const selectedClient = searchParams.get('client') || 'all';
+  // 'year' param absent → default to current year; explicit 'all' → show all years
+  const selectedYear = searchParams.get('year') ?? new Date().getFullYear().toString();
+  const selectedApprovalStatus = searchParams.get('approval') || 'all';
+
+  const setFilters = (updates: Record<string, string>) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, value]) => {
+        // Only client and approval use 'all' as "remove from URL" — year keeps explicit value
+        if (!value || (value === 'all' && key !== 'year')) next.delete(key);
+        else next.set(key, value);
+      });
+      return next;
+    }, { replace: true });
+  };
+
+  const setSelectedClient = (v: string) => setFilters({ client: v });
+  const setSelectedYear = (v: string) => setFilters({ year: v });
+  const setSelectedApprovalStatus = (v: string) => setFilters({ approval: v });
 
   // Analytics month — defaults to current month, user can navigate
   const [analyticsMonth, setAnalyticsMonth] = useState<Date>(startOfMonth(new Date()));
@@ -250,7 +270,7 @@ export function SuppliesPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Supplies — click to clear all filters */}
           <button
-            onClick={() => { setSelectedClient('all'); setSelectedYear(new Date().getFullYear().toString()); setSelectedApprovalStatus('all'); }}
+            onClick={() => setSearchParams({ year: new Date().getFullYear().toString() }, { replace: true })}
             className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 text-left hover:shadow-md hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600 transition-all"
           >
             <div className="flex items-center justify-between">
@@ -609,7 +629,7 @@ export function SuppliesPage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: '/supplies' } })}
+                        onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: `${location.pathname}${location.search}` } })}
                         className="p-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all"
                         title="Edit supply"
                       >
