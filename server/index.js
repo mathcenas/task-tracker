@@ -251,6 +251,7 @@ initDB();
 // Run migrations to add new columns to existing tables
 const runMigrations = () => {
   const migrations = [
+    `ALTER TABLE clients ADD COLUMN archived BOOLEAN DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN billed BOOLEAN DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN billedAt DATETIME`,
     `ALTER TABLE tasks ADD COLUMN paid BOOLEAN DEFAULT 0`,
@@ -453,6 +454,18 @@ app.put('/api/clients/:id', authenticateToken, (req, res) => {
       res.json({ success: true });
     }
   );
+});
+
+app.patch('/api/clients/:id/archive', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { archived } = req.body;
+  db.run(`UPDATE clients SET archived = ? WHERE id = ?`, [archived ? 1 : 0, id], function(err) {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    db.get('SELECT name FROM clients WHERE id = ?', [id], (_, client) => {
+      logActivity(archived ? 'archived' : 'unarchived', 'client', id, client?.name || id, {}, req.user?.id);
+    });
+    res.json({ success: true, archived: Boolean(archived) });
+  });
 });
 
 app.delete('/api/clients/:id', authenticateToken, (req, res) => {

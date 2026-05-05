@@ -6,6 +6,7 @@ export interface Client {
   contactPerson?: string;
   email?: string;
   phone?: string;
+  archived?: boolean;
   yearlyRates?: ClientYearlyRate[];
 }
 

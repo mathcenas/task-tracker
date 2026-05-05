@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
-import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays } from 'lucide-react';
+import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PDFExporter } from '../utils/pdfExport';
 import { apiService } from '../services/api';
 import { ClientYearlyRates } from './ClientYearlyRates';
 
 export function ClientDashboard() {
-  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient } = useApp();
+  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient, archiveClient } = useApp();
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMultiMonthModal, setShowMultiMonthModal] = useState(false);
@@ -23,6 +23,7 @@ export function ClientDashboard() {
   const [editClientData, setEditClientData] = useState({ name: '', email: '', hourlyRate: 0 });
   const [showYearlyRatesModal, setShowYearlyRatesModal] = useState(false);
   const [yearlyRatesClient, setYearlyRatesClient] = useState<any>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
 
   const toggleClient = (clientId: string) => {
@@ -57,6 +58,18 @@ export function ClientDashboard() {
         console.error('Error deleting client:', error);
         alert('❌ Failed to delete client. Please try again.');
       }
+    }
+  };
+
+  const handleArchiveClient = async (clientId: string, clientName: string, archive: boolean) => {
+    try {
+      await archiveClient(clientId, archive);
+      if (archive) {
+        setExpandedClients(prev => { const n = new Set(prev); n.delete(clientId); return n; });
+      }
+    } catch (error) {
+      console.error('Error archiving client:', error);
+      alert('Failed to update client. Please try again.');
     }
   };
 
@@ -765,7 +778,24 @@ export function ClientDashboard() {
             </Link>
           </div>
         ) : (
-          clients.map(client => {
+          <>
+            {/* Archive toggle */}
+            {clients.some(c => c.archived) && (
+              <div className="flex items-center justify-end">
+                <button
+                  onClick={() => setShowArchived(v => !v)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                    showArchived
+                      ? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {showArchived ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {showArchived ? 'Hide Archived' : `Show Archived (${clients.filter(c => c.archived).length})`}
+                </button>
+              </div>
+            )}
+          {clients.filter(c => showArchived ? c.archived : !c.archived).map(client => {
             const allClientTasks = getClientTasks(client.id);
             const monthlyTasks = allClientTasks.filter(task =>
               task.finished &&
@@ -831,6 +861,11 @@ export function ClientDashboard() {
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         {client.name}
+                        {client.archived && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            <Archive className="w-3 h-3" />Archived
+                          </span>
+                        )}
                         {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -845,7 +880,7 @@ export function ClientDashboard() {
                   </div>
 
                   {/* Quick Stats */}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-4 gap-3">
                     <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Hours</p>
                       <p className="text-lg font-bold text-blue-900 dark:text-blue-300">
@@ -853,9 +888,15 @@ export function ClientDashboard() {
                       </p>
                     </div>
                     <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <p className="text-xs text-green-600 dark:text-green-400 mb-1">Revenue</p>
+                      <p className="text-xs text-green-600 dark:text-green-400 mb-1">Services</p>
                       <p className="text-lg font-bold text-green-900 dark:text-green-300">
                         ${clientStats.serviceRevenue.toFixed(0)}
+                      </p>
+                    </div>
+                    <div className="text-center p-3 bg-slate-50 dark:bg-slate-900/20 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Supplies</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-slate-300">
+                        {clientStats.suppliesCount > 0 ? `$${clientStats.suppliesCost.toFixed(0)}` : '—'}
                       </p>
                     </div>
                     <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -945,6 +986,16 @@ export function ClientDashboard() {
                       >
                         <Pencil className="w-4 h-4 mr-2" />
                         Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArchiveClient(client.id, client.name, !client.archived);
+                        }}
+                        className="inline-flex items-center px-3 py-2 border border-amber-300 rounded-lg shadow-sm text-sm font-medium text-amber-700 bg-white hover:bg-amber-50 dark:border-amber-700 dark:bg-gray-800 dark:text-amber-400 dark:hover:bg-amber-900/20"
+                      >
+                        {client.archived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
+                        {client.archived ? 'Unarchive' : 'Archive'}
                       </button>
                       <button
                         onClick={(e) => {
@@ -1114,7 +1165,8 @@ export function ClientDashboard() {
                 )}
               </div>
             );
-          })
+          })}
+          </>
         )}
       </div>
 

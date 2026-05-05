@@ -17,6 +17,7 @@ interface AppContextType {
   deleteClient: (clientId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   updateClient: (client: Client) => Promise<void>;
+  archiveClient: (clientId: string, archived: boolean) => Promise<void>;
   updateProject: (project: Project) => Promise<void>;
   reloadTasks: () => Promise<void>;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
@@ -226,6 +227,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const archiveClient = async (clientId: string, archived: boolean) => {
+    try {
+      await apiService.archiveClient(clientId, archived);
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, archived } : c));
+    } catch (error) {
+      console.error('Error archiving client:', error);
+      throw error;
+    }
+  };
+
   const updateClient = async (client: Client) => {
     try {
       await apiService.updateClient(client.id, client);
@@ -282,6 +293,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteClient,
       deleteProject,
       updateClient,
+      archiveClient,
       updateProject
     }}>
       {children}

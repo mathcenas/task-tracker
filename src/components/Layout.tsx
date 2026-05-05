@@ -175,7 +175,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const menuItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Weekly', group: 'Dashboards' },
+    { path: '/', icon: LayoutDashboard, label: 'Work Queue', group: 'Dashboards' },
+    { path: '/weekly', icon: Calendar, label: 'Weekly', group: 'Dashboards' },
     { path: '/fortnight', icon: Calendar, label: '15 Days', group: 'Dashboards' },
     { path: '/monthly', icon: Calendar, label: 'Monthly', group: 'Dashboards' },
     { path: '/overview', icon: BarChart3, label: 'Overview', group: 'Dashboards' },

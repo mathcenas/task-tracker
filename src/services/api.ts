@@ -123,6 +123,7 @@ class ApiService {
       email: c.email,
       phone: c.phone,
       createdAt: c.created_at,
+      archived: Boolean(c.archived),
       yearlyRates: c.yearly_rates?.map((r: any) => ({
         id: r.id,
         clientId: r.client_id,
@@ -178,6 +179,13 @@ class ApiService {
     return this.request('/projects', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+  }
+
+  async archiveClient(id: string, archived: boolean) {
+    return this.request(`/clients/${id}/archive`, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived }),
     });
   }
 
