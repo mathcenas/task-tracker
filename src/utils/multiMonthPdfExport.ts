@@ -302,9 +302,13 @@ export async function exportMultiMonthPDF(
         });
 
         const suppliesSubTotal = clientSupplyTasks.reduce((s, t) => s + (t.cost || 0), 0);
+        const suppliesTotalRow = [
+          { content: 'Supplies Total', colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } },
+          { content: `$${suppliesSubTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } }
+        ];
         pdf.addTable(
           ['Date', 'Description', 'Vendor', 'Approved By', 'Ref', 'Type', 'Status', 'Cost'],
-          supplyRows,
+          [...supplyRows, suppliesTotalRow],
           {
             theme: 'striped',
             headStyles: { fillColor: [20, 120, 100], fontSize: 8 },
@@ -319,12 +323,7 @@ export async function exportMultiMonthPDF(
               6: { cellWidth: 16, halign: 'center' },
               7: { cellWidth: 18, halign: 'right', fontStyle: 'bold' }
             },
-            styles: { overflow: 'linebreak' },
-            foot: [[
-              { content: 'Supplies Total', colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } },
-              { content: `$${suppliesSubTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } }
-            ]],
-            showFoot: 'lastPage'
+            styles: { overflow: 'linebreak' }
           }
         );
       }

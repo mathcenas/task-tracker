@@ -193,7 +193,7 @@ export class PDFExporter {
       },
       bodyStyles: { fontSize: 9, textColor: 50 },
       alternateRowStyles: { fillColor: [245, 247, 250] },
-      styles: { overflow: 'linebreak', cellWidth: 'wrap', cellPadding: 2, minCellWidth: 10 },
+      styles: { overflow: 'linebreak', cellPadding: { top: 3, bottom: 3, left: 3, right: 3 }, minCellWidth: 8 },
       ...options
     });
 
@@ -202,6 +202,9 @@ export class PDFExporter {
 
   addTotals(items: { label: string; value: string; bold?: boolean }[]) {
     const startX = 125;
+    // Estimate total height needed: ~6px per regular item, ~13px per bold item
+    const estimatedHeight = items.reduce((h, i) => h + (i.bold ? 13 : 6), 10);
+    if (this.currentY + estimatedHeight > 278) { this.doc.addPage(); this.currentY = 20; }
     this.currentY += 5;
 
     items.forEach((item) => {
@@ -295,9 +298,16 @@ export class PDFExporter {
       const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * hourlyRate, 0);
       const totalHoursStr = `${servicesTasks.reduce((s, t) => s + (t.hours || 0), 0).toFixed(1)}h`;
 
+      // Total row appended as a styled body row (more reliable than foot across jspdf-autotable versions)
+      const servicesTotalRow = [
+        { content: 'Total', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [235, 240, 255] as [number,number,number], textColor: [30, 30, 30] as [number,number,number] } },
+        { content: totalHoursStr, styles: { fontStyle: 'bold', halign: 'center' as const, fillColor: [235, 240, 255] as [number,number,number], textColor: [30, 30, 30] as [number,number,number] } },
+        { content: `$${servicesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [235, 240, 255] as [number,number,number], textColor: [30, 30, 30] as [number,number,number] } }
+      ];
+
       this.addTable(
         ['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount'],
-        servicesRows,
+        [...servicesRows, servicesTotalRow],
         {
           columnStyles: {
             0: { cellWidth: 24 },
@@ -306,13 +316,7 @@ export class PDFExporter {
             3: { cellWidth: 'auto' },
             4: { cellWidth: 18, halign: 'center' },
             5: { cellWidth: 26, halign: 'right' }
-          },
-          foot: [[
-            { content: 'Total', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right', fillColor: [235, 240, 255], textColor: [30, 30, 30] } },
-            { content: totalHoursStr, styles: { fontStyle: 'bold', halign: 'center', fillColor: [235, 240, 255], textColor: [30, 30, 30] } },
-            { content: `$${servicesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [235, 240, 255], textColor: [30, 30, 30] } }
-          ]],
-          showFoot: 'lastPage'
+          }
         }
       );
     }
@@ -330,9 +334,14 @@ export class PDFExporter {
 
       const suppliesTotal = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
 
+      const suppliesTotalRow = [
+        { content: 'Supplies Total', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [209, 250, 229] as [number,number,number], textColor: [6, 78, 59] as [number,number,number] } },
+        { content: `$${suppliesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [209, 250, 229] as [number,number,number], textColor: [6, 78, 59] as [number,number,number] } }
+      ];
+
       this.addTable(
         ['Date', 'Project', 'Description', 'Cost'],
-        suppliesRows,
+        [...suppliesRows, suppliesTotalRow],
         {
           headStyles: { fillColor: [15, 118, 110] },
           columnStyles: {
@@ -340,12 +349,7 @@ export class PDFExporter {
             1: { cellWidth: 32 },
             2: { cellWidth: 'auto' },
             3: { cellWidth: 26, halign: 'right' }
-          },
-          foot: [[
-            { content: 'Supplies Total', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } },
-            { content: `$${suppliesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } }
-          ]],
-          showFoot: 'lastPage'
+          }
         }
       );
     }
