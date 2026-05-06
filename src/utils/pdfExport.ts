@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { format } from 'date-fns';
 
 interface CompanySettings {
   company_name: string;
@@ -11,10 +12,43 @@ interface CompanySettings {
   tax_id: string | null;
 }
 
+export interface ReportTask {
+  id: string;
+  clientId: string;
+  projectId: string;
+  description: string;
+  hours?: number;
+  cost?: number;
+  date: string;
+  type: string;
+  status?: string;
+  priority?: string;
+  finished?: boolean;
+  notes?: string;
+  isRecurring?: boolean;
+  approvalStatus?: string;
+  vendor?: string;
+  approvedBy?: string;
+  receiptRef?: string;
+}
+
+export interface ReportClient {
+  id: string;
+  name: string;
+  hourlyRate: number;
+  contactPerson?: string;
+  email?: string;
+}
+
+export interface ReportProject {
+  id: string;
+  name: string;
+}
+
 export class PDFExporter {
   private doc: jsPDF;
   private companySettings: CompanySettings;
-  private currentY: number = 20;
+  currentY: number = 20;
 
   constructor(companySettings: CompanySettings) {
     this.doc = new jsPDF();
@@ -23,7 +57,6 @@ export class PDFExporter {
 
   private async loadLogo(): Promise<string | null> {
     if (!this.companySettings.logo_url) return null;
-
     try {
       const response = await fetch(this.companySettings.logo_url);
       const blob = await response.blob();
@@ -33,8 +66,7 @@ export class PDFExporter {
         reader.onerror = () => resolve(null);
         reader.readAsDataURL(blob);
       });
-    } catch (error) {
-      console.error('Failed to load logo:', error);
+    } catch {
       return null;
     }
   }
@@ -45,15 +77,12 @@ export class PDFExporter {
     if (this.companySettings.logo_url) {
       try {
         this.doc.addImage(this.companySettings.logo_url, 'PNG', 15, this.currentY, 40, 15);
-      } catch (error) {
-        console.error('Failed to add logo to PDF:', error);
+      } catch {
         const logoData = await this.loadLogo();
         if (logoData) {
           try {
             this.doc.addImage(logoData, 'PNG', 15, this.currentY, 40, 15);
-          } catch (e) {
-            console.error('Failed to add logo as base64:', e);
-          }
+          } catch { /* ignore */ }
         }
       }
     }
@@ -78,21 +107,9 @@ export class PDFExporter {
         companyY += 3.5;
       });
     }
-
-    if (this.companySettings.phone) {
-      this.doc.text(this.companySettings.phone, rightMargin, companyY, { align: 'right' });
-      companyY += 3.5;
-    }
-
-    if (this.companySettings.email) {
-      this.doc.text(this.companySettings.email, rightMargin, companyY, { align: 'right' });
-      companyY += 3.5;
-    }
-
-    if (this.companySettings.website) {
-      this.doc.text(this.companySettings.website, rightMargin, companyY, { align: 'right' });
-      companyY += 3.5;
-    }
+    if (this.companySettings.phone) { this.doc.text(this.companySettings.phone, rightMargin, companyY, { align: 'right' }); companyY += 3.5; }
+    if (this.companySettings.email) { this.doc.text(this.companySettings.email, rightMargin, companyY, { align: 'right' }); companyY += 3.5; }
+    if (this.companySettings.website) { this.doc.text(this.companySettings.website, rightMargin, companyY, { align: 'right' }); companyY += 3.5; }
 
     this.currentY = Math.max(this.currentY + 25, companyY + 3);
 
@@ -105,13 +122,21 @@ export class PDFExporter {
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(37, 99, 235);
     this.doc.text(title, 15, this.currentY);
-
     this.currentY += 10;
 
     return this.currentY;
   }
 
   addSection(title: string, content: Record<string, string>) {
+    const rows = Object.keys(content).length;
+    const blockHeight = rows * 5.5 + 10;
+
+    // Page break if section won't fit
+    if (this.currentY + blockHeight > 270) {
+      this.doc.addPage();
+      this.currentY = 20;
+    }
+
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(50, 50, 50);
@@ -119,8 +144,7 @@ export class PDFExporter {
     this.currentY += 6;
 
     this.doc.setFillColor(248, 250, 252);
-    const sectionHeight = Object.keys(content).length * 5.5 + 4;
-    this.doc.roundedRect(15, this.currentY - 3, 180, sectionHeight, 2, 2, 'F');
+    this.doc.roundedRect(15, this.currentY - 3, 180, rows * 5.5 + 4, 2, 2, 'F');
     this.currentY += 2;
 
     this.doc.setFontSize(9);
@@ -131,7 +155,9 @@ export class PDFExporter {
       this.doc.text(`${key}:`, 20, this.currentY);
       this.doc.setFont('helvetica', 'bold');
       this.doc.setTextColor(30, 30, 30);
-      this.doc.text(value, 65, this.currentY);
+      // Truncate long values so they don't overflow the box
+      const safeValue = this.doc.splitTextToSize(value, 120)[0];
+      this.doc.text(safeValue, 65, this.currentY);
       this.doc.setTextColor(70, 70, 70);
       this.currentY += 5.5;
     });
@@ -140,6 +166,7 @@ export class PDFExporter {
   }
 
   addSectionTitle(title: string) {
+    if (this.currentY > 270) { this.doc.addPage(); this.currentY = 20; }
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(50, 50, 50);
@@ -149,8 +176,7 @@ export class PDFExporter {
 
   addTable(headers: string[], rows: any[][], options?: any) {
     const pageWidth = this.doc.internal.pageSize.getWidth();
-    const margins = 28;
-    const availableWidth = pageWidth - margins;
+    const availableWidth = pageWidth - 28;
 
     (this.doc as any).autoTable({
       startY: this.currentY,
@@ -165,19 +191,9 @@ export class PDFExporter {
         fontStyle: 'bold',
         fontSize: 10
       },
-      bodyStyles: {
-        fontSize: 9,
-        textColor: 50
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250]
-      },
-      styles: {
-        overflow: 'linebreak',
-        cellWidth: 'wrap',
-        cellPadding: 2,
-        minCellWidth: 10
-      },
+      bodyStyles: { fontSize: 9, textColor: 50 },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      styles: { overflow: 'linebreak', cellWidth: 'wrap', cellPadding: 2, minCellWidth: 10 },
       ...options
     });
 
@@ -186,10 +202,11 @@ export class PDFExporter {
 
   addTotals(items: { label: string; value: string; bold?: boolean }[]) {
     const startX = 125;
-
     this.currentY += 5;
 
-    items.forEach((item, index) => {
+    items.forEach((item) => {
+      if (this.currentY > 275) { this.doc.addPage(); this.currentY = 20; }
+
       if (item.bold) {
         this.doc.setDrawColor(37, 99, 235);
         this.doc.setLineWidth(0.3);
@@ -222,6 +239,8 @@ export class PDFExporter {
     if (!content) return;
 
     this.currentY += 8;
+    if (this.currentY > 265) { this.doc.addPage(); this.currentY = 20; }
+
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(50, 50, 50);
@@ -240,10 +259,7 @@ export class PDFExporter {
     this.currentY += 1;
 
     lines.forEach((line: string) => {
-      if (this.currentY > 270) {
-        this.doc.addPage();
-        this.currentY = 20;
-      }
+      if (this.currentY > 270) { this.doc.addPage(); this.currentY = 20; }
       this.doc.text(line, 20, this.currentY);
       this.currentY += 4;
     });
@@ -251,18 +267,166 @@ export class PDFExporter {
     this.currentY += 3;
   }
 
+  /**
+   * Renders the standard service + supplies tables, breakdown, and totals block.
+   * Used by monthly, project, and public reports so all PDFs are consistent.
+   */
+  addClientReportSections(
+    tasks: ReportTask[],
+    getProject: (id: string) => ReportProject | undefined,
+    hourlyRate: number
+  ) {
+    const servicesTasks = tasks.filter(t => t.type !== 'insumos');
+    const suppliesTasks = tasks.filter(t => t.type === 'insumos');
+
+    // ── Services table ────────────────────────────────────────────────
+    if (servicesTasks.length > 0) {
+      this.addSectionTitle('Services');
+
+      const servicesRows = servicesTasks.map(task => [
+        format(new Date(task.date), 'MMM d, yyyy'),
+        getProject(task.projectId)?.name || '—',
+        task.type === 'incident' ? 'Incident' : 'Request',
+        task.description,
+        `${(task.hours || 0).toFixed(1)}h`,
+        `$${((task.hours || 0) * hourlyRate).toFixed(2)}`
+      ]);
+
+      const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * hourlyRate, 0);
+      const totalHoursStr = `${servicesTasks.reduce((s, t) => s + (t.hours || 0), 0).toFixed(1)}h`;
+
+      this.addTable(
+        ['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount'],
+        servicesRows,
+        {
+          columnStyles: {
+            0: { cellWidth: 24 },
+            1: { cellWidth: 28 },
+            2: { cellWidth: 20 },
+            3: { cellWidth: 'auto' },
+            4: { cellWidth: 18, halign: 'center' },
+            5: { cellWidth: 26, halign: 'right' }
+          },
+          foot: [[
+            { content: 'Total', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right', fillColor: [235, 240, 255], textColor: [30, 30, 30] } },
+            { content: totalHoursStr, styles: { fontStyle: 'bold', halign: 'center', fillColor: [235, 240, 255], textColor: [30, 30, 30] } },
+            { content: `$${servicesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [235, 240, 255], textColor: [30, 30, 30] } }
+          ]],
+          showFoot: 'lastPage'
+        }
+      );
+    }
+
+    // ── Supplies table ────────────────────────────────────────────────
+    if (suppliesTasks.length > 0) {
+      this.addSectionTitle('Supplies');
+
+      const suppliesRows = suppliesTasks.map(task => [
+        format(new Date(task.date), 'MMM d, yyyy'),
+        getProject(task.projectId)?.name || '—',
+        task.description,
+        `$${(task.cost || 0).toFixed(2)}`
+      ]);
+
+      const suppliesTotal = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
+
+      this.addTable(
+        ['Date', 'Project', 'Description', 'Cost'],
+        suppliesRows,
+        {
+          headStyles: { fillColor: [15, 118, 110] },
+          columnStyles: {
+            0: { cellWidth: 24 },
+            1: { cellWidth: 32 },
+            2: { cellWidth: 'auto' },
+            3: { cellWidth: 26, halign: 'right' }
+          },
+          foot: [[
+            { content: 'Supplies Total', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } },
+            { content: `$${suppliesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } }
+          ]],
+          showFoot: 'lastPage'
+        }
+      );
+    }
+
+    // ── Service type breakdown ────────────────────────────────────────
+    const incidentTasks = servicesTasks.filter(t => t.type === 'incident');
+    const requestTasks  = servicesTasks.filter(t => t.type === 'request');
+
+    if (incidentTasks.length > 0 || requestTasks.length > 0) {
+      this.addSectionTitle('Service Breakdown');
+
+      const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * hourlyRate, 0);
+      const breakdownRows: any[][] = [];
+
+      if (incidentTasks.length > 0) {
+        const h = incidentTasks.reduce((s, t) => s + (t.hours || 0), 0);
+        const amt = h * hourlyRate;
+        breakdownRows.push([
+          'Incidents',
+          incidentTasks.length.toString(),
+          `${h.toFixed(1)}h`,
+          `$${amt.toFixed(2)}`,
+          servicesTotal > 0 ? `${((amt / servicesTotal) * 100).toFixed(0)}%` : '0%'
+        ]);
+      }
+      if (requestTasks.length > 0) {
+        const h = requestTasks.reduce((s, t) => s + (t.hours || 0), 0);
+        const amt = h * hourlyRate;
+        breakdownRows.push([
+          'Requests',
+          requestTasks.length.toString(),
+          `${h.toFixed(1)}h`,
+          `$${amt.toFixed(2)}`,
+          servicesTotal > 0 ? `${((amt / servicesTotal) * 100).toFixed(0)}%` : '0%'
+        ]);
+      }
+
+      this.addTable(
+        ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],
+        breakdownRows,
+        {
+          theme: 'grid',
+          headStyles: { fillColor: [75, 85, 99] },
+          columnStyles: {
+            0: { cellWidth: 'auto', fontStyle: 'bold' },
+            1: { cellWidth: 22, halign: 'center' },
+            2: { cellWidth: 25, halign: 'center' },
+            3: { cellWidth: 30, halign: 'right' },
+            4: { cellWidth: 30, halign: 'center' }
+          }
+        }
+      );
+    }
+
+    // ── Grand totals block ────────────────────────────────────────────
+    const totalHours    = servicesTasks.reduce((s, t) => s + (t.hours || 0), 0);
+    const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * hourlyRate, 0);
+    const suppliesTotal = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
+    const grandTotal    = servicesTotal + suppliesTotal;
+
+    const totalsItems: { label: string; value: string; bold?: boolean }[] = [
+      { label: 'Total Service Hours:', value: `${totalHours.toFixed(2)}h` },
+      { label: 'Services Total:', value: `$${servicesTotal.toFixed(2)}` }
+    ];
+    if (suppliesTotal > 0) {
+      totalsItems.push({ label: 'Supplies Total:', value: `$${suppliesTotal.toFixed(2)}` });
+    }
+    totalsItems.push({ label: 'Total Amount:', value: `$${grandTotal.toFixed(2)}`, bold: true });
+
+    this.addTotals(totalsItems);
+  }
+
   addFooter() {
     const pageCount = this.doc.getNumberOfPages();
-
     for (let i = 1; i <= pageCount; i++) {
       this.doc.setPage(i);
       this.doc.setFontSize(8);
       this.doc.setTextColor(150, 150, 150);
       this.doc.text(
-        `Generated by ${this.companySettings.company_name} - Page ${i} of ${pageCount}`,
-        105,
-        290,
-        { align: 'center' }
+        `Generated by ${this.companySettings.company_name} — Page ${i} of ${pageCount}`,
+        105, 290, { align: 'center' }
       );
     }
   }

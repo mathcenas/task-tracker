@@ -126,157 +126,35 @@ export function ClientDashboard() {
 
   const exportMonthlyReport = async (clientData: any, clientTasks: any[], exportMonth = selectedMonth) => {
     try {
-      console.log('📄 Starting PDF export for client:', clientData.name);
       const exportMonthStart = startOfMonth(exportMonth);
       const exportMonthEnd = endOfMonth(exportMonth);
       const exportTasks = clientTasks.filter(task =>
         task.finished &&
-        isWithinInterval(new Date(task.date), { start: exportMonthStart, end: exportMonthEnd })
+        isWithinInterval(parseISO(task.date + 'T00:00:00'), { start: exportMonthStart, end: exportMonthEnd })
       );
 
-      console.log('📊 Export tasks found:', exportTasks.length);
       const companySettings = await apiService.getCompanySettings();
-      console.log('⚙️ Company settings loaded:', companySettings);
       const pdf = new PDFExporter(companySettings);
-      console.log('✅ PDF Exporter initialized');
 
-      const clientName = clientData.name;
-      const monthYear = format(exportMonth, 'MMMM yyyy');
-      const exportYear = exportMonth.getFullYear();
-      const hourlyRate = getHourlyRateForYear(clientData, exportYear);
+      const hourlyRate = getHourlyRateForYear(clientData, exportMonth.getFullYear());
       const reportNumber = `RPT-${format(exportMonth, 'yyyyMM')}-${clientData.id.slice(-6)}`;
 
       await pdf.addHeader('Monthly Report');
 
       pdf.addSection('Report Details', {
         'Report Number': reportNumber,
-        'Client': clientName,
-        'Period': monthYear,
+        'Client': clientData.name,
+        'Period': format(exportMonth, 'MMMM yyyy'),
         'Generated': format(new Date(), 'MMM dd, yyyy'),
         'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
       });
 
-      const servicesTasks = exportTasks.filter(task => task.type !== 'insumos');
-      const suppliesTasks = exportTasks.filter(task => task.type === 'insumos');
-
-      if (servicesTasks.length > 0) {
-        const servicesTableData = servicesTasks.map(task => [
-          format(new Date(task.date), 'MMM d, yyyy'),
-          getProject(task.projectId)?.name || '',
-          task.type.charAt(0).toUpperCase() + task.type.slice(1),
-          task.description,
-          task.hours?.toString() || '',
-          `$${(task.hours * hourlyRate).toFixed(2)}`
-        ]);
-
-        pdf.addTable(
-          ['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount'],
-          servicesTableData,
-          {
-            columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 'auto' },
-              2: { cellWidth: 22 },
-              3: { cellWidth: 'auto' },
-              4: { cellWidth: 18, halign: 'center' },
-              5: { cellWidth: 25, halign: 'right' }
-            }
-          }
-        );
-      }
-
-      if (suppliesTasks.length > 0) {
-        const suppliesTableData = suppliesTasks.map(task => [
-          format(new Date(task.date), 'MMM d, yyyy'),
-          getProject(task.projectId)?.name || '',
-          task.description,
-          `$${task.cost?.toFixed(2)}`
-        ]);
-
-        pdf.addTable(
-          ['Date', 'Project', 'Description', 'Cost'],
-          suppliesTableData,
-          {
-            headStyles: {
-              fillColor: [156, 39, 176]
-            },
-            columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 'auto' },
-              2: { cellWidth: 'auto' },
-              3: { cellWidth: 25, halign: 'right' }
-            }
-          }
-        );
-      }
-
-      const incidentTasks = servicesTasks.filter(task => task.type === 'incident');
-      const requestTasks = servicesTasks.filter(task => task.type === 'request');
-      const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-      const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-      const incidentTotal = incidentHours * hourlyRate;
-      const requestTotal = requestHours * hourlyRate;
-      const servicesTotal = servicesTasks.reduce((sum, task) => sum + ((task.hours || 0) * hourlyRate), 0);
-      const suppliesTotal = suppliesTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
-      const totalAmount = servicesTotal + suppliesTotal;
-
-      if (incidentTasks.length > 0 || requestTasks.length > 0) {
-        const breakdownData = [];
-        if (incidentTasks.length > 0) {
-          breakdownData.push([
-            'Incidents',
-            incidentTasks.length.toString(),
-            `${incidentHours.toFixed(1)}h`,
-            `$${incidentTotal.toFixed(2)}`,
-            servicesTotal > 0 ? `${((incidentTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
-          ]);
-        }
-        if (requestTasks.length > 0) {
-          breakdownData.push([
-            'Requests',
-            requestTasks.length.toString(),
-            `${requestHours.toFixed(1)}h`,
-            `$${requestTotal.toFixed(2)}`,
-            servicesTotal > 0 ? `${((requestTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
-          ]);
-        }
-
-        pdf.addTable(
-          ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],
-          breakdownData,
-          {
-            theme: 'grid',
-            headStyles: {
-              fillColor: [100, 100, 100]
-            },
-            columnStyles: {
-              0: { cellWidth: 'auto', fontStyle: 'bold' },
-              1: { cellWidth: 22, halign: 'center' },
-              2: { cellWidth: 25, halign: 'center' },
-              3: { cellWidth: 30, halign: 'right' },
-              4: { cellWidth: 30, halign: 'center' }
-            }
-          }
-        );
-      }
-
-      const totalServiceHours = servicesTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-
-      pdf.addTotals([
-        { label: 'Total Service Hours:', value: `${totalServiceHours.toFixed(2)}h` },
-        { label: 'Services Total:', value: `$${servicesTotal.toFixed(2)}` },
-        { label: 'Supplies Total:', value: `$${suppliesTotal.toFixed(2)}` },
-        { label: 'Total Amount:', value: `$${totalAmount.toFixed(2)}`, bold: true }
-      ]);
-
+      pdf.addClientReportSections(exportTasks, getProject, hourlyRate);
       pdf.addNotes('Thank you', 'Thank you for your business!');
 
-      const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`;
-      console.log('💾 Saving PDF as:', filename);
-      pdf.save(filename);
-      console.log('✅ PDF export completed successfully');
-    } catch (error) {
-      console.error('❌ Failed to generate monthly report:', error);
+      pdf.save(`${clientData.name.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`);
+    } catch (error: any) {
+      console.error('Failed to generate monthly report:', error);
       alert(`Failed to generate PDF report: ${error.message || error}`);
     }
   };
@@ -353,125 +231,11 @@ export function ClientDashboard() {
         'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
       });
 
-      const servicesTasks = filteredTasks.filter(task => task.type !== 'insumos');
-      const suppliesTasks = filteredTasks.filter(task => task.type === 'insumos');
-
-      if (servicesTasks.length > 0) {
-        const servicesTableData = servicesTasks.map(task => [
-          format(new Date(task.date), 'MMM d, yyyy'),
-          getProject(task.projectId)?.name || '',
-          task.type.charAt(0).toUpperCase() + task.type.slice(1),
-          task.description,
-          task.hours?.toString() || '',
-          `$${(task.hours * hourlyRate).toFixed(2)}`
-        ]);
-
-        pdf.addTable(
-          ['Date', 'Project', 'Type', 'Description', 'Hours', 'Amount'],
-          servicesTableData,
-          {
-            columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 'auto' },
-              2: { cellWidth: 22 },
-              3: { cellWidth: 'auto' },
-              4: { cellWidth: 18, halign: 'center' },
-              5: { cellWidth: 25, halign: 'right' }
-            }
-          }
-        );
-      }
-
-      if (suppliesTasks.length > 0) {
-        const suppliesTableData = suppliesTasks.map(task => [
-          format(new Date(task.date), 'MMM d, yyyy'),
-          getProject(task.projectId)?.name || '',
-          task.description,
-          `$${(task.cost || 0).toFixed(2)}`
-        ]);
-
-        pdf.addTable(
-          ['Date', 'Project', 'Description', 'Cost'],
-          suppliesTableData,
-          {
-            theme: 'grid',
-            headStyles: {
-              fillColor: [120, 53, 190]
-            },
-            columnStyles: {
-              0: { cellWidth: 22 },
-              1: { cellWidth: 'auto' },
-              2: { cellWidth: 'auto' },
-              3: { cellWidth: 25, halign: 'right' }
-            }
-          }
-        );
-      }
-
-      const incidentTasks = servicesTasks.filter(task => task.type === 'incident');
-      const requestTasks = servicesTasks.filter(task => task.type === 'request');
-      const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-      const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-      const incidentTotal = incidentHours * hourlyRate;
-      const requestTotal = requestHours * hourlyRate;
-      const servicesTotal = servicesTasks.reduce((sum, task) => sum + ((task.hours || 0) * hourlyRate), 0);
-      const suppliesTotal = suppliesTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
-      const totalAmount = servicesTotal + suppliesTotal;
-
-      if (incidentTasks.length > 0 || requestTasks.length > 0) {
-        const breakdownData = [];
-        if (incidentTasks.length > 0) {
-          breakdownData.push([
-            'Incidents',
-            incidentTasks.length.toString(),
-            `${incidentHours.toFixed(1)}h`,
-            `$${incidentTotal.toFixed(2)}`,
-            servicesTotal > 0 ? `${((incidentTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
-          ]);
-        }
-        if (requestTasks.length > 0) {
-          breakdownData.push([
-            'Requests',
-            requestTasks.length.toString(),
-            `${requestHours.toFixed(1)}h`,
-            `$${requestTotal.toFixed(2)}`,
-            servicesTotal > 0 ? `${((requestTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
-          ]);
-        }
-
-        pdf.addTable(
-          ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],
-          breakdownData,
-          {
-            theme: 'grid',
-            headStyles: {
-              fillColor: [100, 100, 100]
-            },
-            columnStyles: {
-              0: { cellWidth: 'auto', fontStyle: 'bold' },
-              1: { cellWidth: 22, halign: 'center' },
-              2: { cellWidth: 25, halign: 'center' },
-              3: { cellWidth: 30, halign: 'right' },
-              4: { cellWidth: 30, halign: 'center' }
-            }
-          }
-        );
-      }
-
-      const totalServiceHours = servicesTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-
-      pdf.addTotals([
-        { label: 'Total Service Hours:', value: `${totalServiceHours.toFixed(2)}h` },
-        { label: 'Services Total:', value: `$${servicesTotal.toFixed(2)}` },
-        { label: 'Supplies Total:', value: `$${suppliesTotal.toFixed(2)}` },
-        { label: 'Total Amount:', value: `$${totalAmount.toFixed(2)}`, bold: true }
-      ]);
-
+      pdf.addClientReportSections(filteredTasks, getProject, hourlyRate);
       pdf.addNotes('Thank you', 'Thank you for your business!');
 
       const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
-      const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-complete.pdf`;
-      pdf.save(filename);
+      pdf.save(`${clientName.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-complete.pdf`);
 
       setShowProjectFilterModal(false);
       alert('Project report generated successfully!');

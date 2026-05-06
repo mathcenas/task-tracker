@@ -186,7 +186,7 @@ export async function exportMultiMonthPDF(
     if (index > 0) {
       const doc = pdf.getDoc();
       doc.addPage();
-      (pdf as any).currentY = 20;
+      pdf.currentY = 20;
     }
 
     pdf.addSectionTitle(`Detailed Breakdown: ${monthData.month}`);
@@ -301,6 +301,7 @@ export async function exportMultiMonthPDF(
           ];
         });
 
+        const suppliesSubTotal = clientSupplyTasks.reduce((s, t) => s + (t.cost || 0), 0);
         pdf.addTable(
           ['Date', 'Description', 'Vendor', 'Approved By', 'Ref', 'Type', 'Status', 'Cost'],
           supplyRows,
@@ -318,7 +319,12 @@ export async function exportMultiMonthPDF(
               6: { cellWidth: 16, halign: 'center' },
               7: { cellWidth: 18, halign: 'right', fontStyle: 'bold' }
             },
-            styles: { overflow: 'linebreak' }
+            styles: { overflow: 'linebreak' },
+            foot: [[
+              { content: 'Supplies Total', colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } },
+              { content: `$${suppliesSubTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } }
+            ]],
+            showFoot: 'lastPage'
           }
         );
       }
@@ -335,7 +341,7 @@ export async function exportMultiMonthPDF(
   // Overall Totals
   const doc = pdf.getDoc();
   doc.addPage();
-  (pdf as any).currentY = 20;
+  pdf.currentY = 20;
 
   pdf.addSectionTitle('Overall Period Totals');
 
