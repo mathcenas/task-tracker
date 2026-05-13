@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
-import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye } from 'lucide-react';
+import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PDFExporter } from '../utils/pdfExport';
 import { apiService } from '../services/api';
 import { ClientYearlyRates } from './ClientYearlyRates';
 
 export function ClientDashboard() {
-  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient, archiveClient } = useApp();
+  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient, archiveClient, updateTask } = useApp();
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMultiMonthModal, setShowMultiMonthModal] = useState(false);
@@ -71,6 +71,13 @@ export function ClientDashboard() {
       console.error('Error archiving client:', error);
       alert('Failed to update client. Please try again.');
     }
+  };
+
+  const handleMarkMonthBilled = async (clientId: string, monthTasks: any[]) => {
+    const unbilled = monthTasks.filter(t => !t.billed);
+    if (unbilled.length === 0) return;
+    const now = new Date().toISOString();
+    await Promise.all(unbilled.map(t => updateTask({ ...t, billed: true, billedAt: now })));
   };
 
   const openEditClient = (client: any) => {
@@ -708,6 +715,34 @@ export function ClientDashboard() {
                         <Download className="w-4 h-4 mr-2" />
                         Export PDF
                       </button>
+                      {(() => {
+                        const unbilledCount = monthlyTasks.filter(t => !t.billed).length;
+                        const allBilled = monthlyTasks.length > 0 && unbilledCount === 0;
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!allBilled && unbilledCount > 0) {
+                                handleMarkMonthBilled(client.id, monthlyTasks);
+                              }
+                            }}
+                            disabled={monthlyTasks.length === 0 || allBilled}
+                            title={allBilled ? 'All tasks billed' : `Mark ${unbilledCount} task${unbilledCount !== 1 ? 's' : ''} as billed`}
+                            className={`inline-flex items-center px-3 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${
+                              allBilled
+                                ? 'border-green-300 bg-green-50 text-green-700 dark:border-green-700 dark:bg-green-900/20 dark:text-green-400 cursor-default'
+                                : monthlyTasks.length === 0
+                                ? 'bg-gray-400 text-white cursor-not-allowed border-transparent'
+                                : 'border-orange-300 bg-white text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-orange-900/20'
+                            }`}
+                          >
+                            {allBilled
+                              ? <><CheckCheck className="w-4 h-4 mr-2" />Billed</>
+                              : <><Receipt className="w-4 h-4 mr-2" />Mark Billed{unbilledCount > 0 && monthlyTasks.length > 0 ? ` (${unbilledCount})` : ''}</>
+                            }
+                          </button>
+                        );
+                      })()}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -872,12 +907,21 @@ export function ClientDashboard() {
                                   <div className="flex items-start space-x-3 flex-1">
                                     {getTaskIcon(task.type)}
                                     <div className="flex-1">
-                                      <div className="flex items-center space-x-2 mb-1">
+                                      <div className="flex items-center space-x-2 mb-1 flex-wrap gap-y-1">
                                         <p className="text-sm font-medium text-gray-900 dark:text-white">{project?.name}</p>
                                         <span className="text-sm text-gray-500 dark:text-gray-400">•</span>
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                           {getRelativeDate(task.date)}
                                         </span>
+                                        {task.billed ? (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                            <CheckCheck className="w-3 h-3" />Billed
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                                            Unbilled
+                                          </span>
+                                        )}
                                       </div>
                                       <p className="text-sm text-gray-600 dark:text-gray-300">{task.description}</p>
                                     </div>

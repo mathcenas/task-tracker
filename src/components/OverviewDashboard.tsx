@@ -5,7 +5,7 @@ import {
 } from 'date-fns';
 import {
   TrendingUp, TrendingDown, Clock, DollarSign, Package, AlertTriangle,
-  FileText, CheckCircle, BarChart3, Users
+  FileText, CheckCircle, BarChart3, Users, Receipt
 } from 'lucide-react';
 
 type Range = 3 | 6;
@@ -42,6 +42,22 @@ function TrendBadge({ value }: { value: number | null }) {
 export function OverviewDashboard() {
   const { tasks, clients, getClient } = useApp();
   const [range, setRange] = useState<Range>(3);
+
+  // Unbilled: finished service tasks (not insumos) that have billed !== true
+  const unbilledByClient = useMemo(() => {
+    const map: Record<string, { name: string; hours: number; revenue: number; count: number }> = {};
+    tasks
+      .filter(t => t.finished && t.type !== 'insumos' && !t.billed)
+      .forEach(t => {
+        const c = getClient(t.clientId);
+        if (!c) return;
+        if (!map[t.clientId]) map[t.clientId] = { name: c.name, hours: 0, revenue: 0, count: 0 };
+        map[t.clientId].hours += t.hours || 0;
+        map[t.clientId].revenue += (t.hours || 0) * (c.hourlyRate || 0);
+        map[t.clientId].count++;
+      });
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
+  }, [tasks, getClient]);
 
   const today = new Date();
 
@@ -363,6 +379,40 @@ export function OverviewDashboard() {
           );
         })}
       </div>
+
+      {/* Unbilled warning */}
+      {unbilledByClient.length > 0 && (
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-200 dark:border-orange-800/50 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Receipt className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-orange-900 dark:text-orange-200">Unbilled Work</h2>
+              <p className="text-xs text-orange-600 dark:text-orange-400">
+                {unbilledByClient.reduce((s, c) => s + c.count, 0)} tasks across {unbilledByClient.length} client{unbilledByClient.length !== 1 ? 's' : ''} — mark as billed from the Client Dashboard
+              </p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-lg font-bold text-orange-900 dark:text-orange-200">
+                ${unbilledByClient.reduce((s, c) => s + c.revenue, 0).toFixed(0)}
+              </p>
+              <p className="text-xs text-orange-600 dark:text-orange-400">total unbilled</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {unbilledByClient.map(c => (
+              <div key={c.name} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg px-3 py-2 border border-orange-100 dark:border-orange-900/30">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{c.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{c.count} task{c.count !== 1 ? 's' : ''} · {c.hours.toFixed(1)}h</p>
+                </div>
+                <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">${c.revenue.toFixed(0)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Client breakdown */}
       {clientBreakdown.length > 0 && (

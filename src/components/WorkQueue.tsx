@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { parseISO, isToday, isTomorrow, isYesterday, format } from 'date-fns';
 import {
   AlertTriangle, FileText, Package, Check, Pencil, Plus, ChevronDown, ChevronUp,
-  Filter, Clock, Flame, CalendarClock, CheckCircle2, MoreHorizontal, X
+  Filter, Clock, Flame, CalendarClock, CheckCircle2, MoreHorizontal, X,
+  Timer, StopCircle, Play
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskStatusBadge } from './TaskStatusBadge';
+
+function formatElapsed(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
 type FilterMode = 'active' | 'overdue' | 'today' | 'not_started' | 'all';
 
@@ -20,6 +29,40 @@ export function WorkQueue() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
+  // Timer state
+  const [timerTaskId, setTimerTaskId] = useState<string | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (timerRunning) {
+      timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [timerRunning]);
+
+  const startTimer = (taskId: string) => {
+    if (timerTaskId === taskId && timerRunning) return;
+    setTimerTaskId(taskId);
+    setTimerSeconds(0);
+    setTimerRunning(true);
+  };
+
+  const stopTimer = () => {
+    setTimerRunning(false);
+  };
+
+  const dismissTimer = () => {
+    setTimerRunning(false);
+    setTimerTaskId(null);
+    setTimerSeconds(0);
+  };
+
+  const timerHours = parseFloat((timerSeconds / 3600).toFixed(2));
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -78,6 +121,7 @@ export function WorkQueue() {
     if (task.type === 'insumos') {
       updateTask({ ...task, finished: true, status: 'completed', completedAt: new Date().toISOString() });
     } else {
+      if (timerTaskId === taskId && timerSeconds > 0) stopTimer();
       setSelectedTaskId(taskId);
       setIsModalOpen(true);
     }
@@ -89,6 +133,7 @@ export function WorkQueue() {
     if (task) {
       updateTask({ ...task, hours, finished: true, status: 'completed', completedAt: new Date().toISOString() });
     }
+    if (timerTaskId === selectedTaskId) dismissTimer();
     setIsModalOpen(false);
     setSelectedTaskId(null);
   };
@@ -288,6 +333,22 @@ export function WorkQueue() {
 
                       {/* Actions — visible on hover */}
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        {task.type !== 'insumos' && (
+                          <button
+                            onClick={() => timerTaskId === task.id && timerRunning ? stopTimer() : startTimer(task.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              timerTaskId === task.id && timerRunning
+                                ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400'
+                            }`}
+                            title={timerTaskId === task.id && timerRunning ? 'Stop timer' : 'Start timer'}
+                          >
+                            {timerTaskId === task.id && timerRunning
+                              ? <StopCircle className="w-4 h-4" />
+                              : <Timer className="w-4 h-4" />
+                            }
+                          </button>
+                        )}
                         <button
                           onClick={() => toggleStatus(task)}
                           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -350,13 +411,54 @@ export function WorkQueue() {
         </div>
       )}
 
+      {/* Floating timer bar */}
+      {timerTaskId && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl border transition-all ${
+          timerRunning
+            ? 'bg-orange-600 border-orange-500 text-white'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white'
+        }`}>
+          <Timer className={`w-4 h-4 flex-shrink-0 ${timerRunning ? 'text-orange-100 animate-pulse' : 'text-orange-500'}`} />
+          <div className="text-sm font-medium max-w-[180px] truncate opacity-80">
+            {tasks.find(t => t.id === timerTaskId)?.description || 'Task'}
+          </div>
+          <span className={`font-mono text-lg font-bold tabular-nums ${timerRunning ? 'text-white' : 'text-orange-600 dark:text-orange-400'}`}>
+            {formatElapsed(timerSeconds)}
+          </span>
+          {timerRunning ? (
+            <button
+              onClick={stopTimer}
+              className="p-1.5 rounded-lg bg-orange-500 hover:bg-orange-400 transition-colors"
+              title="Pause timer"
+            >
+              <StopCircle className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setTimerRunning(true)}
+              className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors text-orange-600 dark:text-orange-400"
+              title="Resume timer"
+            >
+              <Play className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={dismissTimer}
+            className={`p-1.5 rounded-lg transition-colors ${timerRunning ? 'hover:bg-orange-500' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400'}`}
+            title="Dismiss timer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <CompletionModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setSelectedTaskId(null); }}
         onComplete={handleTaskComplete}
         taskType={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.type || 'request' : 'request'}
         taskDescription={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.description : undefined}
-        existingHours={selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.hours ?? undefined : undefined}
+        existingHours={timerTaskId === selectedTaskId && timerSeconds > 0 ? timerHours : (selectedTaskId ? tasks.find(t => t.id === selectedTaskId)?.hours ?? undefined : undefined)}
       />
     </div>
   );

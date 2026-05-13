@@ -132,7 +132,8 @@ export function transformCSVToTasks(
 
       const finalHours = type === 'insumos' ? 0 : hours;
 
-      const taskDescription = row.Description || row.Activity;
+      const rawDesc = row.Description || row.Activity;
+      const taskDescription = rawDesc.replace(/\[cite:\s*\d+\]/gi, '').trim();
 
       return {
         id: `import-${Date.now()}-${index}`,
