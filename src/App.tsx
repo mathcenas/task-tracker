@@ -31,6 +31,7 @@ import { IdeasBoard } from './components/IdeasBoard';
 import { SuppliesPage } from './components/SuppliesPage';
 import { SuppliesPaymentTracker } from './components/SuppliesPaymentTracker';
 import { OverviewDashboard } from './components/OverviewDashboard';
+import { ReportsPage } from './components/ReportsPage';
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
                   <Route path="/supplies" element={<SuppliesPage />} />
                   <Route path="/supplies/payments" element={<SuppliesPaymentTracker />} />
                   <Route path="/recurring-tasks" element={<RecurringTasksPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
                   <Route path="/clients" element={<ClientDashboard />} />
                   <Route path="/projects" element={<ProjectsDashboard />} />
                   <Route path="/import-csv" element={<CSVImport />} />

@@ -32,8 +32,14 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
   const selectedTaskObjects = tasks.filter(task => selectedTasks.includes(task.id));
   const pendingTasks = selectedTaskObjects.filter(task => !task.finished);
 
-  const availableProjects = editClientId !== UNCHANGED && editClientId !== ''
-    ? projects.filter(p => p.clientId === editClientId)
+  // When a client is selected, filter projects to that client.
+  // When no client change, infer from the common client of selected tasks (if uniform).
+  const commonClientId = selectedTaskObjects.every(t => t.clientId === selectedTaskObjects[0]?.clientId)
+    ? selectedTaskObjects[0]?.clientId
+    : null;
+  const effectiveClientId = editClientId !== UNCHANGED ? editClientId : commonClientId;
+  const availableProjects = effectiveClientId
+    ? projects.filter(p => p.clientId === effectiveClientId)
     : projects;
 
   const handleBulkComplete = async () => {
@@ -240,7 +246,7 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
                       value={editProjectId}
                       onChange={(e) => setEditProjectId(e.target.value)}
                       className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                      disabled={editClientId === UNCHANGED}
+
                     >
                       <option value={UNCHANGED}>No change</option>
                       {availableProjects.map(p => (
