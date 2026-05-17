@@ -55,14 +55,26 @@ export class PDFExporter {
     this.companySettings = companySettings;
   }
 
-  private async loadLogo(): Promise<string | null> {
+  private async loadLogo(): Promise<{ data: string; format: string } | null> {
     if (!this.companySettings.logo_url) return null;
     try {
-      const response = await fetch(this.companySettings.logo_url);
+      // If already a data URL, use it directly
+      if (this.companySettings.logo_url.startsWith('data:')) {
+        const match = this.companySettings.logo_url.match(/^data:image\/(\w+);base64,/);
+        const format = match ? match[1].toUpperCase() : 'PNG';
+        return { data: this.companySettings.logo_url, format: format === 'JPEG' ? 'JPEG' : format === 'JPG' ? 'JPEG' : 'PNG' };
+      }
+      // Make relative URLs absolute
+      const url = this.companySettings.logo_url.startsWith('http')
+        ? this.companySettings.logo_url
+        : `${window.location.origin}${this.companySettings.logo_url.startsWith('/') ? '' : '/'}${this.companySettings.logo_url}`;
+      const response = await fetch(url);
+      if (!response.ok) return null;
       const blob = await response.blob();
+      const format = blob.type.includes('jpeg') || blob.type.includes('jpg') ? 'JPEG' : 'PNG';
       return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
+        reader.onloadend = () => resolve({ data: reader.result as string, format });
         reader.onerror = () => resolve(null);
         reader.readAsDataURL(blob);
       });
@@ -75,15 +87,12 @@ export class PDFExporter {
     this.currentY = 15;
 
     if (this.companySettings.logo_url) {
-      try {
-        this.doc.addImage(this.companySettings.logo_url, 'PNG', 15, this.currentY, 40, 15);
-      } catch {
-        const logoData = await this.loadLogo();
-        if (logoData) {
-          try {
-            this.doc.addImage(logoData, 'PNG', 15, this.currentY, 40, 15);
-          } catch { /* ignore */ }
-        }
+      const logo = await this.loadLogo();
+      if (logo) {
+        try {
+          // Logo: up to 50mm wide, 20mm tall, preserving space
+          this.doc.addImage(logo.data, logo.format, 15, this.currentY, 50, 20);
+        } catch { /* ignore logo if it still fails */ }
       }
     }
 
@@ -111,7 +120,7 @@ export class PDFExporter {
     if (this.companySettings.email) { this.doc.text(this.companySettings.email, rightMargin, companyY, { align: 'right' }); companyY += 3.5; }
     if (this.companySettings.website) { this.doc.text(this.companySettings.website, rightMargin, companyY, { align: 'right' }); companyY += 3.5; }
 
-    this.currentY = Math.max(this.currentY + 25, companyY + 3);
+    this.currentY = Math.max(this.currentY + 28, companyY + 3);
 
     this.doc.setDrawColor(37, 99, 235);
     this.doc.setLineWidth(0.5);

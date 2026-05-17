@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Building2, Save, Image, Mail, Phone, Globe, FileText } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Building2, Save, Image, Mail, Phone, Globe, FileText, Upload, X } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface CompanySettings {
@@ -25,6 +25,27 @@ export function CompanySettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Please select an image file (PNG, JPG, etc.)' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Logo file must be under 2MB' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSettings(s => ({ ...s, logo_url: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+    // Reset so same file can be re-selected
+    e.target.value = '';
+  };
 
   useEffect(() => {
     loadSettings();
@@ -115,31 +136,58 @@ export function CompanySettings() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <div className="flex items-center gap-2">
                 <Image className="w-4 h-4" />
-                Logo URL
+                Company Logo
               </div>
             </label>
-            <input
-              type="url"
-              value={settings.logo_url || ''}
-              onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="https://example.com/logo.png"
-            />
+
+            {/* Upload button */}
+            <div className="flex gap-3 items-start">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Logo File
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoFileUpload}
+                className="hidden"
+              />
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={settings.logo_url?.startsWith('data:') ? '' : (settings.logo_url || '')}
+                  onChange={(e) => setSettings({ ...settings, logo_url: e.target.value || null })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                  placeholder="Or paste a URL: https://example.com/logo.png"
+                />
+              </div>
+            </div>
+
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Enter a URL to your company logo (recommended: PNG or JPG, max 200x50px)
+              Upload a file (PNG or JPG recommended) — stored as base64 so it appears reliably in PDFs and reports.
             </p>
+
             {settings.logo_url && (
-              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Preview:</p>
+              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center gap-3">
                 <img
                   src={settings.logo_url}
                   alt="Company Logo"
-                  className="max-h-12 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = '';
-                    e.currentTarget.alt = 'Failed to load logo';
-                  }}
+                  className="max-h-14 max-w-[180px] object-contain"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setSettings(s => ({ ...s, logo_url: null }))}
+                  className="ml-auto p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  title="Remove logo"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>

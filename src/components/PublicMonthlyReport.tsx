@@ -14,6 +14,7 @@ export function PublicMonthlyReport() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [companySettings, setCompanySettings] = useState<{ company_name: string; logo_url: string | null } | null>(null);
 
   // Load report data from public API (including 6 months of data for trend)
   useEffect(() => {
@@ -42,6 +43,12 @@ export function PublicMonthlyReport() {
         setClient(data.client);
         setTasks(data.tasks);
         setProjects(data.projects);
+
+        // Load company settings for logo/branding
+        try {
+          const settingsRes = await fetch(`${apiUrl}/api/public/company-settings`);
+          if (settingsRes.ok) setCompanySettings(await settingsRes.json());
+        } catch { /* branding optional */ }
 
         // Load 6 months of data for trend chart
         const currentDate = new Date(parseInt(year), parseInt(month) - 1, 1);
@@ -321,12 +328,23 @@ export function PublicMonthlyReport() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
+              {companySettings?.logo_url ? (
+                <img
+                  src={companySettings.logo_url}
+                  alt={companySettings.company_name}
+                  className="h-10 max-w-[120px] object-contain"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+              )}
               <div>
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">TaskTracker Pro</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">by Cenas-Support • Client Dashboard</p>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {companySettings?.company_name || 'TaskTracker Pro'}
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Client Report</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
