@@ -11,6 +11,7 @@ interface AppContextType {
   addClient: (client: Omit<Client, 'id'>) => Promise<string>;
   addProject: (project: Omit<Project, 'id'>) => Promise<string>;
   addTask: (task: Omit<Task, 'id'>) => Promise<void>;
+  isDuplicateTask: (task: Omit<Task, 'id'>) => boolean;
   updateTask: (task: Task) => Promise<void>;
   finishTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
@@ -104,7 +105,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isDuplicateTask = (task: Omit<Task, 'id'>) =>
+    tasks.some(t =>
+      t.clientId === task.clientId &&
+      t.date === task.date &&
+      t.description.trim().toLowerCase() === task.description.trim().toLowerCase() &&
+      (task.hours == null || t.hours === task.hours)
+    );
+
   const addTask = async (task: Omit<Task, 'id'>) => {
+    if (isDuplicateTask(task)) {
+      throw new Error('DUPLICATE: A task with the same description, date, hours and client already exists.');
+    }
     const newTask = { ...task, id: crypto.randomUUID() };
     console.log('📦 [AppContext] New task object:', newTask);
 
@@ -278,6 +290,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addClient,
       addProject,
       addTask,
+      isDuplicateTask,
       updateTask,
       finishTask,
       setTasks,

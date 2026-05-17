@@ -27,7 +27,7 @@ interface EditState {
 }
 
 export function CSVImport() {
-  const { clients, projects, reloadTasks } = useApp();
+  const { clients, projects, reloadTasks, isDuplicateTask } = useApp();
   const [selectedClient, setSelectedClient] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -123,8 +123,13 @@ export function CSVImport() {
     try {
       let successCount = 0;
       let errorCount = 0;
+      let skipCount = 0;
 
       for (const task of preview) {
+        if (isDuplicateTask(task as Task)) {
+          skipCount++;
+          continue;
+        }
         try {
           await api.createTask(task as Task);
           successCount++;
@@ -136,7 +141,10 @@ export function CSVImport() {
 
       await reloadTasks();
 
-      setSuccess(`Successfully imported ${successCount} tasks${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
+      const parts = [`Imported ${successCount} task${successCount !== 1 ? 's' : ''}`];
+      if (skipCount > 0) parts.push(`${skipCount} duplicate${skipCount !== 1 ? 's' : ''} skipped`);
+      if (errorCount > 0) parts.push(`${errorCount} failed`);
+      setSuccess(parts.join(' · '));
       setPreview([]);
       setSummary('');
       setFile(null);

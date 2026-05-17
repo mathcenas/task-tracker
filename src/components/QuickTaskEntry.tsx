@@ -46,7 +46,15 @@ export function QuickTaskEntry() {
       finished: false
     };
 
-    await addTask(task);
+    try {
+      await addTask(task);
+    } catch (error: any) {
+      if (error?.message?.startsWith('DUPLICATE')) {
+        alert('Duplicate detected: a task with the same description, date, hours and client already exists.');
+        return;
+      }
+      throw error;
+    }
 
     setFormData({
       projectId: '',

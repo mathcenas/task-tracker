@@ -276,9 +276,13 @@ export function TaskForm() {
 
       // Default redirect to dashboard
       navigate(returnPath);
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error adding task:', error);
-      alert('Failed to add task. Please try again.');
+      if (error?.message?.startsWith('DUPLICATE')) {
+        alert('A task with the same description, date, hours and client already exists. If this is intentional, adjust the description slightly to tell them apart.');
+      } else {
+        alert('Failed to add task. Please try again.');
+      }
       setIsSubmitting(false);
     }
   };
