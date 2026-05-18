@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown, Copy } from 'lucide-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
@@ -21,7 +21,7 @@ export function AllTasksPage() {
   const [isBulkOpen, setIsBulkOpen] = useState(false);
 
   // Read filter state from URL so it survives navigation away and back
-  const taskFilter = (searchParams.get('status') || 'all') as 'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added';
+  const taskFilter = (searchParams.get('status') || 'all') as 'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added' | 'duplicates';
   const typeFilter = (searchParams.get('type') || 'all') as 'all' | 'incident' | 'request' | 'insumos';
   const priorityFilter = (searchParams.get('priority') || 'all') as 'all' | 'high' | 'medium' | 'low';
   const clientFilter = searchParams.get('client') || 'all';
@@ -85,6 +85,21 @@ export function AllTasksPage() {
     })
     .slice(0, 20);
 
+  // Group ALL tasks by normalized description to find duplicates
+  const duplicateGroups = (() => {
+    const grouped = new Map<string, typeof tasks>();
+    applySecondaryFilters(tasks).forEach(t => {
+      const key = t.description.trim().toLowerCase();
+      const group = grouped.get(key) || [];
+      group.push(t);
+      grouped.set(key, group);
+    });
+    return [...grouped.values()]
+      .filter(g => g.length >= 2)
+      .sort((a, b) => b.length - a.length);
+  })();
+  const duplicateTasks = duplicateGroups.flat();
+
   // Apply status filter
   let filteredTasks: typeof tasks;
   if (taskFilter === 'overdue') filteredTasks = overdueTasks;
@@ -94,6 +109,7 @@ export function AllTasksPage() {
   else if (taskFilter === 'in_progress') filteredTasks = inProgressTasks;
   else if (taskFilter === 'not_started') filteredTasks = notStartedTasks;
   else if (taskFilter === 'recently_added') filteredTasks = recentlyAddedTasks;
+  else if (taskFilter === 'duplicates') filteredTasks = duplicateTasks;
   else filteredTasks = allUnfinishedTasks; // 'all'
 
   // Sort tasks: latest created first (recently_added already sorted)
@@ -225,7 +241,7 @@ export function AllTasksPage() {
       </div>
 
       {/* Task Status Filter Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div
           className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
             taskFilter === 'all'
@@ -313,6 +329,30 @@ export function AllTasksPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Finished tasks</p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-500" />
+          </div>
+        </div>
+
+        <div
+          className={`bg-white rounded-md border-2 p-6 dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02] ${
+            taskFilter === 'duplicates'
+              ? 'border-amber-500 shadow-lg'
+              : duplicateGroups.length > 0
+              ? 'border-amber-200 dark:border-amber-800'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onClick={() => setTaskFilter('duplicates')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Duplicates</p>
+              <p className={`text-3xl font-bold ${duplicateGroups.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'}`}>
+                {duplicateGroups.length}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {duplicateGroups.length > 0 ? `${duplicateTasks.length} tasks` : 'No duplicates'}
+              </p>
+            </div>
+            <Copy className={`w-8 h-8 ${duplicateGroups.length > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
           </div>
         </div>
       </div>
@@ -453,12 +493,126 @@ export function AllTasksPage() {
       {/* Tasks List */}
       <div className="bg-white rounded-lg shadow dark:bg-gray-800">
         <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
-            {taskFilter === 'recently_added'
-              ? `Recently Added Tasks (${filteredTasks.length})`
-              : `Tasks (${filteredTasks.length})`}
-          </h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              {taskFilter === 'recently_added'
+                ? `Recently Added Tasks (${filteredTasks.length})`
+                : taskFilter === 'duplicates'
+                ? `Duplicate Groups (${duplicateGroups.length} groups · ${duplicateTasks.length} tasks)`
+                : `Tasks (${filteredTasks.length})`}
+            </h3>
+            {taskFilter === 'duplicates' && duplicateGroups.length > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-full">
+                Tasks grouped by identical description
+              </p>
+            )}
+          </div>
 
+          {/* Grouped duplicate view */}
+          {taskFilter === 'duplicates' && (
+            <div className="space-y-6">
+              {duplicateGroups.length === 0 && (
+                <div className="text-center py-12">
+                  <Copy className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">No duplicate descriptions found</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">All task descriptions are unique</p>
+                </div>
+              )}
+              {duplicateGroups.map((group, gi) => {
+                const key = group[0].description.trim().toLowerCase();
+                return (
+                  <div key={key} className="border-2 border-amber-200 dark:border-amber-800 rounded-xl overflow-hidden">
+                    {/* Group header */}
+                    <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 px-4 py-3 border-b border-amber-200 dark:border-amber-800">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Copy className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 truncate">
+                          "{group[0].description}"
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                        <span className="text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">
+                          {group.length} tasks
+                        </span>
+                        <button
+                          onClick={() => {
+                            group.forEach(t => setSelectedTasks(prev => { const n = new Set(prev); n.add(t.id); return n; }));
+                          }}
+                          className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                        >
+                          Select all
+                        </button>
+                      </div>
+                    </div>
+                    {/* Group tasks */}
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {group.map(task => {
+                        const client = getClient(task.clientId);
+                        const project = getProject(task.projectId);
+                        const isSelected = selectedTasks.has(task.id);
+                        return (
+                          <div
+                            key={task.id}
+                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                              isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleTaskSelection(task.id)}
+                              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-900 dark:text-white truncate">{client?.name || '—'}</span>
+                                <span className="text-gray-400 text-xs">·</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{project?.name || '—'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                                  task.type === 'incident' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                  task.type === 'insumos' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                }`}>{task.type}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                                  task.finished ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                }`}>{task.finished ? 'completed' : task.status}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{format(parseISO(task.date + 'T00:00:00'), 'MMM d, yyyy')}</span>
+                                {task.hours != null && <span className="text-xs text-gray-500 dark:text-gray-400">{task.hours}h</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Link
+                                to={`/edit-task/${task.id}`}
+                                state={{ from: `${location.pathname}${location.search}` }}
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                              </Link>
+                              <button
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Normal task list */}
+          {taskFilter !== 'duplicates' && (
           <div className="space-y-3">
             {sortedTasks.map(task => {
               const client = getClient(task.clientId);
@@ -610,7 +764,7 @@ export function AllTasksPage() {
                 <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">No tasks found</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                  {tasks.length === 0 
+                  {tasks.length === 0
                     ? "Add your first task to get started"
                     : "Try adjusting your filters or search terms"
                   }
@@ -626,6 +780,7 @@ export function AllTasksPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 
