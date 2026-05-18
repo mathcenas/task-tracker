@@ -18,6 +18,7 @@ export function ReportsPage() {
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
   const [exportMode, setExportMode] = useState<ExportMode>('monthly');
 
   // Monthly mode
@@ -35,6 +36,13 @@ export function ReportsPage() {
     selectedClientId ? projects.filter(p => p.clientId === selectedClientId) : [],
     [projects, selectedClientId]
   );
+
+  const availableYears = useMemo(() => {
+    if (!selectedClientId) return [];
+    const clientTasks = getClientTasks(selectedClientId).filter(t => t.finished);
+    const years = [...new Set(clientTasks.map(t => new Date(t.date).getFullYear()))].sort((a, b) => b - a);
+    return years;
+  }, [selectedClientId, getClientTasks]);
 
   const getHourlyRateForYear = (client: any, year: number): number => {
     if (client.yearlyRates?.length > 0) {
@@ -60,7 +68,11 @@ export function ReportsPage() {
       const e = endOfMonth(endMonth);
       filtered = allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
     } else {
-      filtered = allTasks.filter(t => t.finished && (selectedProjectId === 'all' || t.projectId === selectedProjectId));
+      filtered = allTasks.filter(t =>
+        t.finished &&
+        (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+        (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
+      );
     }
 
     const serviceTasks = filtered.filter(t => t.type !== 'insumos');
@@ -82,7 +94,7 @@ export function ReportsPage() {
       revenue,
       suppliesCost,
     };
-  }, [selectedClientId, selectedClient, exportMode, selectedMonth, startMonth, endMonth, selectedProjectId, getClientTasks]);
+  }, [selectedClientId, selectedClient, exportMode, selectedMonth, startMonth, endMonth, selectedProjectId, selectedYear, getClientTasks]);
 
   const handleExport = async () => {
     if (!selectedClient) return;
@@ -145,29 +157,38 @@ export function ReportsPage() {
 
       } else {
         // project mode
-        let exportTasks = allTasks.filter(t => t.finished);
-        if (selectedProjectId !== 'all') exportTasks = exportTasks.filter(t => t.projectId === selectedProjectId);
+        let exportTasks = allTasks.filter(t =>
+          t.finished &&
+          (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+          (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
+        );
         if (exportTasks.length === 0) { alert('No completed tasks found.'); return; }
 
         const sortedTasks = [...exportTasks].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Project';
-        const periodText = `${format(new Date(sortedTasks[0].date), 'MMM d, yyyy')} – ${format(new Date(sortedTasks[sortedTasks.length - 1].date), 'MMM d, yyyy')}`;
+        const periodLabel = selectedYear === 'all'
+          ? `${format(new Date(sortedTasks[0].date), 'MMM d, yyyy')} – ${format(new Date(sortedTasks[sortedTasks.length - 1].date), 'MMM d, yyyy')}`
+          : `${selectedYear}`;
+        const rateYear = selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear);
+        const hourlyRate = getHourlyRateForYear(selectedClient, rateYear);
 
         const pdf = new PDFExporter(companySettings);
         await pdf.addHeader('Project Report');
         pdf.addSection('Report Details', {
-          'Report Number': `RPT-PROJECT-${selectedClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}`,
+          'Report Number': `RPT-PROJECT-${selectedClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}${selectedYear !== 'all' ? '-' + selectedYear : ''}`,
           'Client': selectedClient.name,
           'Project': projectName,
-          'Period': periodText,
+          'Year': selectedYear === 'all' ? 'All Years' : selectedYear,
+          'Period': periodLabel,
           'Total Tasks': exportTasks.length.toString(),
           'Generated': format(new Date(), 'MMM dd, yyyy'),
-          'Service Rate': `$${selectedClient.hourlyRate.toFixed(2)}/hour`
+          'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
         });
-        pdf.addClientReportSections(exportTasks, getProject, selectedClient.hourlyRate);
+        pdf.addClientReportSections(exportTasks, getProject, hourlyRate);
         pdf.addNotes('Thank you', 'Thank you for your business!');
         const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
-        pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-complete.pdf`);
+        const yearSlug = selectedYear === 'all' ? 'all-years' : selectedYear;
+        pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-${yearSlug}.pdf`);
       }
     } catch (err: any) {
       alert(`Failed to generate report: ${err.message || err}`);
@@ -210,7 +231,7 @@ export function ReportsPage() {
                 return (
                   <button
                     key={c.id}
-                    onClick={() => { setSelectedClientId(c.id); setSelectedProjectId('all'); }}
+                    onClick={() => { setSelectedClientId(c.id); setSelectedProjectId('all'); setSelectedYear('all'); }}
                     className={`flex items-center justify-between p-3 rounded-lg border-2 text-left transition-all ${
                       selectedClientId === c.id
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -246,7 +267,7 @@ export function ReportsPage() {
                 {([
                   { mode: 'monthly' as ExportMode, icon: CalendarDays, label: 'Monthly', desc: 'Single month period' },
                   { mode: 'multimonth' as ExportMode, icon: BarChart3, label: 'Multi-Month', desc: 'Custom date range' },
-                  { mode: 'project' as ExportMode, icon: Folders, label: 'By Project', desc: 'All time, per project' },
+                  { mode: 'project' as ExportMode, icon: Folders, label: 'By Project', desc: 'Per project, filter by year' },
                 ] as const).map(({ mode, icon: Icon, label, desc }) => (
                   <button
                     key={mode}
@@ -325,19 +346,40 @@ export function ReportsPage() {
               )}
 
               {exportMode === 'project' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project</label>
-                  <select
-                    value={selectedProjectId}
-                    onChange={e => setSelectedProjectId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Projects</option>
-                    {clientProjects.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Exports all completed tasks from the project's entire history.</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project</label>
+                      <select
+                        value={selectedProjectId}
+                        onChange={e => setSelectedProjectId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="all">All Projects</option>
+                        {clientProjects.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Year</label>
+                      <select
+                        value={selectedYear}
+                        onChange={e => setSelectedYear(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="all">All Years</option>
+                        {availableYears.map(y => (
+                          <option key={y} value={String(y)}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+                    {selectedYear === 'all'
+                      ? 'Exporting all completed tasks across entire history.'
+                      : `Exporting completed tasks for ${selectedYear} only.`}
+                  </div>
                 </div>
               )}
             </div>
