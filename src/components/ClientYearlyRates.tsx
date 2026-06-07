@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Plus, Trash2, Calendar } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useApp } from '../context/AppContext';
 import { ClientYearlyRate } from '../types';
 
 interface ClientYearlyRatesProps {
@@ -11,6 +12,7 @@ interface ClientYearlyRatesProps {
 }
 
 export function ClientYearlyRates({ clientId, clientName, defaultHourlyRate, onClose }: ClientYearlyRatesProps) {
+  const { refreshClientYearlyRates } = useApp();
   const [yearlyRates, setYearlyRates] = useState<ClientYearlyRate[]>([]);
   const [newYear, setNewYear] = useState(new Date().getFullYear().toString());
   const [newRate, setNewRate] = useState('');
@@ -54,6 +56,7 @@ export function ClientYearlyRates({ clientId, clientName, defaultHourlyRate, onC
 
       await apiService.saveClientYearlyRate(clientId, newRateData);
       await loadYearlyRates();
+      await refreshClientYearlyRates(clientId);
       setNewYear((year + 1).toString());
       setNewRate('');
     } catch (error) {
@@ -67,6 +70,7 @@ export function ClientYearlyRates({ clientId, clientName, defaultHourlyRate, onC
       try {
         await apiService.deleteClientYearlyRate(clientId, rateId);
         await loadYearlyRates();
+        await refreshClientYearlyRates(clientId);
       } catch (error) {
         console.error('Failed to delete yearly rate:', error);
         alert('Failed to delete yearly rate');

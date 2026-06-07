@@ -21,6 +21,7 @@ interface AppContextType {
   archiveClient: (clientId: string, archived: boolean) => Promise<void>;
   updateProject: (project: Project) => Promise<void>;
   reloadTasks: () => Promise<void>;
+  refreshClientYearlyRates: (clientId: string) => Promise<void>;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   getClientProjects: (clientId: string) => Project[];
   getClientTasks: (clientId: string) => Task[];
@@ -282,6 +283,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshClientYearlyRates = async (clientId: string) => {
+    try {
+      const rates = await apiService.getClientYearlyRates(clientId);
+      setClients(prev => prev.map(c =>
+        c.id === clientId ? { ...c, yearlyRates: rates } : c
+      ));
+    } catch (error) {
+      console.error('❌ Error refreshing yearly rates:', error);
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       clients,
@@ -295,6 +308,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       finishTask,
       setTasks,
       reloadTasks,
+      refreshClientYearlyRates,
       getClientProjects,
       getClientTasks,
       getProjectTasks,
