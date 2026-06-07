@@ -27,7 +27,7 @@ interface Project {
   name: string;
 }
 
-interface ReportMeta {
+export interface ReportMeta {
   title: string;
   client: Client;
   period: string;
@@ -39,8 +39,11 @@ function fmtDate(dateStr: string) {
   try { return format(parseISO(dateStr + 'T00:00:00'), 'MMM d, yyyy'); } catch { return dateStr; }
 }
 
+function shortId(id: string) {
+  return id.slice(-8);
+}
+
 function buildDuplicateSection(tasks: Task[], getProject: (id: string) => Project | undefined): string {
-  // Group by normalized description
   const groups = new Map<string, Task[]>();
   tasks.forEach(t => {
     const key = t.description.trim().toLowerCase();
@@ -57,19 +60,19 @@ function buildDuplicateSection(tasks: Task[], getProject: (id: string) => Projec
 
   let md = `## Duplicate Analysis\n\n`;
   md += `> **${dupes.length} duplicate group(s) found** across ${tasks.length} tasks. Review below.\n\n`;
-  md += `> *Prompt for AI: "Review the duplicate groups below. For each group, determine if these are legitimately separate tasks or likely billing errors. Flag any that look suspicious and suggest which to keep or merge."*\n\n`;
+  md += `> *AI prompt: "Review the duplicate groups below. For each group, determine if these are legitimately separate tasks or likely billing errors. Remove duplicate rows from the Tasks section above, then I will re-import the edited file."*\n\n`;
 
   dupes.forEach((group, i) => {
     const desc = group[0].description;
     md += `### Duplicate Group ${i + 1} — ${group.length} entries\n\n`;
     md += `**Description:** "${desc}"\n\n`;
-    md += `| # | Date | Project | Type | Status | Hours | Cost |\n`;
-    md += `|---|------|---------|------|--------|-------|------|\n`;
-    group.forEach((t, idx) => {
+    md += `| ID | Date | Project | Type | Status | Hours | Cost |\n`;
+    md += `|----|------|---------|------|--------|-------|------|\n`;
+    group.forEach(t => {
       const proj = getProject(t.projectId)?.name || t.projectId;
       const hours = t.hours != null ? `${t.hours}h` : '—';
       const cost = t.cost != null ? `$${t.cost.toFixed(2)}` : '—';
-      md += `| ${idx + 1} | ${fmtDate(t.date)} | ${proj} | ${t.type} | ${t.status} | ${hours} | ${cost} |\n`;
+      md += `| ${shortId(t.id)} | ${fmtDate(t.date)} | ${proj} | ${t.type} | ${t.status} | ${hours} | ${cost} |\n`;
     });
     md += `\n`;
   });
@@ -87,31 +90,31 @@ function buildTaskTable(tasks: Task[], getProject: (id: string) => Project | und
 
   if (serviceTasks.length > 0) {
     md += `### Service Tasks (${serviceTasks.length})\n\n`;
-    md += `| Date | Description | Project | Type | Priority | Status | Hours | Revenue |\n`;
-    md += `|------|-------------|---------|------|----------|--------|-------|---------|\n`;
+    md += `| ID | Date | Description | Project | Type | Priority | Status | Hours | Revenue |\n`;
+    md += `|----|------|-------------|---------|------|----------|--------|-------|---------|\n`;
     serviceTasks
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .forEach(t => {
         const proj = getProject(t.projectId)?.name || '—';
-        const hrs = t.hours != null ? `${t.hours}h` : '—';
+        const hrs = t.hours != null ? `${t.hours}` : '—';
         const rev = (t.hours != null && hourlyRate) ? `$${(t.hours * hourlyRate).toFixed(2)}` : '—';
         const desc = t.description.replace(/\|/g, '\\|');
-        md += `| ${fmtDate(t.date)} | ${desc} | ${proj} | ${t.type} | ${t.priority} | ${t.status} | ${hrs} | ${rev} |\n`;
+        md += `| ${shortId(t.id)} | ${fmtDate(t.date)} | ${desc} | ${proj} | ${t.type} | ${t.priority} | ${t.status} | ${hrs} | ${rev} |\n`;
       });
     md += `\n`;
   }
 
   if (supplyTasks.length > 0) {
     md += `### Supply Tasks (${supplyTasks.length})\n\n`;
-    md += `| Date | Description | Project | Priority | Status | Cost |\n`;
-    md += `|------|-------------|---------|----------|--------|------|\n`;
+    md += `| ID | Date | Description | Project | Priority | Status | Cost |\n`;
+    md += `|----|------|-------------|---------|----------|--------|------|\n`;
     supplyTasks
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .forEach(t => {
         const proj = getProject(t.projectId)?.name || '—';
-        const cost = t.cost != null ? `$${t.cost.toFixed(2)}` : '—';
+        const cost = t.cost != null ? `${t.cost.toFixed(2)}` : '—';
         const desc = t.description.replace(/\|/g, '\\|');
-        md += `| ${fmtDate(t.date)} | ${desc} | ${proj} | ${t.priority} | ${t.status} | ${cost} |\n`;
+        md += `| ${shortId(t.id)} | ${fmtDate(t.date)} | ${desc} | ${proj} | ${t.priority} | ${t.status} | ${cost} |\n`;
       });
     md += `\n`;
   }
@@ -133,12 +136,9 @@ export function generateMarkdownReport(
   const requests = serviceTasks.filter(t => t.type === 'request').length;
 
   let md = '';
-
-  // Title
   md += `# ${meta.title}\n\n`;
   md += `> Generated: ${format(meta.generatedAt, 'MMMM d, yyyy · HH:mm')}\n\n`;
 
-  // Report details
   md += `## Report Details\n\n`;
   md += `| Field | Value |\n`;
   md += `|-------|-------|\n`;
@@ -148,7 +148,6 @@ export function generateMarkdownReport(
   if (meta.hourlyRate) md += `| Service Rate | $${meta.hourlyRate.toFixed(2)}/hour |\n`;
   md += `\n`;
 
-  // Summary
   md += `## Summary\n\n`;
   md += `| Metric | Value |\n`;
   md += `|--------|-------|\n`;
@@ -161,11 +160,9 @@ export function generateMarkdownReport(
   if (supplyTasks.length > 0) md += `| Supplies Cost | $${totalSupplies.toFixed(2)} |\n`;
   md += `\n`;
 
-  // All tasks
   md += `## Tasks\n\n`;
   md += buildTaskTable(tasks, getProject, meta.hourlyRate);
 
-  // Duplicate analysis — always included
   md += buildDuplicateSection(tasks, getProject);
 
   md += `---\n_Report generated by TaskTracker Pro_\n`;

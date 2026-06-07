@@ -6,11 +6,12 @@ import {
 } from 'date-fns';
 import {
   Download, FileText, ChevronLeft, ChevronRight, BarChart3,
-  Users, Folders, Globe, CalendarDays, Clock, CheckCircle2, Package, FileCode
+  Users, Folders, Globe, CalendarDays, Clock, CheckCircle2, Package, FileCode, Upload
 } from 'lucide-react';
 import { PDFExporter } from '../utils/pdfExport';
 import { generateMarkdownReport, downloadMarkdown } from '../utils/markdownExport';
 import { apiService } from '../services/api';
+import { MarkdownImportModal } from './MarkdownImportModal';
 
 type ExportMode = 'monthly' | 'multimonth' | 'project';
 
@@ -30,6 +31,7 @@ export function ReportsPage() {
   const [endMonth, setEndMonth] = useState(new Date());
 
   const [isExporting, setIsExporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const activeClients = useMemo(() => clients.filter(c => !c.archived), [clients]);
   const selectedClient = useMemo(() => activeClients.find(c => c.id === selectedClientId), [activeClients, selectedClientId]);
@@ -255,6 +257,26 @@ export function ReportsPage() {
   };
 
   const canExport = !!selectedClient && (previewStats?.taskCount ?? 0) > 0;
+
+  const currentFilteredTasks = useMemo(() => {
+    if (!selectedClientId) return [];
+    const allTasks = getClientTasks(selectedClientId);
+    if (exportMode === 'monthly') {
+      const s = startOfMonth(selectedMonth);
+      const e = endOfMonth(selectedMonth);
+      return allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
+    } else if (exportMode === 'multimonth') {
+      const s = startOfMonth(startMonth);
+      const e = endOfMonth(endMonth);
+      return allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
+    } else {
+      return allTasks.filter(t =>
+        t.finished &&
+        (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+        (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
+      );
+    }
+  }, [selectedClientId, exportMode, selectedMonth, startMonth, endMonth, selectedProjectId, selectedYear, getClientTasks]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -509,6 +531,16 @@ export function ReportsPage() {
               Download Markdown (AI analysis)
             </button>
 
+            <button
+              onClick={() => setShowImportModal(true)}
+              disabled={!canExport}
+              title="Import an edited Markdown report back into the app to apply changes"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors"
+            >
+              <Upload className="w-4 h-4 text-teal-500" />
+              Import Edited Markdown
+            </button>
+
             {exportMode === 'monthly' && selectedClient?.slug && (
               <button
                 onClick={copyPublicUrl}
@@ -539,6 +571,14 @@ export function ReportsPage() {
           )}
         </div>
       </div>
+
+      {showImportModal && (
+        <MarkdownImportModal
+          tasks={currentFilteredTasks}
+          onClose={() => setShowImportModal(false)}
+          onApplied={() => setShowImportModal(false)}
+        />
+      )}
     </div>
   );
 }
