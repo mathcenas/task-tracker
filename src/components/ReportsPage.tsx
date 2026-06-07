@@ -6,9 +6,10 @@ import {
 } from 'date-fns';
 import {
   Download, FileText, ChevronLeft, ChevronRight, BarChart3,
-  Users, Folders, Globe, CalendarDays, Clock, CheckCircle2, Package
+  Users, Folders, Globe, CalendarDays, Clock, CheckCircle2, Package, FileCode
 } from 'lucide-react';
 import { PDFExporter } from '../utils/pdfExport';
+import { generateMarkdownReport, downloadMarkdown } from '../utils/markdownExport';
 import { apiService } from '../services/api';
 
 type ExportMode = 'monthly' | 'multimonth' | 'project';
@@ -195,6 +196,54 @@ export function ReportsPage() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleMarkdownExport = () => {
+    if (!selectedClient) return;
+    const allTasks = getClientTasks(selectedClient.id);
+
+    let exportTasks: typeof allTasks = [];
+    let period = '';
+    let filename = '';
+    let hourlyRate = selectedClient.hourlyRate;
+
+    if (exportMode === 'monthly') {
+      const s = startOfMonth(selectedMonth);
+      const e = endOfMonth(selectedMonth);
+      exportTasks = allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
+      period = format(selectedMonth, 'MMMM yyyy');
+      hourlyRate = getHourlyRateForYear(selectedClient, selectedMonth.getFullYear());
+      filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-monthly-${format(selectedMonth, 'yyyy-MM')}.md`;
+    } else if (exportMode === 'multimonth') {
+      const s = startOfMonth(startMonth);
+      const e = endOfMonth(endMonth);
+      exportTasks = allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
+      period = `${format(s, 'MMM yyyy')} – ${format(e, 'MMM yyyy')}`;
+      filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}.md`;
+    } else {
+      exportTasks = allTasks.filter(t =>
+        t.finished &&
+        (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+        (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
+      );
+      const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Project';
+      period = `${projectName}${selectedYear !== 'all' ? ` · ${selectedYear}` : ' · All Years'}`;
+      hourlyRate = getHourlyRateForYear(selectedClient, selectedYear !== 'all' ? parseInt(selectedYear) : new Date().getFullYear());
+      const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
+      filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-${selectedYear === 'all' ? 'all-years' : selectedYear}.md`;
+    }
+
+    if (exportTasks.length === 0) { alert('No completed tasks found for this selection.'); return; }
+
+    const md = generateMarkdownReport(exportTasks, {
+      title: `${selectedClient.name} — ${exportMode === 'monthly' ? 'Monthly' : exportMode === 'multimonth' ? 'Multi-Month' : 'Project'} Report`,
+      client: selectedClient,
+      period,
+      generatedAt: new Date(),
+      hourlyRate,
+    }, getProject);
+
+    downloadMarkdown(md, filename);
   };
 
   const copyPublicUrl = () => {
@@ -448,6 +497,16 @@ export function ReportsPage() {
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generating PDF...' : 'Download PDF Report'}
+            </button>
+
+            <button
+              onClick={handleMarkdownExport}
+              disabled={!canExport}
+              title="Markdown is ideal for AI analysis — includes a duplicate detection section"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors"
+            >
+              <FileCode className="w-4 h-4 text-teal-500" />
+              Download Markdown (AI analysis)
             </button>
 
             {exportMode === 'monthly' && selectedClient?.slug && (
