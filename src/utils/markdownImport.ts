@@ -57,7 +57,9 @@ export function parseMarkdownReport(content: string): ParsedTask[] {
     const rows = parseTableRows(match[1]);
     if (rows.length === 0) continue;
     const firstRow = rows[0];
-    if (!('id' in firstRow)) continue;
+    // Only parse task tables — they must have both 'id' and 'description'.
+    // Duplicate Analysis tables have 'id' but no 'description', so skip them.
+    if (!('id' in firstRow) || !('description' in firstRow)) continue;
 
     for (const row of rows) {
       const shortId = row['id']?.trim();
