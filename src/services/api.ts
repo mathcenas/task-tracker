@@ -674,6 +674,47 @@ class ApiService {
   async getStats(): Promise<{ tasks: number; clients: number; projects: number; recurring: number; total: number }> {
     return this.request('/stats');
   }
+
+  // Onboarding / Offboarding requests (Altas y Bajas de Personal)
+  async submitOnboardingRequest(data: {
+    managerEmail: string;
+    type: 'alta' | 'baja';
+    employeeName: string;
+    role?: string;
+    effectiveDate?: string;
+    details?: string;
+  }) {
+    return this.request('/public/onboarding', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getOnboardingRequests() {
+    const rows = await this.request('/admin/onboarding');
+    return rows.map((r: any) => ({
+      id: r.id,
+      managerEmail: r.manager_email,
+      type: r.type,
+      employeeName: r.employee_name,
+      role: r.role,
+      effectiveDate: r.effective_date,
+      details: r.details,
+      status: r.status,
+      createdAt: r.created_at
+    }));
+  }
+
+  async confirmOnboardingRequest(id: number, data: { clientId: string; projectId: string; extraServices: string[] }) {
+    return this.request(`/admin/onboarding/${id}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({
+        client_id: data.clientId,
+        project_id: data.projectId,
+        extra_services: data.extraServices
+      }),
+    });
+  }
 }
 
 export const apiService = new ApiService();

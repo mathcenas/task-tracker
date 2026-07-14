@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import crypto from 'crypto';
+import { Resend } from 'resend';
 import UptimeKumaService from './uptime-kuma-service.js';
 
 const { verbose } = sqlite3;
@@ -36,6 +38,12 @@ const db = new (verbose().Database)(dbPath, (err) => {
     console.log('📁 Database file exists:', fs.existsSync(dbPath));
   }
 });
+
+// Resend client for transactional email (onboarding/offboarding confirmations)
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+if (!resend) {
+  console.warn('⚠️  RESEND_API_KEY not set - onboarding confirmation emails will be skipped');
+}
 
 // Initialize database tables
 const initDB = () => {
@@ -217,6 +225,18 @@ const initDB = () => {
       amount REAL DEFAULT 0,
       sort_order INTEGER DEFAULT 0,
       FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE CASCADE
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS onboarding_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      manager_email TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('alta', 'baja')),
+      employee_name TEXT NOT NULL,
+      role TEXT,
+      effective_date TEXT,
+      details TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`
   ];
 
@@ -2069,6 +2089,197 @@ app.get('/api/monitor-proxy', authenticateToken, async (req, res) => {
       details: error.message
     });
   }
+});
+
+// ============================================================
+// Onboarding / Offboarding requests (Altas y Bajas de Personal)
+// ============================================================
+
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+}[char]));
+
+const normalizeExtraServices = (extraServices) => {
+  if (Array.isArray(extraServices)) {
+    return extraServices.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (typeof extraServices === 'string') {
+    return extraServices.split(/\r?\n|,/).map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const sendOnboardingConfirmationEmail = async (request, extraServices) => {
+  if (!resend) return;
+
+  const typeLabel = request.type === 'alta' ? 'Alta' : 'Baja';
+  const originalDetailsRows = [
+    ['Puesto', request.role],
+    ['Fecha de efectividad', request.effective_date],
+  ].filter(([, value]) => value);
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+      <h2 style="color: #111827;">Proceso de ${escapeHtml(typeLabel)} finalizado</h2>
+      <p>Hola,</p>
+      <p>Te confirmamos que el proceso de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
+        <strong>${escapeHtml(request.employee_name)}</strong> ha finalizado correctamente.</p>
+
+      ${originalDetailsRows.length > 0 ? `
+        <h3 style="color: #111827; margin-top: 24px;">Detalles de la solicitud</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          ${originalDetailsRows.map(([label, value]) => `
+            <tr>
+              <td style="padding: 4px 8px; color: #6b7280; font-size: 13px;">${escapeHtml(label)}</td>
+              <td style="padding: 4px 8px; font-size: 13px;">${escapeHtml(value)}</td>
+            </tr>
+          `).join('')}
+        </table>
+      ` : ''}
+
+      ${request.details ? `
+        <h3 style="color: #111827; margin-top: 24px;">Notas originales</h3>
+        <p style="background: #f9fafb; border-radius: 8px; padding: 12px; font-size: 13px; white-space: pre-wrap;">${escapeHtml(request.details)}</p>
+      ` : ''}
+
+      <h3 style="color: #111827; margin-top: 24px;">Accesos y servicios configurados</h3>
+      ${extraServices.length > 0 ? `
+        <ul style="padding-left: 20px;">
+          ${extraServices.map((service) => `<li style="margin-bottom: 4px;">${escapeHtml(service)}</li>`).join('')}
+        </ul>
+      ` : '<p style="color: #6b7280; font-size: 13px;">No se configuraron accesos o servicios adicionales.</p>'}
+
+      <p style="margin-top: 32px; color: #6b7280; font-size: 12px;">Este correo fue generado automáticamente por TaskTracker Pro.</p>
+    </div>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro',
+      to: request.manager_email,
+      subject: `${typeLabel} de ${request.employee_name} - Proceso finalizado`,
+      html
+    });
+  } catch (error) {
+    console.error('❌ Error sending onboarding confirmation email:', error);
+  }
+};
+
+// Public: managers submit an onboarding/offboarding request - no auth required
+app.post('/api/public/onboarding', (req, res) => {
+  const { managerEmail, type, employeeName, role, effectiveDate, details } = req.body;
+
+  if (!managerEmail || !type || !employeeName) {
+    return res.status(400).json({ error: 'managerEmail, type and employeeName are required' });
+  }
+  if (!['alta', 'baja'].includes(type)) {
+    return res.status(400).json({ error: "type must be 'alta' or 'baja'" });
+  }
+
+  db.run(
+    `INSERT INTO onboarding_requests (manager_email, type, employee_name, role, effective_date, details)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [managerEmail, type, employeeName, role || null, effectiveDate || null, details || null],
+    function (err) {
+      if (err) {
+        console.error('❌ Error creating onboarding request:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true, id: this.lastID });
+    }
+  );
+});
+
+// Admin: list pending onboarding/offboarding requests
+app.get('/api/admin/onboarding', authenticateToken, (req, res) => {
+  db.all(
+    `SELECT * FROM onboarding_requests WHERE status = 'pending' ORDER BY created_at DESC`,
+    (err, rows) => {
+      if (err) {
+        console.error('❌ Error fetching onboarding requests:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(rows);
+    }
+  );
+});
+
+// Admin: confirm a request - creates the billable task and emails the manager
+app.post('/api/admin/onboarding/:id/confirm', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { client_id, project_id, extra_services } = req.body;
+
+  if (!client_id || !project_id) {
+    return res.status(400).json({ error: 'client_id and project_id are required' });
+  }
+
+  const extraServices = normalizeExtraServices(extra_services);
+
+  db.get('SELECT * FROM onboarding_requests WHERE id = ?', [id], (err, request) => {
+    if (err) {
+      console.error('❌ Error fetching onboarding request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!request) {
+      return res.status(404).json({ error: 'Onboarding request not found' });
+    }
+    if (request.status === 'completed') {
+      return res.status(400).json({ error: 'This request was already completed' });
+    }
+
+    const typeLabel = request.type === 'alta' ? 'Alta' : 'Baja';
+    const title = `[${typeLabel}] - ${request.employee_name}`;
+    const description = [
+      title,
+      `Solicitado por: ${request.manager_email}`,
+      `Puesto: ${request.role || '-'}`,
+      `Fecha de efectividad: ${request.effective_date || '-'}`,
+      `Detalles originales: ${request.details || '-'}`,
+      extraServices.length > 0
+        ? `Servicios extra configurados:\n${extraServices.map((s) => `- ${s}`).join('\n')}`
+        : 'Servicios extra configurados: ninguno'
+    ].join('\n');
+
+    const taskId = crypto.randomUUID();
+    const today = new Date().toISOString().split('T')[0];
+
+    db.run(
+      `INSERT INTO tasks (id, client_id, project_id, description, date, type, status, priority)
+       VALUES (?, ?, ?, ?, ?, 'request', 'in_progress', 'medium')`,
+      [taskId, client_id, project_id, description, today],
+      function (taskErr) {
+        if (taskErr) {
+          console.error('❌ Error creating onboarding task:', taskErr);
+          return res.status(500).json({ error: 'Database error creating task' });
+        }
+
+        db.run(
+          `UPDATE onboarding_requests SET status = 'completed' WHERE id = ?`,
+          [id],
+          (updateErr) => {
+            if (updateErr) {
+              console.error('❌ Error updating onboarding request:', updateErr);
+              return res.status(500).json({ error: 'Database error updating request' });
+            }
+
+            logActivity('created', 'task', taskId, title, {
+              source: 'onboarding',
+              onboardingRequestId: id,
+              extraServices
+            }, req.user?.id);
+
+            sendOnboardingConfirmationEmail(request, extraServices);
+
+            res.json({ success: true, taskId });
+          }
+        );
+      }
+    );
+  });
 });
 
 // Serve static files in production - MUST BE AFTER all API routes

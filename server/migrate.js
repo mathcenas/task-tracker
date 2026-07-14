@@ -103,6 +103,20 @@ const runMigrations = async () => {
               clients.hourly_rate
             FROM clients
             WHERE clients.hourly_rate > 0`
+    },
+    {
+      name: 'Create onboarding_requests table',
+      sql: `CREATE TABLE IF NOT EXISTS onboarding_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        manager_email TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('alta', 'baja')),
+        employee_name TEXT NOT NULL,
+        role TEXT,
+        effective_date TEXT,
+        details TEXT,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`
     }
   ];
 

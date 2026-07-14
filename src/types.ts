@@ -19,6 +19,18 @@ export interface ClientYearlyRate {
   updatedAt?: string;
 }
 
+export interface OnboardingRequest {
+  id: number;
+  managerEmail: string;
+  type: 'alta' | 'baja';
+  employeeName: string;
+  role?: string;
+  effectiveDate?: string;
+  details?: string;
+  status: 'pending' | 'completed';
+  createdAt?: string;
+}
+
 export interface Project {
   id: string;
   clientId: string;

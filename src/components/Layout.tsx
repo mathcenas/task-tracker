@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database, Package, Printer } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database, Package, Printer, UserCog } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
@@ -192,6 +192,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/import-json', icon: Database, label: 'Import JSON', group: 'Tools' },
     { path: '/activity-log', icon: History, label: 'Activity Log', group: 'Tools' },
     { path: '/quotes', icon: FileText, label: 'Quotes', group: 'Management' },
+    { path: '/onboarding-admin', icon: UserCog, label: 'Altas / Bajas', group: 'Management' },
     { path: '/integrations/monitors', icon: Activity, label: 'Monitors', group: 'Integrations' },
     { path: '/integrations/status-pages', icon: Globe, label: 'Status Pages', group: 'Integrations' },
     { path: '/settings/company', icon: Building2, label: 'Company Settings', group: 'Settings' },
