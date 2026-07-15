@@ -236,7 +236,12 @@ const initDB = () => {
       effective_date TEXT,
       details TEXT,
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      client_id TEXT,
+      project_id TEXT,
+      task_id TEXT,
+      extra_services TEXT,
+      cc_emails TEXT
     )`
   ];
 
@@ -281,6 +286,11 @@ const runMigrations = () => {
     `ALTER TABLE tasks ADD COLUMN accepted_at DATETIME`,
     `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`,
     `ALTER TABLE quotes ADD COLUMN quote_type TEXT DEFAULT 'standard'`,
+    `ALTER TABLE onboarding_requests ADD COLUMN client_id TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN project_id TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN task_id TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
   ];
 
   migrations.forEach(sql => {
@@ -2113,8 +2123,63 @@ const normalizeExtraServices = (extraServices) => {
   return [];
 };
 
-const sendOnboardingConfirmationEmail = async (request, extraServices) => {
+const normalizeEmailList = (emails) => {
+  const list = Array.isArray(emails)
+    ? emails
+    : (typeof emails === 'string' ? emails.split(/\r?\n|,/) : []);
+  return list.map((e) => String(e).trim()).filter((e) => e.includes('@'));
+};
+
+const parseJsonArray = (value) => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+// Public: acknowledge that a request was received, before it's processed
+const sendOnboardingReceivedEmail = async (request) => {
   if (!resend) return;
+
+  const typeLabel = request.type === 'alta' ? 'Alta' : 'Baja';
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+      <h2 style="color: #111827;">Recibimos tu solicitud</h2>
+      <p>Hola,</p>
+      <p>Confirmamos que recibimos tu solicitud de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
+        <strong>${escapeHtml(request.employeeName)}</strong>. Va a ser procesada a la brevedad y te vamos a
+        avisar por este mismo medio apenas quede finalizada.</p>
+      <p style="margin-top: 32px; color: #6b7280; font-size: 12px;">Este correo fue generado automáticamente por TaskTracker Pro.</p>
+    </div>
+  `;
+
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro';
+  console.log(`📧 [Onboarding] Sending "received" acknowledgment to ${request.managerEmail}...`);
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: request.managerEmail,
+      subject: `Recibimos tu solicitud de ${typeLabel.toLowerCase()} de ${request.employeeName}`,
+      html
+    });
+
+    if (error) {
+      console.error('❌ [Onboarding] Resend rejected the acknowledgment email:', error);
+      return;
+    }
+
+    console.log(`✅ [Onboarding] Acknowledgment email sent to ${request.managerEmail} (id: ${data?.id})`);
+  } catch (error) {
+    console.error('❌ [Onboarding] Error sending acknowledgment email:', error);
+  }
+};
+
+const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails = []) => {
+  if (!resend) return { success: false, error: 'Resend is not configured' };
 
   const typeLabel = request.type === 'alta' ? 'Alta' : 'Baja';
   const originalDetailsRows = [
@@ -2158,24 +2223,27 @@ const sendOnboardingConfirmationEmail = async (request, extraServices) => {
   `;
 
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro';
-  console.log(`📧 [Onboarding] Sending confirmation email to ${request.manager_email} (from ${fromAddress})...`);
+  console.log(`📧 [Onboarding] Sending confirmation email to ${request.manager_email}${ccEmails.length ? ` (cc: ${ccEmails.join(', ')})` : ''} (from ${fromAddress})...`);
 
   try {
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: request.manager_email,
+      ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
       subject: `${typeLabel} de ${request.employee_name} - Proceso finalizado`,
       html
     });
 
     if (error) {
       console.error('❌ [Onboarding] Resend rejected the email:', error);
-      return;
+      return { success: false, error };
     }
 
     console.log(`✅ [Onboarding] Confirmation email sent to ${request.manager_email} (id: ${data?.id})`);
+    return { success: true, id: data?.id };
   } catch (error) {
     console.error('❌ [Onboarding] Error sending confirmation email:', error);
+    return { success: false, error };
   }
 };
 
@@ -2199,15 +2267,16 @@ app.post('/api/public/onboarding', (req, res) => {
         console.error('❌ Error creating onboarding request:', err);
         return res.status(500).json({ error: 'Database error' });
       }
+      sendOnboardingReceivedEmail({ managerEmail, type, employeeName });
       res.json({ success: true, id: this.lastID });
     }
   );
 });
 
-// Admin: list pending onboarding/offboarding requests
+// Admin: list all onboarding/offboarding requests (pending and completed), newest first
 app.get('/api/admin/onboarding', authenticateToken, (req, res) => {
   db.all(
-    `SELECT * FROM onboarding_requests WHERE status = 'pending' ORDER BY created_at DESC`,
+    `SELECT * FROM onboarding_requests ORDER BY created_at DESC`,
     (err, rows) => {
       if (err) {
         console.error('❌ Error fetching onboarding requests:', err);
@@ -2221,13 +2290,14 @@ app.get('/api/admin/onboarding', authenticateToken, (req, res) => {
 // Admin: confirm a request - creates the billable task and emails the manager
 app.post('/api/admin/onboarding/:id/confirm', authenticateToken, (req, res) => {
   const { id } = req.params;
-  const { client_id, project_id, extra_services } = req.body;
+  const { client_id, project_id, extra_services, cc } = req.body;
 
   if (!client_id || !project_id) {
     return res.status(400).json({ error: 'client_id and project_id are required' });
   }
 
   const extraServices = normalizeExtraServices(extra_services);
+  const ccEmails = normalizeEmailList(cc);
 
   db.get('SELECT * FROM onboarding_requests WHERE id = ?', [id], (err, request) => {
     if (err) {
@@ -2268,8 +2338,10 @@ app.post('/api/admin/onboarding/:id/confirm', authenticateToken, (req, res) => {
         }
 
         db.run(
-          `UPDATE onboarding_requests SET status = 'completed' WHERE id = ?`,
-          [id],
+          `UPDATE onboarding_requests
+           SET status = 'completed', client_id = ?, project_id = ?, task_id = ?, extra_services = ?, cc_emails = ?
+           WHERE id = ?`,
+          [client_id, project_id, taskId, JSON.stringify(extraServices), JSON.stringify(ccEmails), id],
           (updateErr) => {
             if (updateErr) {
               console.error('❌ Error updating onboarding request:', updateErr);
@@ -2282,13 +2354,44 @@ app.post('/api/admin/onboarding/:id/confirm', authenticateToken, (req, res) => {
               extraServices
             }, req.user?.id);
 
-            sendOnboardingConfirmationEmail(request, extraServices);
+            sendOnboardingConfirmationEmail(request, extraServices, ccEmails);
 
             res.json({ success: true, taskId });
           }
         );
       }
     );
+  });
+});
+
+// Admin: resend the confirmation email for an already-completed request
+app.post('/api/admin/onboarding/:id/resend', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT * FROM onboarding_requests WHERE id = ?', [id], async (err, request) => {
+    if (err) {
+      console.error('❌ Error fetching onboarding request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!request) {
+      return res.status(404).json({ error: 'Onboarding request not found' });
+    }
+    if (request.status !== 'completed') {
+      return res.status(400).json({ error: 'This request has not been processed yet' });
+    }
+    if (!resend) {
+      return res.status(400).json({ error: 'RESEND_API_KEY is not configured on the server' });
+    }
+
+    const extraServices = parseJsonArray(request.extra_services);
+    const ccEmails = parseJsonArray(request.cc_emails);
+
+    const result = await sendOnboardingConfirmationEmail(request, extraServices, ccEmails);
+    if (!result?.success) {
+      return res.status(502).json({ error: 'Resend rejected the email', details: result?.error });
+    }
+
+    res.json({ success: true });
   });
 });
 

@@ -115,8 +115,33 @@ const runMigrations = async () => {
         effective_date TEXT,
         details TEXT,
         status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        client_id TEXT,
+        project_id TEXT,
+        task_id TEXT,
+        extra_services TEXT,
+        cc_emails TEXT
       )`
+    },
+    {
+      name: 'Add client/project/task linkage and resend data to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN client_id TEXT`
+    },
+    {
+      name: 'Add project_id to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN project_id TEXT`
+    },
+    {
+      name: 'Add task_id to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN task_id TEXT`
+    },
+    {
+      name: 'Add extra_services to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`
+    },
+    {
+      name: 'Add cc_emails to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`
     }
   ];
 

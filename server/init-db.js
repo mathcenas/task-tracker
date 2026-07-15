@@ -170,7 +170,12 @@ const initDB = async () => {
       effective_date TEXT,
       details TEXT,
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      client_id TEXT,
+      project_id TEXT,
+      task_id TEXT,
+      extra_services TEXT,
+      cc_emails TEXT
     )`
   ];
 
@@ -201,6 +206,12 @@ const initDB = async () => {
     `ALTER TABLE tasks ADD COLUMN approval_status TEXT DEFAULT 'pending'`,
     // Add recurring_start_date to recurring_tasks table
     `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`,
+    // Onboarding requests: link to the resulting task and store what was sent, for resend
+    `ALTER TABLE onboarding_requests ADD COLUMN client_id TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN project_id TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN task_id TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
     // Update old status values to new workflow statuses
     `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`,
     `UPDATE tasks SET status = 'in_progress' WHERE status = 'in-progress'`,

@@ -29,6 +29,11 @@ export interface OnboardingRequest {
   details?: string;
   status: 'pending' | 'completed';
   createdAt?: string;
+  clientId?: string;
+  projectId?: string;
+  taskId?: string;
+  extraServices?: string[];
+  ccEmails?: string[];
 }
 
 export interface Project {
