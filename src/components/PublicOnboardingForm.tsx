@@ -6,11 +6,13 @@ import { OnboardingPrivacyDisclaimer } from './OnboardingPrivacyDisclaimer';
 
 type RequestType = 'alta' | 'baja';
 
+const ACCESS_OPTIONS = ['Mail', 'NAS/Carpetas Compartidas', 'VPN'];
+
 interface FormState {
   managerEmail: string;
   type: RequestType;
   employeeName: string;
-  role: string;
+  accessTypes: string[];
   effectiveDate: string;
   details: string;
 }
@@ -19,7 +21,7 @@ const initialState: FormState = {
   managerEmail: '',
   type: 'alta',
   employeeName: '',
-  role: '',
+  accessTypes: [],
   effectiveDate: '',
   details: ''
 };
@@ -31,10 +33,19 @@ export function PublicOnboardingForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (field: keyof FormState) =>
+  const handleChange = (field: 'managerEmail' | 'type' | 'employeeName' | 'effectiveDate' | 'details') =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
     };
+
+  const toggleAccessType = (option: string) => {
+    setForm((prev) => ({
+      ...prev,
+      accessTypes: prev.accessTypes.includes(option)
+        ? prev.accessTypes.filter((a) => a !== option)
+        : [...prev.accessTypes, option]
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +62,17 @@ export function PublicOnboardingForm() {
 
     setSubmitting(true);
     try {
+      const accessLine = form.accessTypes.length > 0
+        ? `Accesos solicitados: ${form.accessTypes.join(', ')}`
+        : '';
+      const combinedDetails = [accessLine, form.details].filter(Boolean).join('\n\n');
+
       await api.submitOnboardingRequest({
         managerEmail: form.managerEmail,
         type: form.type,
         employeeName: form.employeeName,
-        role: form.role || undefined,
         effectiveDate: form.effectiveDate || undefined,
-        details: form.details || undefined
+        details: combinedDetails || undefined
       });
       setSubmitted(true);
       setForm(initialState);
@@ -173,19 +188,22 @@ export function PublicOnboardingForm() {
           </div>
 
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Puesto
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Accesos Requeridos
             </label>
-            <input
-              type="text"
-              id="role"
-              value={form.role}
-              onChange={handleChange('role')}
-              placeholder="Ej: Analista Contable"
-              className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm
-                       focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
-                       dark:bg-gray-700 dark:text-white transition-all duration-200"
-            />
+            <div className="space-y-2">
+              {ACCESS_OPTIONS.map((option) => (
+                <label key={option} className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.accessTypes.includes(option)}
+                    onChange={() => toggleAccessType(option)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -212,7 +230,7 @@ export function PublicOnboardingForm() {
               rows={4}
               value={form.details}
               onChange={handleChange('details')}
-              placeholder="Accesos requeridos, sistemas, notas para el equipo..."
+              placeholder="Otros sistemas, accesos puntuales o notas para el equipo..."
               className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm
                        focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
                        dark:bg-gray-700 dark:text-white transition-all duration-200"
