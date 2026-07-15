@@ -2157,15 +2157,25 @@ const sendOnboardingConfirmationEmail = async (request, extraServices) => {
     </div>
   `;
 
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro';
+  console.log(`📧 [Onboarding] Sending confirmation email to ${request.manager_email} (from ${fromAddress})...`);
+
   try {
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro',
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
       to: request.manager_email,
       subject: `${typeLabel} de ${request.employee_name} - Proceso finalizado`,
       html
     });
+
+    if (error) {
+      console.error('❌ [Onboarding] Resend rejected the email:', error);
+      return;
+    }
+
+    console.log(`✅ [Onboarding] Confirmation email sent to ${request.manager_email} (id: ${data?.id})`);
   } catch (error) {
-    console.error('❌ Error sending onboarding confirmation email:', error);
+    console.error('❌ [Onboarding] Error sending confirmation email:', error);
   }
 };
 
