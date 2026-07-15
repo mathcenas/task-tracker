@@ -66,6 +66,7 @@ export function PublicOnboardingForm() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
         <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 shadow-xl p-8 text-center">
+          <img src="/logo - Copy.png" alt="TaskTracker Pro" className="h-10 w-auto mx-auto mb-4" />
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Solicitud enviada
@@ -88,6 +89,10 @@ export function PublicOnboardingForm() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg rounded-lg bg-white dark:bg-gray-800 shadow-xl p-8">
+        <div className="flex justify-center mb-6">
+          <img src="/logo - Copy.png" alt="TaskTracker Pro" className="h-10 w-auto" />
+        </div>
+
         <div className="flex items-center mb-6">
           {form.type === 'alta' ? (
             <UserPlus className="w-6 h-6 text-green-500 mr-2" />
