@@ -701,18 +701,30 @@ class ApiService {
       effectiveDate: r.effective_date,
       details: r.details,
       status: r.status,
-      createdAt: r.created_at
+      createdAt: r.created_at,
+      clientId: r.client_id,
+      projectId: r.project_id,
+      taskId: r.task_id,
+      extraServices: r.extra_services ? JSON.parse(r.extra_services) : [],
+      ccEmails: r.cc_emails ? JSON.parse(r.cc_emails) : []
     }));
   }
 
-  async confirmOnboardingRequest(id: number, data: { clientId: string; projectId: string; extraServices: string[] }) {
+  async confirmOnboardingRequest(id: number, data: { clientId: string; projectId: string; extraServices: string[]; cc?: string[] }) {
     return this.request(`/admin/onboarding/${id}/confirm`, {
       method: 'POST',
       body: JSON.stringify({
         client_id: data.clientId,
         project_id: data.projectId,
-        extra_services: data.extraServices
+        extra_services: data.extraServices,
+        cc: data.cc || []
       }),
+    });
+  }
+
+  async resendOnboardingConfirmation(id: number) {
+    return this.request(`/admin/onboarding/${id}/resend`, {
+      method: 'POST',
     });
   }
 }
