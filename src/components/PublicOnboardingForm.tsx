@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { UserPlus, UserMinus, CheckCircle, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
+import { OnboardingInfoBanner } from './OnboardingInfoBanner';
+import { OnboardingPrivacyDisclaimer } from './OnboardingPrivacyDisclaimer';
 
 type RequestType = 'alta' | 'baja';
 
@@ -24,6 +26,7 @@ const initialState: FormState = {
 
 export function PublicOnboardingForm() {
   const [form, setForm] = useState<FormState>(initialState);
+  const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,10 @@ export function PublicOnboardingForm() {
       setError('Completá al menos el email del solicitante y el nombre del empleado.');
       return;
     }
+    if (!accepted) {
+      setError('Necesitamos que aceptes los términos de protección de datos para continuar.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -54,6 +61,7 @@ export function PublicOnboardingForm() {
       });
       setSubmitted(true);
       setForm(initialState);
+      setAccepted(false);
     } catch (err) {
       console.error('Error submitting onboarding request:', err);
       setError('No pudimos enviar la solicitud. Por favor intentá nuevamente.');
@@ -103,6 +111,8 @@ export function PublicOnboardingForm() {
             Solicitud de Alta / Baja de Personal
           </h1>
         </div>
+
+        <OnboardingInfoBanner />
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300">
@@ -209,9 +219,11 @@ export function PublicOnboardingForm() {
             />
           </div>
 
+          <OnboardingPrivacyDisclaimer accepted={accepted} setAccepted={setAccepted} />
+
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !accepted}
             className="w-full flex items-center justify-center px-4 py-2 rounded-lg shadow-sm text-sm
                      font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60
                      dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200"
