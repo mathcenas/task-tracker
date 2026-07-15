@@ -14,6 +14,8 @@ import { TaskForm } from './components/TaskForm';
 import { EditTask } from './components/EditTask';
 import { PublicMonthlyReport } from './components/PublicMonthlyReport';
 import { PublicStatusPage } from './components/PublicStatusPage';
+import { PublicOnboardingForm } from './components/PublicOnboardingForm';
+import { OnboardingAdminPanel } from './components/OnboardingAdminPanel';
 import { AboutPage } from './components/AboutPage';
 import { AllTasksPage } from './components/AllTasksPage';
 import { RecurringTasksPage } from './components/RecurringTasksPage';
@@ -41,6 +43,7 @@ export default function App() {
           {/* Public routes - no authentication required */}
           <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
           <Route path="/status/:slug" element={<PublicStatusPage />} />
+          <Route path="/onboarding" element={<PublicOnboardingForm />} />
           <Route path="/about" element={<AboutPage />} />
 
           {/* Protected routes - authentication required */}
@@ -72,6 +75,7 @@ export default function App() {
                   <Route path="/quotes/new" element={<QuoteForm />} />
                   <Route path="/quotes/:id/edit" element={<QuoteForm />} />
                   <Route path="/quotes/:id" element={<QuoteView />} />
+                  <Route path="/onboarding-admin" element={<OnboardingAdminPanel />} />
                   <Route path="/add-client" element={<ClientForm />} />
                   <Route path="/add-task" element={<TaskForm />} />
                   <Route path="/task" element={<TaskForm />} />
