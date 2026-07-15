@@ -11,10 +11,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=TaskTracker2025!
-      - USER_USERNAME=user
-      - USER_PASSWORD=User2025!
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-TaskTracker2025!}
+      - USER_USERNAME=${USER_USERNAME:-user}
+      - USER_PASSWORD=${USER_PASSWORD:-User2025!}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-onboarding@tasktracker.pro}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s

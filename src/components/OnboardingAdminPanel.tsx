@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { UserPlus, UserMinus, X, Plus, Trash2, Loader2, Inbox } from 'lucide-react';
 import { api } from '../services/api';
+import { useApp } from '../context/AppContext';
 import { OnboardingRequest, Client, Project } from '../types';
 
 export function OnboardingAdminPanel() {
+  const { reloadTasks } = useApp();
   const [requests, setRequests] = useState<OnboardingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +104,7 @@ export function OnboardingAdminPanel() {
           onConfirmed={() => {
             setActiveRequest(null);
             loadRequests();
+            reloadTasks();
           }}
         />
       )}
