@@ -2160,6 +2160,16 @@ const emailFooter = () => `
   </div>
 `;
 
+// alta -> onboarding@<domain>, baja -> offboarding@<domain>, domain taken from RESEND_FROM_EMAIL
+const getFromAddressForType = (type) => {
+  const configured = process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro';
+  const atIndex = configured.indexOf('@');
+  const domain = atIndex !== -1 ? configured.slice(atIndex + 1) : 'tasktracker.pro';
+  return `${type === 'baja' ? 'offboarding' : 'onboarding'}@${domain}`;
+};
+
+const adminNotificationEmail = process.env.ADMIN_NOTIFICATION_EMAIL || null;
+
 // Public: acknowledge that a request was received, before it's processed
 const sendOnboardingReceivedEmail = async (request) => {
   if (!resend) return;
@@ -2177,13 +2187,14 @@ const sendOnboardingReceivedEmail = async (request) => {
     </div>
   `;
 
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro';
-  console.log(`📧 [Onboarding] Sending "received" acknowledgment to ${request.managerEmail}...`);
+  const fromAddress = getFromAddressForType(request.type);
+  console.log(`📧 [Onboarding] Sending "received" acknowledgment to ${request.managerEmail}${adminNotificationEmail ? ` (bcc: ${adminNotificationEmail})` : ''}...`);
 
   try {
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: request.managerEmail,
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
       subject: `Recibimos tu solicitud de ${typeLabel.toLowerCase()} de ${request.employeeName}`,
       html
     });
@@ -2244,7 +2255,7 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
     </div>
   `;
 
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro';
+  const fromAddress = getFromAddressForType(request.type);
   console.log(`📧 [Onboarding] Sending confirmation email to ${request.manager_email}${ccEmails.length ? ` (cc: ${ccEmails.join(', ')})` : ''} (from ${fromAddress})...`);
 
   try {
@@ -2252,6 +2263,7 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
       from: fromAddress,
       to: request.manager_email,
       ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
       subject: `${typeLabel} de ${request.employee_name} - Proceso finalizado`,
       html
     });
