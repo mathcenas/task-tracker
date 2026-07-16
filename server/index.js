@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import rateLimit from 'express-rate-limit';
 import UptimeKumaService from './uptime-kuma-service.js';
 
 const { verbose } = sqlite3;
@@ -15,6 +16,11 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Trust the reverse proxy in front of the container (nginx/Caddy/etc.) so
+// req.ip reflects the real client IP instead of the proxy's, which the
+// onboarding rate limiter below relies on.
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors({
@@ -241,7 +247,8 @@ const initDB = () => {
       project_id TEXT,
       task_id TEXT,
       extra_services TEXT,
-      cc_emails TEXT
+      cc_emails TEXT,
+      reminder_sent_at DATETIME
     )`
   ];
 
@@ -291,6 +298,7 @@ const runMigrations = () => {
     `ALTER TABLE onboarding_requests ADD COLUMN task_id TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
   ];
 
   migrations.forEach(sql => {
@@ -2281,8 +2289,18 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
   }
 };
 
-// Public: managers submit an onboarding/offboarding request - no auth required
-app.post('/api/public/onboarding', (req, res) => {
+// Public: managers submit an onboarding/offboarding request - no auth required.
+// Rate limited per IP since this endpoint is unauthenticated and each
+// submission sends real emails (to the manager, cc'd/bcc'd to the team).
+const onboardingRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes desde esta conexión. Por favor intentá nuevamente en unos minutos.' }
+});
+
+app.post('/api/public/onboarding', onboardingRateLimiter, (req, res) => {
   const { managerEmail, type, employeeName, role, effectiveDate, details } = req.body;
 
   if (!managerEmail || !type || !employeeName) {
@@ -2428,6 +2446,82 @@ app.post('/api/admin/onboarding/:id/resend', authenticateToken, async (req, res)
     res.json({ success: true });
   });
 });
+
+// Periodically remind the team about onboarding/offboarding requests that
+// have been pending for too long. One reminder per request (tracked via
+// reminder_sent_at) so an unprocessed request doesn't spam the team on
+// every check. No-op if Resend or ADMIN_NOTIFICATION_EMAIL isn't configured.
+const ONBOARDING_STALE_DAYS = parseInt(process.env.ONBOARDING_STALE_DAYS || '2', 10);
+const ONBOARDING_STALE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // every 6 hours
+
+const checkStaleOnboardingRequests = () => {
+  if (!resend || !adminNotificationEmail) return;
+
+  db.all(
+    `SELECT * FROM onboarding_requests
+     WHERE status = 'pending' AND reminder_sent_at IS NULL
+     AND datetime(created_at) <= datetime('now', ?)`,
+    [`-${ONBOARDING_STALE_DAYS} days`],
+    async (err, rows) => {
+      if (err) {
+        console.error('❌ [Onboarding] Error checking stale requests:', err);
+        return;
+      }
+      if (!rows || rows.length === 0) return;
+
+      const html = `
+        <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+          ${emailHeader()}
+          <h2 style="color: #111827;">Solicitudes pendientes hace más de ${ONBOARDING_STALE_DAYS} día(s)</h2>
+          <p>Estas solicitudes de alta/baja todavía no fueron procesadas en el panel:</p>
+          <ul style="padding-left: 20px;">
+            ${rows.map((r) => `
+              <li style="margin-bottom: 8px;">
+                <strong>${escapeHtml(r.type === 'alta' ? 'Alta' : 'Baja')}</strong> - ${escapeHtml(r.employee_name)}
+                <br /><span style="color: #6b7280; font-size: 13px;">
+                  Solicitado por ${escapeHtml(r.manager_email)} el ${escapeHtml(r.created_at)}
+                </span>
+              </li>
+            `).join('')}
+          </ul>
+          ${emailFooter()}
+        </div>
+      `;
+
+      try {
+        const { data, error } = await resend.emails.send({
+          from: getFromAddressForType('alta'),
+          to: adminNotificationEmail,
+          subject: `${rows.length} solicitud(es) de alta/baja pendiente(s) hace más de ${ONBOARDING_STALE_DAYS} día(s)`,
+          html
+        });
+
+        if (error) {
+          console.error('❌ [Onboarding] Resend rejected the stale-request reminder:', error);
+          return;
+        }
+
+        console.log(`✅ [Onboarding] Stale-request reminder sent for ${rows.length} request(s) (id: ${data?.id})`);
+
+        const ids = rows.map((r) => r.id);
+        db.run(
+          `UPDATE onboarding_requests SET reminder_sent_at = CURRENT_TIMESTAMP WHERE id IN (${ids.map(() => '?').join(',')})`,
+          ids,
+          (updateErr) => {
+            if (updateErr) console.error('❌ [Onboarding] Error marking reminders as sent:', updateErr);
+          }
+        );
+      } catch (error) {
+        console.error('❌ [Onboarding] Error sending stale-request reminder:', error);
+      }
+    }
+  );
+};
+
+setTimeout(() => {
+  checkStaleOnboardingRequests();
+  setInterval(checkStaleOnboardingRequests, ONBOARDING_STALE_CHECK_INTERVAL_MS);
+}, 60 * 1000);
 
 // Serve static files in production - MUST BE AFTER all API routes
 if (process.env.NODE_ENV === 'production') {

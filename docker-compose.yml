@@ -19,6 +19,7 @@ services:
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-onboarding@tasktracker.pro}
       - PUBLIC_APP_URL=${PUBLIC_APP_URL:-https://clientes.cenas-support.com}
       - ADMIN_NOTIFICATION_EMAIL=${ADMIN_NOTIFICATION_EMAIL:-}
+      - ONBOARDING_STALE_DAYS=${ONBOARDING_STALE_DAYS:-2}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
