@@ -2140,6 +2140,26 @@ const parseJsonArray = (value) => {
   }
 };
 
+const publicAppUrl = (process.env.PUBLIC_APP_URL || 'https://clientes.cenas-support.com').replace(/\/$/, '');
+const onboardingFormUrl = `${publicAppUrl}/onboarding`;
+const logoUrl = `${publicAppUrl}/logo%20-%20Copy.png`;
+
+const emailHeader = () => `
+  <div style="text-align: center; margin-bottom: 24px;">
+    <img src="${logoUrl}" alt="TaskTracker Pro" style="height: 40px; width: auto;" />
+  </div>
+`;
+
+const emailFooter = () => `
+  <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+    <p style="color: #6b7280; font-size: 12px; margin: 0 0 6px;">
+      ¿Necesitás gestionar otra alta o baja? Podés hacerlo acá:
+      <a href="${onboardingFormUrl}" style="color: #2563eb;">${onboardingFormUrl}</a>
+    </p>
+    <p style="color: #6b7280; font-size: 12px; margin: 0;">Correo generado por TaskTracker Pro, by Cenas Support.</p>
+  </div>
+`;
+
 // Public: acknowledge that a request was received, before it's processed
 const sendOnboardingReceivedEmail = async (request) => {
   if (!resend) return;
@@ -2147,12 +2167,13 @@ const sendOnboardingReceivedEmail = async (request) => {
   const typeLabel = request.type === 'alta' ? 'Alta' : 'Baja';
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+      ${emailHeader()}
       <h2 style="color: #111827;">Recibimos tu solicitud</h2>
       <p>Hola,</p>
       <p>Confirmamos que recibimos tu solicitud de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
         <strong>${escapeHtml(request.employeeName)}</strong>. Va a ser procesada a la brevedad y te vamos a
         avisar por este mismo medio apenas quede finalizada.</p>
-      <p style="margin-top: 32px; color: #6b7280; font-size: 12px;">Este correo fue generado automáticamente por TaskTracker Pro.</p>
+      ${emailFooter()}
     </div>
   `;
 
@@ -2189,6 +2210,7 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+      ${emailHeader()}
       <h2 style="color: #111827;">Proceso de ${escapeHtml(typeLabel)} finalizado</h2>
       <p>Hola,</p>
       <p>Te confirmamos que el proceso de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
@@ -2218,7 +2240,7 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
         </ul>
       ` : '<p style="color: #6b7280; font-size: 13px;">No se configuraron accesos o servicios adicionales.</p>'}
 
-      <p style="margin-top: 32px; color: #6b7280; font-size: 12px;">Este correo fue generado automáticamente por TaskTracker Pro.</p>
+      ${emailFooter()}
     </div>
   `;
 

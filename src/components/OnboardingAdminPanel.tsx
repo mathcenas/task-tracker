@@ -277,6 +277,7 @@ function TagListInput({ label, placeholder, values, onChange, inputType = 'text'
               addValue();
             }
           }}
+          onBlur={addValue}
           placeholder={placeholder}
           className="block w-full rounded-lg border-gray-300 bg-white shadow-sm
                    focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
