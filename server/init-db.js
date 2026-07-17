@@ -175,7 +175,8 @@ const initDB = async () => {
       project_id TEXT,
       task_id TEXT,
       extra_services TEXT,
-      cc_emails TEXT
+      cc_emails TEXT,
+      reminder_sent_at DATETIME
     )`
   ];
 
@@ -212,6 +213,7 @@ const initDB = async () => {
     `ALTER TABLE onboarding_requests ADD COLUMN task_id TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
     // Update old status values to new workflow statuses
     `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`,
     `UPDATE tasks SET status = 'in_progress' WHERE status = 'in-progress'`,

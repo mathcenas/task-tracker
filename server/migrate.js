@@ -120,7 +120,8 @@ const runMigrations = async () => {
         project_id TEXT,
         task_id TEXT,
         extra_services TEXT,
-        cc_emails TEXT
+        cc_emails TEXT,
+        reminder_sent_at DATETIME
       )`
     },
     {
@@ -142,6 +143,10 @@ const runMigrations = async () => {
     {
       name: 'Add cc_emails to onboarding_requests',
       sql: `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`
+    },
+    {
+      name: 'Add reminder_sent_at to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`
     }
   ];
 
