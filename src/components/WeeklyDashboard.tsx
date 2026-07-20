@@ -5,7 +5,6 @@ import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, Trendin
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
 import { TaskTemplates } from './TaskTemplates';
-import { RecurringTaskManager } from './RecurringTaskManager';
 import { CalendarSync } from './CalendarSync';
 import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
@@ -20,7 +19,6 @@ export function WeeklyDashboard() {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [showBulkOperations, setShowBulkOperations] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
@@ -541,13 +539,13 @@ export function WeeklyDashboard() {
               Templates
             </button>
             
-            <button
-              onClick={() => setShowRecurringTasks(true)}
+            <Link
+              to="/recurring-tasks"
               className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 transition-colors"
             >
               <Repeat className="w-4 h-4 mr-1" />
               Recurring
-            </button>
+            </Link>
             
             <button
               onClick={() => setShowCalendarSync(true)}
@@ -1085,11 +1083,6 @@ export function WeeklyDashboard() {
         isOpen={showTemplates}
         onClose={() => setShowTemplates(false)}
         onUseTemplate={handleUseTemplate}
-      />
-
-      <RecurringTaskManager
-        isOpen={showRecurringTasks}
-        onClose={() => setShowRecurringTasks(false)}
       />
 
       <CalendarSync

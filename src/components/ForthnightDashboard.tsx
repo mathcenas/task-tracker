@@ -5,7 +5,6 @@ import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, Trendin
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
 import { TaskTemplates } from './TaskTemplates';
-import { RecurringTaskManager } from './RecurringTaskManager';
 import { CalendarSync } from './CalendarSync';
 import { Link } from 'react-router-dom';
 
@@ -17,7 +16,6 @@ export function ForthnightDashboard() {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [showBulkOperations, setShowBulkOperations] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
 
   const today = new Date();
@@ -258,13 +256,13 @@ export function ForthnightDashboard() {
               <CalendarDays className="w-4 h-4" />
               Calendar Sync
             </button>
-            <button
-              onClick={() => setShowRecurringTasks(true)}
+            <Link
+              to="/recurring-tasks"
               className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
             >
               <Repeat className="w-4 h-4" />
               Recurring Tasks
-            </button>
+            </Link>
             <button
               onClick={() => setShowTemplates(true)}
               className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
@@ -546,10 +544,6 @@ export function ForthnightDashboard() {
 
       {showTemplates && (
         <TaskTemplates onClose={() => setShowTemplates(false)} />
-      )}
-
-      {showRecurringTasks && (
-        <RecurringTaskManager onClose={() => setShowRecurringTasks(false)} />
       )}
 
       {showCalendarSync && (
