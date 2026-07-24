@@ -7,7 +7,7 @@ interface TaskTemplate {
   id: string;
   name: string;
   description: string;
-  type: 'incident' | 'request' | 'insumos';
+  type: 'incident' | 'request' | 'insumos' | 'problem' | 'change';
   priority: 'low' | 'medium' | 'high';
   estimatedHours?: number;
   estimatedCost?: number;
@@ -209,11 +209,13 @@ export function TaskTemplates({ isOpen, onClose, onUseTemplate }: TaskTemplatesP
                     </label>
                     <select
                       value={newTemplate.type || 'request'}
-                      onChange={(e) => setNewTemplate(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' }))}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                       className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     >
                       <option value="request">Request</option>
                       <option value="incident">Incident</option>
+                      <option value="problem">Problem</option>
+                      <option value="change">Change</option>
                       <option value="insumos">Supplies</option>
                     </select>
                   </div>

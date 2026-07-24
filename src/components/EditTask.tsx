@@ -2,13 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { format } from 'date-fns';
-import { ArrowLeft, Save, Trash2, RefreshCw, UserCheck, Store, Receipt } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, RefreshCw, UserCheck, Store, Receipt, PhoneCall, StickyNote, Plus, Send, Loader2, CheckCircle2, Globe, Mail } from 'lucide-react';
+import { api } from '../services/api';
+import { TaskNote } from '../types';
 
 export function EditTask() {
   const navigate = useNavigate();
   const location = useLocation();
   const { taskId } = useParams<{ taskId: string }>();
-  const { getTask, updateTask, deleteTask, clients, projects, getClient, getProject } = useApp();
+  const { getTask, updateTask, deleteTask, clients, projects, getClient, getProject, reloadTasks } = useApp();
 
   const returnPath = (location.state as { from?: string })?.from || '/';
 
@@ -27,7 +29,7 @@ export function EditTask() {
     hours: '',
     cost: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    type: 'request' as 'incident' | 'request' | 'insumos',
+    type: 'request' as 'incident' | 'request' | 'insumos' | 'problem' | 'change',
     status: 'in_progress' as 'not_started' | 'in_progress' | 'review' | 'completed',
     priority: 'medium' as 'low' | 'medium' | 'high',
     notes: '',
@@ -36,7 +38,8 @@ export function EditTask() {
     approvedBy: '',
     vendor: '',
     receiptRef: '',
-    approvalStatus: 'pending' as 'pending' | 'approved' | 'rejected'
+    approvalStatus: 'pending' as 'pending' | 'approved' | 'rejected',
+    reportedBy: ''
   });
 
   useEffect(() => {
@@ -57,7 +60,8 @@ export function EditTask() {
         approvedBy: task.approvedBy || '',
         vendor: task.vendor || '',
         receiptRef: task.receiptRef || '',
-        approvalStatus: task.approvalStatus || 'pending'
+        approvalStatus: task.approvalStatus || 'pending',
+        reportedBy: task.reportedBy || ''
       });
     }
   }, [task]);
@@ -66,6 +70,68 @@ export function EditTask() {
     if (!formData.clientId) return [];
     return projects.filter(p => p.clientId === formData.clientId);
   }, [projects, formData.clientId]);
+
+  const isProblemOrChange = task?.type === 'problem' || task?.type === 'change';
+
+  const [taskNotes, setTaskNotes] = useState<TaskNote[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [closeResult, setCloseResult] = useState<{
+    webhook: { attempted: boolean; success?: boolean };
+    email: { attempted: boolean; success?: boolean; reason?: string };
+  } | null>(null);
+
+  useEffect(() => {
+    if (task && isProblemOrChange) {
+      api.getTaskNotes(task.id).then(setTaskNotes).catch((err) => console.error('Error loading task notes:', err));
+    }
+  }, [task, isProblemOrChange]);
+
+  const handleAddNote = async () => {
+    if (!task || !newNote.trim()) return;
+    setAddingNote(true);
+    try {
+      await api.addTaskNote(task.id, newNote.trim());
+      setNewNote('');
+      const updated = await api.getTaskNotes(task.id);
+      setTaskNotes(updated);
+    } catch (err) {
+      console.error('Error adding note:', err);
+      alert('No se pudo agregar el apunte. Intentá nuevamente.');
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!task) return;
+    try {
+      await api.deleteTaskNote(task.id, noteId);
+      setTaskNotes(prev => prev.filter(n => n.id !== noteId));
+    } catch (err) {
+      console.error('Error deleting note:', err);
+    }
+  };
+
+  const handleClose = async () => {
+    if (!task) return;
+    if (!window.confirm('¿Cerrar este problema/cambio? Se va a marcar como completado, publicar en el portal externo (si está configurado) y enviarle un resumen al cliente por mail.')) {
+      return;
+    }
+    setClosing(true);
+    setCloseResult(null);
+    try {
+      const result = await api.closeTask(task.id);
+      setCloseResult({ webhook: result.webhook, email: result.email });
+      await reloadTasks();
+    } catch (err) {
+      console.error('Error closing task:', err);
+      alert('No se pudo cerrar la tarea. Intentá nuevamente.');
+    } finally {
+      setClosing(false);
+    }
+  };
 
   if (!task) {
     return (
@@ -110,6 +176,9 @@ export function EditTask() {
         vendor: formData.vendor || undefined,
         receiptRef: formData.receiptRef || undefined,
         approvalStatus: formData.approvalStatus
+      } : {}),
+      ...((formData.type === 'problem' || formData.type === 'change') ? {
+        reportedBy: formData.reportedBy || undefined
       } : {})
     };
 
@@ -212,34 +281,53 @@ export function EditTask() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Task Type
             </label>
-            <div className="grid grid-cols-3 gap-3">
-              {(['incident', 'request', 'insumos'] as const).map((t) => (
-                <label key={t} className="relative">
-                  <input
-                    type="radio"
-                    className="sr-only peer"
-                    name="type"
-                    value={t}
-                    checked={formData.type === t}
-                    onChange={() => setFormData(prev => ({ ...prev, type: t }))}
-                  />
-                  <div className={`p-3 border-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 ${
-                    t === 'incident' ? 'peer-checked:border-red-500 peer-checked:bg-red-50 dark:peer-checked:bg-red-900/20 dark:peer-checked:border-red-500' :
-                    t === 'request' ? 'peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 dark:peer-checked:border-blue-500' :
-                    'peer-checked:border-teal-500 peer-checked:bg-teal-50 dark:peer-checked:bg-teal-900/20 dark:peer-checked:border-teal-500'
-                  }`}>
-                    <div className="text-center">
-                      <div className={`font-medium ${
-                        t === 'incident' ? 'text-red-500' : t === 'request' ? 'text-blue-500' : 'text-teal-600'
-                      }`}>
-                        {t === 'insumos' ? 'Supplies' : t.charAt(0).toUpperCase() + t.slice(1)}
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+              {(['incident', 'problem', 'change', 'request', 'insumos'] as const).map((t) => {
+                const typeConfig: Record<typeof t, { label: string; peer: string; text: string }> = {
+                  incident: { label: 'Incident', peer: 'peer-checked:border-red-500 peer-checked:bg-red-50 dark:peer-checked:bg-red-900/20 dark:peer-checked:border-red-500', text: 'text-red-500' },
+                  problem: { label: 'Problem', peer: 'peer-checked:border-orange-500 peer-checked:bg-orange-50 dark:peer-checked:bg-orange-900/20 dark:peer-checked:border-orange-500', text: 'text-orange-500' },
+                  change: { label: 'Change', peer: 'peer-checked:border-teal-500 peer-checked:bg-teal-50 dark:peer-checked:bg-teal-900/20 dark:peer-checked:border-teal-500', text: 'text-teal-600' },
+                  request: { label: 'Request', peer: 'peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 dark:peer-checked:border-blue-500', text: 'text-blue-500' },
+                  insumos: { label: 'Supplies', peer: 'peer-checked:border-purple-500 peer-checked:bg-purple-50 dark:peer-checked:bg-purple-900/20 dark:peer-checked:border-purple-500', text: 'text-purple-500' }
+                };
+                const config = typeConfig[t];
+                return (
+                  <label key={t} className="relative">
+                    <input
+                      type="radio"
+                      className="sr-only peer"
+                      name="type"
+                      value={t}
+                      checked={formData.type === t}
+                      onChange={() => setFormData(prev => ({ ...prev, type: t }))}
+                    />
+                    <div className={`p-3 border-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 ${config.peer}`}>
+                      <div className="text-center">
+                        <div className={`font-medium ${config.text}`}>{config.label}</div>
                       </div>
                     </div>
-                  </div>
-                </label>
-              ))}
+                  </label>
+                );
+              })}
             </div>
           </div>
+
+          {(formData.type === 'problem' || formData.type === 'change') && (
+            <div>
+              <label htmlFor="reportedBy" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <PhoneCall className="w-4 h-4 mr-1.5 text-gray-400" />
+                Reportado / avisado por
+              </label>
+              <input
+                type="text"
+                id="reportedBy"
+                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                value={formData.reportedBy}
+                onChange={(e) => setFormData(prev => ({ ...prev, reportedBy: e.target.value }))}
+                placeholder="Quién llamó o avisó"
+              />
+            </div>
+          )}
 
           {/* Description */}
           <div>
@@ -459,6 +547,115 @@ export function EditTask() {
               placeholder="Add any additional notes..."
             />
           </div>
+
+          {isProblemOrChange && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <StickyNote className="w-4 h-4 mr-1.5 text-gray-400" />
+                  Apuntes
+                </label>
+
+                {taskNotes.length > 0 && (
+                  <ul className="mb-3 space-y-2">
+                    {taskNotes.map((n) => (
+                      <li
+                        key={n.id}
+                        className="flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                      >
+                        <div>
+                          <p>{n.note}</p>
+                          {n.createdAt && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                              {format(new Date(n.createdAt), 'MMM d, yyyy HH:mm')}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(n.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddNote();
+                      }
+                    }}
+                    onBlur={handleAddNote}
+                    placeholder="Agregar un apunte sobre lo que se fue haciendo..."
+                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNote}
+                    disabled={addingNote}
+                    className="px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300
+                             hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shrink-0 disabled:opacity-60"
+                  >
+                    {addingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {task.status !== 'completed' ? (
+                <div className="p-4 rounded-lg border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20">
+                  <p className="text-sm text-teal-800 dark:text-teal-300 mb-3">
+                    Al cerrar se marca como completado, se publica en el portal externo (si está configurado) y se le
+                    manda un resumen al cliente por mail (si tiene un email cargado).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    disabled={closing}
+                    className="inline-flex items-center px-4 py-2 rounded-lg shadow-sm text-sm font-medium text-white
+                             bg-teal-600 hover:bg-teal-700 disabled:opacity-60 dark:bg-teal-500 dark:hover:bg-teal-600 transition-all duration-200"
+                  >
+                    {closing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                    Cerrar y Publicar
+                  </button>
+
+                  {closeResult && (
+                    <div className="mt-3 space-y-1 text-xs text-teal-800 dark:text-teal-300">
+                      <p className="flex items-center">
+                        <Globe className="w-3.5 h-3.5 mr-1.5" />
+                        {!closeResult.webhook.attempted
+                          ? 'Portal externo: no configurado, se salteó'
+                          : closeResult.webhook.success
+                          ? <><CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-500" /> Publicado en el portal externo</>
+                          : 'No se pudo publicar en el portal externo'}
+                      </p>
+                      <p className="flex items-center">
+                        <Mail className="w-3.5 h-3.5 mr-1.5" />
+                        {!closeResult.email.attempted
+                          ? `Mail al cliente: no enviado (${closeResult.email.reason || 'Resend no configurado'})`
+                          : closeResult.email.success
+                          ? <><CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-500" /> Resumen enviado al cliente</>
+                          : 'No se pudo enviar el mail al cliente'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                  <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                  Ya cerrado{task.publishedAt ? ' y publicado en el portal externo' : ''}.
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-between pt-6">
             <button

@@ -297,6 +297,8 @@ class ApiService {
       approvedBy: t.approved_by || t.approvedBy,
       receiptRef: t.receipt_ref || t.receiptRef,
       approvalStatus: t.approval_status || t.approvalStatus || 'pending',
+      reportedBy: t.reported_by || t.reportedBy,
+      publishedAt: t.published_at || t.publishedAt,
     }));
   }
 
@@ -323,7 +325,8 @@ class ApiService {
       recurringWeekendDay: task.recurringWeekendDay,
       recurringEndDate: task.recurringEndDate,
       accepted: task.accepted,
-      acceptedAt: task.acceptedAt
+      acceptedAt: task.acceptedAt,
+      reportedBy: task.reportedBy
     };
     console.log('📤 [ApiService] createTask payload:', payload);
     return this.request('/tasks', {
@@ -357,7 +360,8 @@ class ApiService {
       approvedBy: task.approvedBy,
       vendor: task.vendor,
       receiptRef: task.receiptRef,
-      approvalStatus: task.approvalStatus
+      approvalStatus: task.approvalStatus,
+      reportedBy: task.reportedBy
     };
     return this.request(`/tasks/${id}`, {
       method: 'PUT',
@@ -368,6 +372,33 @@ class ApiService {
   async deleteTask(id: string) {
     return this.request(`/tasks/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Task notes ("apuntes") - mainly used while working a Problem/Change
+  async getTaskNotes(taskId: string) {
+    const notes = await this.request(`/tasks/${taskId}/notes`);
+    return notes.map((n: any) => ({ id: n.id, taskId: n.taskId, note: n.note, createdAt: n.createdAt }));
+  }
+
+  async addTaskNote(taskId: string, note: string) {
+    return this.request(`/tasks/${taskId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    });
+  }
+
+  async deleteTaskNote(taskId: string, noteId: string) {
+    return this.request(`/tasks/${taskId}/notes/${noteId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Close a Problem/Change: marks it completed, publishes to the external
+  // portal webhook (if configured) and emails the client a summary
+  async closeTask(taskId: string): Promise<{ success: boolean; webhook: { attempted: boolean; success?: boolean }; email: { attempted: boolean; success?: boolean; reason?: string } }> {
+    return this.request(`/tasks/${taskId}/close`, {
+      method: 'POST',
     });
   }
 

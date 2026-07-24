@@ -17,7 +17,7 @@ export function TaskForm() {
     description: '',
     hours: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    type: 'request' as 'incident' | 'request' | 'insumos',
+    type: 'request' as 'incident' | 'request' | 'insumos' | 'problem' | 'change',
     status: 'in_progress' as 'not_started' | 'in_progress' | 'review' | 'completed',
     priority: 'medium' as 'low' | 'medium' | 'high',
     cost: '',
@@ -25,6 +25,7 @@ export function TaskForm() {
     approvedBy: '',
     receiptRef: '',
     approvalStatus: 'pending' as 'pending' | 'approved' | 'rejected',
+    reportedBy: '',
     isRecurring: false,
     recurringDay: 1,
     recurringWeekend: false,
@@ -62,7 +63,7 @@ export function TaskForm() {
 
   const clientProjects = selectedClient ? getClientProjects(selectedClient) : [];
   
-  const quickFillTask = (type: 'incident' | 'request' | 'insumos', description: string, priority: 'low' | 'medium' | 'high' = 'medium') => {
+  const quickFillTask = (type: 'incident' | 'request' | 'insumos' | 'problem' | 'change', description: string, priority: 'low' | 'medium' | 'high' = 'medium') => {
     setFormData(prev => ({
       ...prev,
       type,
@@ -268,6 +269,9 @@ export function TaskForm() {
         receiptRef: formData.receiptRef || undefined,
         approvalStatus: formData.approvalStatus,
       }),
+      ...((formData.type === 'problem' || formData.type === 'change') && {
+        reportedBy: formData.reportedBy || undefined,
+      }),
     };
 
     try {
@@ -338,7 +342,7 @@ export function TaskForm() {
               Task Type
             </label>
             <div className="mt-2 space-x-4">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                 <label className="relative">
                   <input
                     type="radio"
@@ -346,7 +350,7 @@ export function TaskForm() {
                     name="type"
                     value="incident"
                     checked={formData.type === 'incident'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
                   <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-red-500 peer-checked:bg-red-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-red-900/20 dark:peer-checked:border-red-500">
                     <div className="text-center">
@@ -360,9 +364,41 @@ export function TaskForm() {
                     type="radio"
                     className="sr-only peer"
                     name="type"
+                    value="problem"
+                    checked={formData.type === 'problem'}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
+                  />
+                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-orange-900/20 dark:peer-checked:border-orange-500">
+                    <div className="text-center">
+                      <div className="text-orange-500 font-medium">Problem</div>
+                      <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">Root cause</div>
+                    </div>
+                  </div>
+                </label>
+                <label className="relative">
+                  <input
+                    type="radio"
+                    className="sr-only peer"
+                    name="type"
+                    value="change"
+                    checked={formData.type === 'change'}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
+                  />
+                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-teal-500 peer-checked:bg-teal-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-teal-900/20 dark:peer-checked:border-teal-500">
+                    <div className="text-center">
+                      <div className="text-teal-500 font-medium">Change</div>
+                      <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">Planned change</div>
+                    </div>
+                  </div>
+                </label>
+                <label className="relative">
+                  <input
+                    type="radio"
+                    className="sr-only peer"
+                    name="type"
                     value="request"
                     checked={formData.type === 'request'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
                   <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-blue-900/20 dark:peer-checked:border-blue-500">
                     <div className="text-center">
@@ -378,7 +414,7 @@ export function TaskForm() {
                     name="type"
                     value="insumos"
                     checked={formData.type === 'insumos'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
                   <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-purple-900/20 dark:peer-checked:border-purple-500">
                     <div className="text-center">
@@ -390,6 +426,22 @@ export function TaskForm() {
               </div>
             </div>
           </div>
+
+          {(formData.type === 'problem' || formData.type === 'change') && (
+            <div>
+              <label htmlFor="reportedBy" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Reportado / avisado por
+              </label>
+              <input
+                type="text"
+                id="reportedBy"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
+                value={formData.reportedBy}
+                onChange={(e) => setFormData(prev => ({ ...prev, reportedBy: e.target.value }))}
+                placeholder="Quién llamó o avisó del problema/cambio"
+              />
+            </div>
+          )}
 
           <div>
             <label htmlFor="client" className="block text-sm font-medium text-gray-700 dark:text-gray-300">

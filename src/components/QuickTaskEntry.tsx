@@ -12,7 +12,7 @@ export function QuickTaskEntry() {
     description: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     priority: 'medium' as 'low' | 'medium' | 'high',
-    type: 'request' as 'incident' | 'request' | 'insumos'
+    type: 'request' as 'incident' | 'request' | 'insumos' | 'problem' | 'change'
   });
 
   const clientProjects = selectedClient ? getClientProjects(selectedClient) : [];
@@ -183,10 +183,12 @@ export function QuickTaskEntry() {
                   </label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
                     <option value="incident">Incident</option>
+                    <option value="problem">Problem</option>
+                    <option value="change">Change</option>
                     <option value="request">Request</option>
                     <option value="insumos">Supplies</option>
                   </select>

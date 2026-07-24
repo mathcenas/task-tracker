@@ -8,7 +8,7 @@ interface RecurringTask {
   id: string;
   name: string;
   description: string;
-  type: 'incident' | 'request' | 'insumos';
+  type: 'incident' | 'request' | 'insumos' | 'problem' | 'change';
   priority: 'low' | 'medium' | 'high';
   clientId: string;
   projectId: string;
@@ -334,6 +334,8 @@ export function RecurringTasksPage() {
             >
               <option value="all">All Types</option>
               <option value="incident">Incident</option>
+              <option value="problem">Problem</option>
+              <option value="change">Change</option>
               <option value="request">Request</option>
               <option value="insumos">Supplies</option>
             </select>
@@ -453,6 +455,8 @@ export function RecurringTasksPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="incident">Incident</option>
+                <option value="problem">Problem</option>
+                <option value="change">Change</option>
                 <option value="request">Request</option>
                 <option value="insumos">Supplies</option>
               </select>
@@ -602,6 +606,8 @@ export function RecurringTasksPage() {
                           <div className="flex items-center space-x-2 mt-1">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                               task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                              task.type === 'problem' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                              task.type === 'change' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                               task.type === 'request' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                               'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                             }`}>

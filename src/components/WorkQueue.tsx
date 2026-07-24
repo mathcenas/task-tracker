@@ -4,7 +4,7 @@ import { parseISO, isToday, isTomorrow, isYesterday, format } from 'date-fns';
 import {
   AlertTriangle, FileText, Package, Check, Pencil, Plus, ChevronDown, ChevronUp,
   Filter, Clock, Flame, CalendarClock, CheckCircle2, MoreHorizontal, X,
-  Timer, StopCircle, Play
+  Timer, StopCircle, Play, AlertOctagon, GitBranch
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
@@ -171,6 +171,8 @@ export function WorkQueue() {
 
   const typeIcon = (type: string) => {
     if (type === 'incident') return <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />;
+    if (type === 'problem') return <AlertOctagon className="w-4 h-4 text-orange-500 flex-shrink-0" />;
+    if (type === 'change') return <GitBranch className="w-4 h-4 text-teal-500 flex-shrink-0" />;
     if (type === 'insumos') return <Package className="w-4 h-4 text-slate-500 flex-shrink-0" />;
     return <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />;
   };

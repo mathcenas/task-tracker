@@ -93,6 +93,8 @@ const initDB = async () => {
       vendor TEXT,
       receipt_ref TEXT,
       approval_status TEXT DEFAULT 'pending',
+      reported_by TEXT,
+      published_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -177,6 +179,14 @@ const initDB = async () => {
       extra_services TEXT,
       cc_emails TEXT,
       reminder_sent_at DATETIME
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS task_notes (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      note TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
     )`
   ];
 
@@ -214,6 +224,9 @@ const initDB = async () => {
     `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
+    // Problem/Change tasks: who reported it, and when it was published externally
+    `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
+    `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
     // Update old status values to new workflow statuses
     `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`,
     `UPDATE tasks SET status = 'in_progress' WHERE status = 'in-progress'`,

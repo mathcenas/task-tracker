@@ -23,7 +23,7 @@ export function WeeklyDashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos' | 'problem' | 'change'>('all');
 
   // Force refresh when tasks change
   React.useEffect(() => {
