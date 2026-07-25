@@ -694,10 +694,15 @@ export function PublicMonthlyReport() {
                                 <div className="flex items-center space-x-2 mt-2">
                                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                     task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                    task.type === 'problem' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                    task.type === 'change' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                                     task.type === 'insumos' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                                     'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                                   }`}>
-                                    {task.type === 'incident' ? 'Incident' : task.type === 'insumos' ? 'Supplies' : 'Request'}
+                                    {task.type === 'incident' ? 'Incident' :
+                                     task.type === 'problem' ? 'Problem' :
+                                     task.type === 'change' ? 'Change' :
+                                     task.type === 'insumos' ? 'Supplies' : 'Request'}
                                   </span>
                                   {task.priority && (
                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${

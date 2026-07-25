@@ -298,7 +298,9 @@ export class PDFExporter {
       const servicesRows = servicesTasks.map(task => [
         format(new Date(task.date), 'MMM d, yyyy'),
         getProject(task.projectId)?.name || '—',
-        task.type === 'incident' ? 'Incident' : 'Request',
+        task.type === 'incident' ? 'Incident' :
+        task.type === 'problem' ? 'Problem' :
+        task.type === 'change' ? 'Change' : 'Request',
         task.description,
         `${(task.hours || 0).toFixed(1)}h`,
         `$${((task.hours || 0) * hourlyRate).toFixed(2)}`
