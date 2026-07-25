@@ -223,6 +223,8 @@ export async function exportMultiMonthPDF(
       const taskRows = clientTasks.map(task => {
         const project = getProject(task.projectId);
         const taskType = task.type === 'incident' ? 'Incident' :
+                        task.type === 'problem' ? 'Problem' :
+                        task.type === 'change' ? 'Change' :
                         task.type === 'insumos' ? 'Supply' : 'Request';
 
         let amount = '';

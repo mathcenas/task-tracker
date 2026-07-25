@@ -147,6 +147,24 @@ const runMigrations = async () => {
     {
       name: 'Add reminder_sent_at to onboarding_requests',
       sql: `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`
+    },
+    {
+      name: 'Add reported_by to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN reported_by TEXT`
+    },
+    {
+      name: 'Add published_at to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN published_at DATETIME`
+    },
+    {
+      name: 'Create task_notes table',
+      sql: `CREATE TABLE IF NOT EXISTS task_notes (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        note TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+      )`
     }
   ];
 

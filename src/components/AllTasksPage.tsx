@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown, Copy } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown, Copy, AlertOctagon, GitBranch } from 'lucide-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
@@ -22,7 +22,7 @@ export function AllTasksPage() {
 
   // Read filter state from URL so it survives navigation away and back
   const taskFilter = (searchParams.get('status') || 'all') as 'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added' | 'duplicates';
-  const typeFilter = (searchParams.get('type') || 'all') as 'all' | 'incident' | 'request' | 'insumos';
+  const typeFilter = (searchParams.get('type') || 'all') as 'all' | 'incident' | 'request' | 'insumos' | 'problem' | 'change';
   const priorityFilter = (searchParams.get('priority') || 'all') as 'all' | 'high' | 'medium' | 'low';
   const clientFilter = searchParams.get('client') || 'all';
   const projectFilter = searchParams.get('project') || 'all';
@@ -133,6 +133,10 @@ export function AllTasksPage() {
     switch (type) {
       case 'incident':
         return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      case 'problem':
+        return <AlertOctagon className="w-5 h-5 text-orange-500" />;
+      case 'change':
+        return <GitBranch className="w-5 h-5 text-teal-500" />;
       case 'insumos':
         return <Package className="w-5 h-5 text-purple-500" />;
       default:
@@ -411,6 +415,8 @@ export function AllTasksPage() {
             >
               <option value="all">All Types</option>
               <option value="incident">Incident</option>
+              <option value="problem">Problem</option>
+              <option value="change">Change</option>
               <option value="request">Request</option>
               <option value="insumos">Supplies</option>
             </select>
@@ -572,6 +578,8 @@ export function AllTasksPage() {
                               <div className="flex items-center gap-2">
                                 <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
                                   task.type === 'incident' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                  task.type === 'problem' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                  task.type === 'change' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
                                   task.type === 'insumos' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
                                   'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                 }`}>{task.type}</span>
@@ -656,6 +664,8 @@ export function AllTasksPage() {
                         <div className="flex items-center space-x-3">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            task.type === 'problem' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                            task.type === 'change' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                             task.type === 'insumos' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                             'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                           }`}>

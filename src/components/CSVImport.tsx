@@ -5,18 +5,22 @@ import { parseCSV, transformCSVToTasks, generateImportSummary } from '../utils/c
 import { api } from '../services/api';
 import { Task } from '../types';
 
-type TaskType = 'incident' | 'request' | 'insumos';
+type TaskType = 'incident' | 'request' | 'insumos' | 'problem' | 'change';
 
 const TYPE_LABELS: Record<TaskType, string> = {
   incident: 'incident',
   request: 'request',
   insumos: 'insumos',
+  problem: 'problem',
+  change: 'change',
 };
 
 const TYPE_STYLES: Record<TaskType, string> = {
   incident: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
   request: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
   insumos: 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400',
+  problem: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400',
+  change: 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-400',
 };
 
 interface EditState {
@@ -327,6 +331,8 @@ export function CSVImport() {
                                   >
                                     <option value="request">request</option>
                                     <option value="incident">incident</option>
+                                    <option value="problem">problem</option>
+                                    <option value="change">change</option>
                                     <option value="insumos">insumos</option>
                                   </select>
                                 </td>

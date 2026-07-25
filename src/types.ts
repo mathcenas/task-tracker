@@ -53,7 +53,7 @@ export interface Task {
   hours?: number;
   cost?: number;
   date: string;
-  type: 'incident' | 'request' | 'insumos';
+  type: 'incident' | 'request' | 'insumos' | 'problem' | 'change';
   status: 'not_started' | 'in_progress' | 'review' | 'completed';
   priority: 'low' | 'medium' | 'high';
   finished: boolean;
@@ -78,4 +78,13 @@ export interface Task {
   vendor?: string;
   receiptRef?: string;
   approvalStatus?: 'pending' | 'approved' | 'rejected';
+  reportedBy?: string; // Who called/reported it in - used for Problem/Change tasks
+  publishedAt?: string; // When it was published to the external portal (Problem/Change)
+}
+
+export interface TaskNote {
+  id: string;
+  taskId: string;
+  note: string;
+  createdAt?: string;
 }

@@ -3,9 +3,9 @@ import { Filter } from 'lucide-react';
 
 interface TaskFiltersProps {
   priorityFilter: 'all' | 'high' | 'medium' | 'low';
-  typeFilter: 'all' | 'incident' | 'request' | 'insumos';
+  typeFilter: 'all' | 'incident' | 'request' | 'insumos' | 'problem' | 'change';
   onPriorityFilterChange: (filter: 'all' | 'high' | 'medium' | 'low') => void;
-  onTypeFilterChange: (filter: 'all' | 'incident' | 'request' | 'insumos') => void;
+  onTypeFilterChange: (filter: 'all' | 'incident' | 'request' | 'insumos' | 'problem' | 'change') => void;
   onClearFilters: () => void;
   filteredCount: number;
 }
@@ -105,6 +105,26 @@ export function TaskFilters({
             }`}
           >
             Incident
+          </button>
+          <button
+            onClick={() => onTypeFilterChange('problem')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              typeFilter === 'problem'
+                ? 'bg-orange-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            Problem
+          </button>
+          <button
+            onClick={() => onTypeFilterChange('change')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              typeFilter === 'change'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            Change
           </button>
           <button
             onClick={() => onTypeFilterChange('request')}

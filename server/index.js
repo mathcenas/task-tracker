@@ -115,6 +115,8 @@ const initDB = () => {
       paid BOOLEAN DEFAULT 0,
       paidAt DATETIME,
       invoiceNumber TEXT,
+      reported_by TEXT,
+      published_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -249,6 +251,14 @@ const initDB = () => {
       extra_services TEXT,
       cc_emails TEXT,
       reminder_sent_at DATETIME
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS task_notes (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      note TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
     )`
   ];
 
@@ -299,6 +309,8 @@ const runMigrations = () => {
     `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
+    `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
+    `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
   ];
 
   migrations.forEach(sql => {
@@ -704,7 +716,9 @@ app.get('/api/tasks', authenticateToken, (req, res) => {
       paid: Boolean(task.paid),
       approvedBy: task.approved_by,
       receiptRef: task.receipt_ref,
-      approvalStatus: task.approval_status || 'pending'
+      approvalStatus: task.approval_status || 'pending',
+      reportedBy: task.reported_by,
+      publishedAt: task.published_at
     })));
   });
 });
@@ -714,7 +728,7 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
     id, clientId, projectId, description, hours, cost, date, type,
     status, priority, finished, notes, completedAt, assignedTo,
     isRecurring, recurringDay, recurringWeekend, recurringWeekendType,
-    recurringWeekendDay, recurringEndDate, accepted, acceptedAt
+    recurringWeekendDay, recurringEndDate, accepted, acceptedAt, reportedBy
   } = req.body;
 
   console.log('📝 [API] Creating task with data:', { id, clientId, projectId, description });
@@ -723,14 +737,14 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
     id, client_id, project_id, description, hours, cost, date, type,
     status, priority, finished, notes, completed_at, assigned_to,
     is_recurring, recurring_day, recurring_weekend, recurring_weekend_type,
-    recurring_weekend_day, recurring_end_date, accepted, accepted_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    recurring_weekend_day, recurring_end_date, accepted, accepted_at, reported_by
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, clientId, projectId, description, hours, cost, date, type,
       status, priority, finished ? 1 : 0, notes, completedAt, assignedTo,
       isRecurring ? 1 : 0, recurringDay, recurringWeekend ? 1 : 0,
       recurringWeekendType, recurringWeekendDay, recurringEndDate,
-      accepted ? 1 : 0, acceptedAt
+      accepted ? 1 : 0, acceptedAt, reportedBy || null
     ],
     function(err) {
       if (err) {
@@ -774,7 +788,7 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
     description, hours, cost, date, type, status, priority,
     finished, notes, completedAt, accepted, acceptedAt,
     billed, billedAt, paid, paidAt, invoiceNumber,
-    isRecurring, approvedBy, vendor, receiptRef, approvalStatus
+    isRecurring, approvedBy, vendor, receiptRef, approvalStatus, reportedBy
   } = req.body;
 
   db.run(`UPDATE tasks SET
@@ -787,7 +801,8 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
     approved_by = COALESCE(?, approved_by),
     vendor = COALESCE(?, vendor),
     receipt_ref = COALESCE(?, receipt_ref),
-    approval_status = COALESCE(?, approval_status)
+    approval_status = COALESCE(?, approval_status),
+    reported_by = COALESCE(?, reported_by)
     WHERE id = ?`,
     [clientId || null, projectId || null,
      description, hours, cost, date, type, status, priority,
@@ -795,6 +810,7 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
      billed ? 1 : 0, billedAt, paid ? 1 : 0, paidAt, invoiceNumber,
      isRecurring ? 1 : 0,
      approvedBy || null, vendor || null, receiptRef || null, approvalStatus || null,
+     reportedBy || null,
      id],
     function(err) {
       if (err) {
@@ -820,6 +836,227 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
       res.json({ success: true });
     }
   );
+});
+
+// Push a closed Problem/Change to an external portal, if configured. No-op
+// (not an error) when EXTERNAL_PORTAL_WEBHOOK_URL isn't set - the rest of
+// the close flow works fine without it.
+const publishTaskToExternalPortal = async (task, client, project, notes) => {
+  const webhookUrl = process.env.EXTERNAL_PORTAL_WEBHOOK_URL;
+  if (!webhookUrl) return { attempted: false };
+
+  const payload = {
+    id: task.id,
+    type: task.type,
+    description: task.description,
+    reportedBy: task.reported_by || null,
+    client: client ? { id: client.id, name: client.name, slug: client.slug } : null,
+    project: project ? { id: project.id, name: project.name } : null,
+    notes: notes.map((n) => ({ note: n.note, createdAt: n.created_at })),
+    closedAt: new Date().toISOString()
+  };
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(process.env.EXTERNAL_PORTAL_WEBHOOK_TOKEN
+          ? { Authorization: `Bearer ${process.env.EXTERNAL_PORTAL_WEBHOOK_TOKEN}` }
+          : {})
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.error(`❌ [Portal] Webhook rejected the publish (HTTP ${response.status})`);
+      return { attempted: true, success: false, status: response.status };
+    }
+
+    console.log(`✅ [Portal] Published task ${task.id} to the external portal`);
+    return { attempted: true, success: true };
+  } catch (error) {
+    console.error('❌ [Portal] Error publishing to the external portal:', error);
+    return { attempted: true, success: false, error: error.message };
+  }
+};
+
+// Email the client a summary of a closed Problem/Change, reusing the same
+// branded header/footer as the onboarding emails. No-op if Resend isn't
+// configured or the client has no email on file.
+const sendTaskCloseSummaryEmail = async (task, client, project, notes) => {
+  if (!resend) return { attempted: false };
+  if (!client?.email) return { attempted: false, reason: 'client has no email on file' };
+
+  const typeLabel = task.type === 'problem' ? 'Problema' : 'Cambio';
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+      ${emailHeader()}
+      <h2 style="color: #111827;">${escapeHtml(typeLabel)} resuelto</h2>
+      <p>Hola,</p>
+      <p>Te confirmamos que el siguiente ${escapeHtml(typeLabel.toLowerCase())}${project ? ` de <strong>${escapeHtml(project.name)}</strong>` : ''} fue resuelto:</p>
+      <p style="background: #f9fafb; border-radius: 8px; padding: 12px; font-size: 13px; white-space: pre-wrap;">${escapeHtml(task.description)}</p>
+      ${task.reported_by ? `<p style="font-size: 13px; color: #6b7280;">Reportado por: ${escapeHtml(task.reported_by)}</p>` : ''}
+
+      ${notes.length > 0 ? `
+        <h3 style="color: #111827; margin-top: 24px;">Detalle de lo realizado</h3>
+        <ul style="padding-left: 20px;">
+          ${notes.map((n) => `<li style="margin-bottom: 6px; font-size: 13px;">${escapeHtml(n.note)}</li>`).join('')}
+        </ul>
+      ` : ''}
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@tasktracker.pro';
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: client.email,
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
+      subject: `${typeLabel} resuelto - ${task.description.slice(0, 80)}`,
+      html
+    });
+
+    if (error) {
+      console.error('❌ [Task Close] Resend rejected the summary email:', error);
+      return { attempted: true, success: false, error };
+    }
+
+    console.log(`✅ [Task Close] Summary email sent to ${client.email} (id: ${data?.id})`);
+    return { attempted: true, success: true, id: data?.id };
+  } catch (error) {
+    console.error('❌ [Task Close] Error sending summary email:', error);
+    return { attempted: true, success: false, error: error.message };
+  }
+};
+
+// Notes ("apuntes") on a task - a running log used mainly for Problem/Change
+// tasks while they're being worked, surfaced later in the close summary
+app.get('/api/tasks/:id/notes', authenticateToken, (req, res) => {
+  db.all(
+    'SELECT * FROM task_notes WHERE task_id = ? ORDER BY created_at ASC',
+    [req.params.id],
+    (err, rows) => {
+      if (err) {
+        console.error('❌ Error fetching task notes:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(rows.map((r) => ({ id: r.id, taskId: r.task_id, note: r.note, createdAt: r.created_at })));
+    }
+  );
+});
+
+app.post('/api/tasks/:id/notes', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { note } = req.body;
+
+  if (!note || !note.trim()) {
+    return res.status(400).json({ error: 'note is required' });
+  }
+
+  const noteId = crypto.randomUUID();
+  db.run(
+    'INSERT INTO task_notes (id, task_id, note) VALUES (?, ?, ?)',
+    [noteId, id, note.trim()],
+    (err) => {
+      if (err) {
+        console.error('❌ Error adding task note:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true, id: noteId });
+    }
+  );
+});
+
+app.delete('/api/tasks/:id/notes/:noteId', authenticateToken, (req, res) => {
+  db.run(
+    'DELETE FROM task_notes WHERE id = ? AND task_id = ?',
+    [req.params.noteId, req.params.id],
+    (err) => {
+      if (err) {
+        console.error('❌ Error deleting task note:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// Close a Problem/Change task: mark it completed, publish it to the external
+// portal webhook (if configured) and email the client a summary via Resend
+// (if the client has an email on file). Both are best-effort - a failure in
+// either doesn't block the close, but is reported back so the admin knows.
+app.post('/api/tasks/:id/close', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+    if (err) {
+      console.error('❌ Error fetching task to close:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    if (!['problem', 'change'].includes(task.type)) {
+      return res.status(400).json({ error: 'Only problem/change tasks can be closed this way' });
+    }
+    if (task.status === 'completed') {
+      return res.status(400).json({ error: 'This task is already closed' });
+    }
+
+    db.get('SELECT * FROM clients WHERE id = ?', [task.client_id], (err, client) => {
+      if (err) {
+        console.error('❌ Error fetching client for task close:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      db.get('SELECT * FROM projects WHERE id = ?', [task.project_id], (err, project) => {
+        if (err) {
+          console.error('❌ Error fetching project for task close:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        db.all('SELECT * FROM task_notes WHERE task_id = ? ORDER BY created_at ASC', [id], async (err, notes) => {
+          if (err) {
+            console.error('❌ Error fetching notes for task close:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+
+          const now = new Date().toISOString();
+
+          db.run(
+            `UPDATE tasks SET status = 'completed', finished = 1, completed_at = ? WHERE id = ?`,
+            [now, id],
+            async (updateErr) => {
+              if (updateErr) {
+                console.error('❌ Error closing task:', updateErr);
+                return res.status(500).json({ error: 'Database error closing task' });
+              }
+
+              logActivity('completed', 'task', id, task.description, {
+                type: task.type,
+                reportedBy: task.reported_by
+              }, req.user?.id);
+
+              const [webhookResult, emailResult] = await Promise.all([
+                publishTaskToExternalPortal(task, client, project, notes),
+                sendTaskCloseSummaryEmail(task, client, project, notes)
+              ]);
+
+              if (webhookResult.attempted && webhookResult.success) {
+                db.run('UPDATE tasks SET published_at = ? WHERE id = ?', [new Date().toISOString(), id]);
+              }
+
+              res.json({ success: true, webhook: webhookResult, email: emailResult });
+            }
+          );
+        });
+      });
+    });
+  });
 });
 
 app.delete('/api/tasks/:id', authenticateToken, (req, res) => {
