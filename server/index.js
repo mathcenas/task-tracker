@@ -765,6 +765,8 @@ app.post('/api/tasks', authenticateToken, (req, res) => {
         projectId
       }, req.user?.id);
 
+      publishTaskOpenedIfApplicable({ id, clientId, projectId, type, description, reportedBy });
+
       // Verify the task was saved by reading it back
       db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
         if (err) {
@@ -838,14 +840,16 @@ app.put('/api/tasks/:id', authenticateToken, (req, res) => {
   );
 });
 
-// Push a closed Problem/Change to an external portal, if configured. No-op
-// (not an error) when EXTERNAL_PORTAL_WEBHOOK_URL isn't set - the rest of
-// the close flow works fine without it.
-const publishTaskToExternalPortal = async (task, client, project, notes) => {
+// Push a Problem/Change to an external portal, if configured, on both the
+// 'opened' (creation) and 'closed' (resolution) events - the portal tells
+// them apart via payload.event. No-op (not an error) when
+// EXTERNAL_PORTAL_WEBHOOK_URL isn't set.
+const publishTaskToExternalPortal = async (task, client, project, notes, event) => {
   const webhookUrl = process.env.EXTERNAL_PORTAL_WEBHOOK_URL;
   if (!webhookUrl) return { attempted: false };
 
   const payload = {
+    event, // 'opened' | 'closed'
     id: task.id,
     type: task.type,
     description: task.description,
@@ -853,7 +857,7 @@ const publishTaskToExternalPortal = async (task, client, project, notes) => {
     client: client ? { id: client.id, name: client.name, slug: client.slug } : null,
     project: project ? { id: project.id, name: project.name } : null,
     notes: notes.map((n) => ({ note: n.note, createdAt: n.created_at })),
-    closedAt: new Date().toISOString()
+    timestamp: new Date().toISOString()
   };
 
   try {
@@ -869,16 +873,43 @@ const publishTaskToExternalPortal = async (task, client, project, notes) => {
     });
 
     if (!response.ok) {
-      console.error(`❌ [Portal] Webhook rejected the publish (HTTP ${response.status})`);
+      console.error(`❌ [Portal] Webhook rejected the ${event} publish (HTTP ${response.status})`);
       return { attempted: true, success: false, status: response.status };
     }
 
-    console.log(`✅ [Portal] Published task ${task.id} to the external portal`);
+    console.log(`✅ [Portal] Published task ${task.id} (${event}) to the external portal`);
     return { attempted: true, success: true };
   } catch (error) {
-    console.error('❌ [Portal] Error publishing to the external portal:', error);
+    console.error(`❌ [Portal] Error publishing the ${event} event to the external portal:`, error);
     return { attempted: true, success: false, error: error.message };
   }
+};
+
+// Fire the 'opened' portal event right after a Problem/Change task is
+// created. Fire-and-forget: never blocks or fails the task creation.
+const publishTaskOpenedIfApplicable = (task) => {
+  if (!process.env.EXTERNAL_PORTAL_WEBHOOK_URL) return;
+  if (!['problem', 'change'].includes(task.type)) return;
+
+  db.get('SELECT * FROM clients WHERE id = ?', [task.clientId], (err, client) => {
+    if (err) {
+      console.error('❌ [Portal] Error fetching client for opened-event publish:', err);
+      return;
+    }
+    db.get('SELECT * FROM projects WHERE id = ?', [task.projectId], (err2, project) => {
+      if (err2) {
+        console.error('❌ [Portal] Error fetching project for opened-event publish:', err2);
+        return;
+      }
+      publishTaskToExternalPortal(
+        { id: task.id, type: task.type, description: task.description, reported_by: task.reportedBy },
+        client,
+        project,
+        [],
+        'opened'
+      );
+    });
+  });
 };
 
 // Email the client a summary of a closed Problem/Change, reusing the same
@@ -1042,7 +1073,7 @@ app.post('/api/tasks/:id/close', authenticateToken, (req, res) => {
               }, req.user?.id);
 
               const [webhookResult, emailResult] = await Promise.all([
-                publishTaskToExternalPortal(task, client, project, notes),
+                publishTaskToExternalPortal(task, client, project, notes, 'closed'),
                 sendTaskCloseSummaryEmail(task, client, project, notes)
               ]);
 
