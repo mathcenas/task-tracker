@@ -354,7 +354,7 @@ export function EditTask() {
               <input
                 type="number"
                 id="hours"
-                min="0.25"
+                min="0"
                 step="0.25"
                 className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
                 value={formData.hours}
