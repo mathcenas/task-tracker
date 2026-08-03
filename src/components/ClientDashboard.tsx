@@ -572,6 +572,7 @@ export function ClientDashboard() {
               task.finished &&
               isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
             );
+            const monthlyRate = getHourlyRateForYear(client, selectedMonth.getFullYear());
 
             const clientStats = monthlyTasks.reduce((stats, task) => {
               if (task.type === 'insumos') {
@@ -579,7 +580,7 @@ export function ClientDashboard() {
                 stats.suppliesCount += 1;
               } else {
                 stats.totalHours += task.hours || 0;
-                stats.serviceRevenue += (task.hours || 0) * client.hourlyRate;
+                stats.serviceRevenue += (task.hours || 0) * monthlyRate;
 
                 if (task.type === 'incident') {
                   stats.incidentHours += task.hours || 0;
@@ -608,7 +609,7 @@ export function ClientDashboard() {
                 isWithinInterval(parseISO(task.date), { start: startOfMonth(month), end: endOfMonth(month) })
               );
               const hours = monthTasks.filter(t => t.type !== 'insumos').reduce((sum, task) => sum + (task.hours || 0), 0);
-              const revenue = hours * client.hourlyRate;
+              const revenue = hours * getHourlyRateForYear(client, month.getFullYear());
 
               return {
                 month: format(month, 'MMM'),
@@ -823,7 +824,7 @@ export function ClientDashboard() {
                             <div className="text-right">
                               <p className="text-lg font-semibold text-red-900 dark:text-red-300">{clientStats.incidentHours.toFixed(1)}h</p>
                               <p className="text-sm text-red-600 dark:text-red-400">
-                                ${(clientStats.incidentHours * client.hourlyRate).toFixed(0)}
+                                ${(clientStats.incidentHours * monthlyRate).toFixed(0)}
                               </p>
                             </div>
                           </div>
@@ -841,7 +842,7 @@ export function ClientDashboard() {
                             <div className="text-right">
                               <p className="text-lg font-semibold text-blue-900 dark:text-blue-300">{clientStats.requestHours.toFixed(1)}h</p>
                               <p className="text-sm text-blue-600 dark:text-blue-400">
-                                ${(clientStats.requestHours * client.hourlyRate).toFixed(0)}
+                                ${(clientStats.requestHours * monthlyRate).toFixed(0)}
                               </p>
                             </div>
                           </div>
@@ -938,7 +939,7 @@ export function ClientDashboard() {
                                             {task.hours?.toFixed(1)}h
                                           </p>
                                           <p className="text-sm text-green-600 dark:text-green-400">
-                                            ${((task.hours || 0) * client.hourlyRate).toFixed(2)}
+                                            ${((task.hours || 0) * monthlyRate).toFixed(2)}
                                           </p>
                                         </>
                                       )}

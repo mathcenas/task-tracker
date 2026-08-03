@@ -15,6 +15,7 @@ export function AllTasksPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { tasks, getClient, getProject, updateTask, deleteTask, clients, projects, reloadTasks } = useApp();
+  const activeClients = clients.filter(c => !c.archived);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
@@ -375,7 +376,7 @@ export function AllTasksPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="all">All Clients</option>
-              {clients.map(client => (
+              {activeClients.map(client => (
                 <option key={client.id} value={client.id}>
                   {client.name}
                 </option>

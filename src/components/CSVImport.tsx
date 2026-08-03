@@ -32,6 +32,7 @@ interface EditState {
 
 export function CSVImport() {
   const { clients, projects, reloadTasks, isDuplicateTask } = useApp();
+  const activeClients = clients.filter(c => !c.archived);
   const [selectedClient, setSelectedClient] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -190,7 +191,7 @@ export function CSVImport() {
                 required
               >
                 <option value="">Choose a client...</option>
-                {clients.map(client => (
+                {activeClients.map(client => (
                   <option key={client.id} value={client.id}>
                     {client.name}
                   </option>
