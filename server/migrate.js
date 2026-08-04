@@ -165,6 +165,10 @@ const runMigrations = async () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
       )`
+    },
+    {
+      name: 'Add recurring_task_id to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`
     }
   ];
 
