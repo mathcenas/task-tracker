@@ -714,6 +714,7 @@ class ApiService {
     role?: string;
     effectiveDate?: string;
     details?: string;
+    accessTypes?: string[];
   }) {
     return this.request('/public/onboarding', {
       method: 'POST',
@@ -737,7 +738,34 @@ class ApiService {
       projectId: r.project_id,
       taskId: r.task_id,
       extraServices: r.extra_services ? JSON.parse(r.extra_services) : [],
-      ccEmails: r.cc_emails ? JSON.parse(r.cc_emails) : []
+      ccEmails: r.cc_emails ? JSON.parse(r.cc_emails) : [],
+      accessTypes: r.access_types ? JSON.parse(r.access_types) : [],
+      accessTypesDone: r.access_types_done ? JSON.parse(r.access_types_done) : {}
+    }));
+  }
+
+  async setOnboardingAccessTypeDone(id: number, accessType: string, done: boolean) {
+    return this.request(`/admin/onboarding/${id}/access-types`, {
+      method: 'PUT',
+      body: JSON.stringify({ accessType, done }),
+    });
+  }
+
+  async sendOnboardingUpdate(id: number, message: string) {
+    return this.request(`/admin/onboarding/${id}/update`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async getOnboardingUpdates(id: number) {
+    const rows = await this.request(`/admin/onboarding/${id}/updates`);
+    return rows.map((r: any) => ({
+      id: r.id,
+      onboardingRequestId: r.onboardingRequestId,
+      kind: r.kind,
+      message: r.message,
+      createdAt: r.createdAt
     }));
   }
 

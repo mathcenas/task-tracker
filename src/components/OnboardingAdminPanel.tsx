@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { UserPlus, UserMinus, X, Plus, Trash2, Loader2, Inbox, Send, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { UserPlus, UserMinus, X, Plus, Trash2, Loader2, Inbox, Send, ExternalLink, CheckCircle2, ChevronDown, ChevronRight, MessageSquarePlus } from 'lucide-react';
 import { api } from '../services/api';
 import { useApp } from '../context/AppContext';
-import { OnboardingRequest, Client, Project } from '../types';
+import { OnboardingRequest, OnboardingUpdate, Client, Project } from '../types';
 
 export function OnboardingAdminPanel() {
   const { reloadTasks } = useApp();
@@ -102,6 +102,7 @@ export function OnboardingAdminPanel() {
                     resendState={resendState[request.id]}
                     onProcess={() => setActiveRequest(request)}
                     onResend={() => handleResend(request)}
+                    onChanged={loadAll}
                   />
                 ))}
               </div>
@@ -123,6 +124,7 @@ export function OnboardingAdminPanel() {
                     resendState={resendState[request.id]}
                     onProcess={() => setActiveRequest(request)}
                     onResend={() => handleResend(request)}
+                    onChanged={loadAll}
                   />
                 ))}
               </div>
@@ -155,88 +157,264 @@ interface RequestCardProps {
   resendState?: 'sending' | 'sent' | 'error';
   onProcess: () => void;
   onResend: () => void;
+  onChanged: () => void;
 }
 
-function RequestCard({ request, clientName, projectName, resendState, onProcess, onResend }: RequestCardProps) {
+function RequestCard({ request, clientName, projectName, resendState, onProcess, onResend, onChanged }: RequestCardProps) {
   const isCompleted = request.status === 'completed';
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm flex items-center justify-between gap-4">
-      <div className="flex items-start space-x-3 min-w-0">
-        {request.type === 'alta' ? (
-          <UserPlus className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-        ) : (
-          <UserMinus className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-        )}
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            {request.employeeName}
-            {request.role && <span className="text-gray-400 dark:text-gray-500 font-normal"> · {request.role}</span>}
-            {isCompleted ? (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                Procesada
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                Pendiente
-              </span>
-            )}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Solicitado por {request.managerEmail}
-            {request.effectiveDate && <> · Efectividad: {request.effectiveDate}</>}
-            {request.createdAt && <> · {new Date(request.createdAt).toLocaleDateString('es-UY')}</>}
-          </p>
-          {isCompleted && (clientName || projectName) && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {clientName || '—'} {projectName && <>· {projectName}</>}
-            </p>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start space-x-3 min-w-0">
+          {request.type === 'alta' ? (
+            <UserPlus className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+          ) : (
+            <UserMinus className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
           )}
-          {request.details && (
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-xl">{request.details}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              {request.employeeName}
+              {request.role && <span className="text-gray-400 dark:text-gray-500 font-normal"> · {request.role}</span>}
+              {isCompleted ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                  Procesada
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                  Pendiente
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Solicitado por {request.managerEmail}
+              {request.effectiveDate && <> · Efectividad: {request.effectiveDate}</>}
+              {request.createdAt && <> · {new Date(request.createdAt).toLocaleDateString('es-UY')}</>}
+            </p>
+            {isCompleted && (clientName || projectName) && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {clientName || '—'} {projectName && <>· {projectName}</>}
+              </p>
+            )}
+            {request.details && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-xl">{request.details}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {isCompleted ? (
+            <>
+              {request.taskId && (
+                <Link
+                  to={`/edit-task/${request.taskId}`}
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300
+                           border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                  Ver tarea
+                </Link>
+              )}
+              <button
+                onClick={onResend}
+                disabled={resendState === 'sending'}
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
+                         disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+              >
+                {resendState === 'sending' ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : resendState === 'sent' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                ) : (
+                  <Send className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                {resendState === 'sent' ? 'Enviado' : resendState === 'error' ? 'Reintentar' : 'Reenviar'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onProcess}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
+                       dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+            >
+              Procesar
+            </button>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        {isCompleted ? (
-          <>
-            {request.taskId && (
-              <Link
-                to={`/edit-task/${request.taskId}`}
-                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300
-                         border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                Ver tarea
-              </Link>
-            )}
-            <button
-              onClick={onResend}
-              disabled={resendState === 'sending'}
-              className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
-                       disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
-            >
-              {resendState === 'sending' ? (
-                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-              ) : resendState === 'sent' ? (
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-              ) : (
-                <Send className="w-3.5 h-3.5 mr-1.5" />
-              )}
-              {resendState === 'sent' ? 'Enviado' : resendState === 'error' ? 'Reintentar' : 'Reenviar'}
-            </button>
-          </>
-        ) : (
+      {!isCompleted && (
+        <ProgressUpdates request={request} onChanged={onChanged} />
+      )}
+    </div>
+  );
+}
+
+interface ProgressUpdatesProps {
+  request: OnboardingRequest;
+  onChanged: () => void;
+}
+
+// Lets the admin notify the requester as an alta/baja advances in stages
+// (offboarding especially is often done piece by piece: mail today, VPN
+// tomorrow, etc.) without waiting for the whole request to be finalized.
+function ProgressUpdates({ request, onChanged }: ProgressUpdatesProps) {
+  const accessTypes = request.accessTypes || [];
+  const accessTypesDone = request.accessTypesDone || {};
+  const [togglingItem, setTogglingItem] = useState<string | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<OnboardingUpdate[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const toggleAccessType = async (accessType: string) => {
+    setTogglingItem(accessType);
+    try {
+      await api.setOnboardingAccessTypeDone(request.id, accessType, !accessTypesDone[accessType]);
+      onChanged();
+    } catch (err) {
+      console.error('Error updating access-type checklist:', err);
+    } finally {
+      setTogglingItem(null);
+    }
+  };
+
+  const sendUpdate = async () => {
+    if (!message.trim()) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      await api.sendOnboardingUpdate(request.id, message.trim());
+      setMessage('');
+      setComposerOpen(false);
+      if (historyOpen) loadHistory();
+    } catch (err) {
+      console.error('Error sending onboarding update:', err);
+      setSendError('No se pudo enviar la actualización.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      setHistory(await api.getOnboardingUpdates(request.id));
+    } catch (err) {
+      console.error('Error loading onboarding update history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const toggleHistory = () => {
+    const next = !historyOpen;
+    setHistoryOpen(next);
+    if (next && history === null) loadHistory();
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+      {accessTypes.length > 0 && (
+        <div className="mb-2">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Accesos solicitados</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {accessTypes.map((accessType) => {
+              const done = Boolean(accessTypesDone[accessType]);
+              return (
+                <label key={accessType} className="inline-flex items-center gap-1.5 text-sm cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={done}
+                    disabled={togglingItem === accessType}
+                    onChange={() => toggleAccessType(accessType)}
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className={done ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'}>
+                    {accessType}
+                  </span>
+                  {togglingItem === accessType && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        {!composerOpen ? (
           <button
-            onClick={onProcess}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
-                     dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+            onClick={() => setComposerOpen(true)}
+            className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
           >
-            Procesar
+            <MessageSquarePlus className="w-3.5 h-3.5 mr-1" />
+            Enviar actualización
           </button>
-        )}
+        ) : null}
+        <button
+          onClick={toggleHistory}
+          className="inline-flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 hover:underline"
+        >
+          {historyOpen ? <ChevronDown className="w-3.5 h-3.5 mr-1" /> : <ChevronRight className="w-3.5 h-3.5 mr-1" />}
+          Actualizaciones enviadas
+        </button>
       </div>
+
+      {composerOpen && (
+        <div className="mt-2">
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Ej: Ya deshabilitamos el correo, todavía falta revocar el acceso VPN."
+            rows={2}
+            className="block w-full rounded-lg border-gray-300 bg-white shadow-sm text-sm
+                     focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
+                     dark:bg-gray-700 dark:text-white transition-all duration-200"
+          />
+          {sendError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{sendError}</p>}
+          <div className="mt-1.5 flex justify-end gap-2">
+            <button
+              onClick={() => { setComposerOpen(false); setMessage(''); setSendError(null); }}
+              className="px-2.5 py-1 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={sendUpdate}
+              disabled={sending || !message.trim()}
+              className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700
+                       disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
+              {sending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+              Enviar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {historyOpen && (
+        <div className="mt-2">
+          {historyLoading ? (
+            <p className="text-xs text-gray-400 flex items-center"><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Cargando...</p>
+          ) : !history || history.length === 0 ? (
+            <p className="text-xs text-gray-400">Todavía no se envió ninguna actualización.</p>
+          ) : (
+            <ul className="space-y-1">
+              {history.map((update) => (
+                <li key={update.id} className="text-xs text-gray-600 dark:text-gray-300 flex items-start gap-1.5">
+                  <span className="text-gray-400 dark:text-gray-500 shrink-0">
+                    {update.createdAt ? new Date(update.createdAt).toLocaleString('es-UY') : ''}
+                  </span>
+                  <span>{update.message}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

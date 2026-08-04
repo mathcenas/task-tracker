@@ -179,7 +179,9 @@ const initDB = async () => {
       task_id TEXT,
       extra_services TEXT,
       cc_emails TEXT,
-      reminder_sent_at DATETIME
+      reminder_sent_at DATETIME,
+      access_types TEXT,
+      access_types_done TEXT
     )`,
 
     `CREATE TABLE IF NOT EXISTS task_notes (
@@ -188,6 +190,15 @@ const initDB = async () => {
       note TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS onboarding_updates (
+      id TEXT PRIMARY KEY,
+      onboarding_request_id INTEGER NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'note' CHECK(kind IN ('checklist', 'note')),
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (onboarding_request_id) REFERENCES onboarding_requests (id) ON DELETE CASCADE
     )`
   ];
 
@@ -225,6 +236,8 @@ const initDB = async () => {
     `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
+    `ALTER TABLE onboarding_requests ADD COLUMN access_types TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN access_types_done TEXT`,
     // Problem/Change tasks: who reported it, and when it was published externally
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,

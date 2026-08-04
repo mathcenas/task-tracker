@@ -251,7 +251,9 @@ const initDB = () => {
       task_id TEXT,
       extra_services TEXT,
       cc_emails TEXT,
-      reminder_sent_at DATETIME
+      reminder_sent_at DATETIME,
+      access_types TEXT,
+      access_types_done TEXT
     )`,
 
     `CREATE TABLE IF NOT EXISTS task_notes (
@@ -260,6 +262,15 @@ const initDB = () => {
       note TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS onboarding_updates (
+      id TEXT PRIMARY KEY,
+      onboarding_request_id INTEGER NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'note' CHECK(kind IN ('checklist', 'note')),
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (onboarding_request_id) REFERENCES onboarding_requests (id) ON DELETE CASCADE
     )`
   ];
 
@@ -310,6 +321,8 @@ const runMigrations = () => {
     `ALTER TABLE onboarding_requests ADD COLUMN extra_services TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN cc_emails TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
+    `ALTER TABLE onboarding_requests ADD COLUMN access_types TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN access_types_done TEXT`,
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
     `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
@@ -2571,7 +2584,7 @@ const onboardingRateLimiter = rateLimit({
 });
 
 app.post('/api/public/onboarding', onboardingRateLimiter, (req, res) => {
-  const { managerEmail, type, employeeName, role, effectiveDate, details } = req.body;
+  const { managerEmail, type, employeeName, role, effectiveDate, details, accessTypes } = req.body;
 
   if (!managerEmail || !type || !employeeName) {
     return res.status(400).json({ error: 'managerEmail, type and employeeName are required' });
@@ -2580,10 +2593,13 @@ app.post('/api/public/onboarding', onboardingRateLimiter, (req, res) => {
     return res.status(400).json({ error: "type must be 'alta' or 'baja'" });
   }
 
+  const accessTypesList = normalizeExtraServices(accessTypes);
+
   db.run(
-    `INSERT INTO onboarding_requests (manager_email, type, employee_name, role, effective_date, details)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [managerEmail, type, employeeName, role || null, effectiveDate || null, details || null],
+    `INSERT INTO onboarding_requests (manager_email, type, employee_name, role, effective_date, details, access_types)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [managerEmail, type, employeeName, role || null, effectiveDate || null, details || null,
+     accessTypesList.length > 0 ? JSON.stringify(accessTypesList) : null],
     function (err) {
       if (err) {
         console.error('❌ Error creating onboarding request:', err);
@@ -2715,6 +2731,185 @@ app.post('/api/admin/onboarding/:id/resend', authenticateToken, async (req, res)
 
     res.json({ success: true });
   });
+});
+
+// Send a progress-update email to the requester while a request is still
+// being worked on (some offboardings happen in stages - revoke mail today,
+// VPN tomorrow, etc.) and log it so there's a record of what was sent when.
+const sendOnboardingUpdateEmail = async (request, headline, bodyHtml) => {
+  if (!resend) return { success: false, error: 'Resend is not configured' };
+
+  const typeLabel = request.type === 'alta' ? 'Alta' : 'Baja';
+  const ccEmails = parseJsonArray(request.cc_emails);
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+      ${emailHeader()}
+      <h2 style="color: #111827;">Actualización de tu ${escapeHtml(typeLabel.toLowerCase())}</h2>
+      <p>Hola,</p>
+      <p>Te compartimos una actualización sobre el proceso de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
+        <strong>${escapeHtml(request.employee_name)}</strong>:</p>
+      <p style="background: #f9fafb; border-radius: 8px; padding: 12px; font-size: 13px;">${bodyHtml}</p>
+      ${emailFooter()}
+    </div>
+  `;
+
+  const fromAddress = getFromAddressForType(request.type);
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: request.manager_email,
+      ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
+      subject: `${headline} - ${request.employee_name}`,
+      html
+    });
+
+    if (error) {
+      console.error('❌ [Onboarding] Resend rejected the update email:', error);
+      return { success: false, error };
+    }
+
+    console.log(`✅ [Onboarding] Update email sent to ${request.manager_email} (id: ${data?.id})`);
+    return { success: true, id: data?.id };
+  } catch (error) {
+    console.error('❌ [Onboarding] Error sending update email:', error);
+    return { success: false, error };
+  }
+};
+
+// Admin: mark a single access-type checklist item as done/not done. Marking
+// one done fires an auto-email to the requester and logs it; un-marking
+// (fixing a mistaken click) is silent - no email, no log entry.
+app.put('/api/admin/onboarding/:id/access-types', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { accessType, done } = req.body;
+
+  if (!accessType) {
+    return res.status(400).json({ error: 'accessType is required' });
+  }
+
+  db.get('SELECT * FROM onboarding_requests WHERE id = ?', [id], async (err, request) => {
+    if (err) {
+      console.error('❌ Error fetching onboarding request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!request) {
+      return res.status(404).json({ error: 'Onboarding request not found' });
+    }
+
+    const accessTypesDone = { ...(JSON.parse(request.access_types_done || '{}')) };
+    const alreadyDone = Boolean(accessTypesDone[accessType]);
+
+    if (done) {
+      accessTypesDone[accessType] = new Date().toISOString();
+    } else {
+      delete accessTypesDone[accessType];
+    }
+
+    db.run(
+      'UPDATE onboarding_requests SET access_types_done = ? WHERE id = ?',
+      [JSON.stringify(accessTypesDone), id],
+      async (updateErr) => {
+        if (updateErr) {
+          console.error('❌ Error updating access-types checklist:', updateErr);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (done && !alreadyDone) {
+          const typeLabel = request.type === 'alta' ? 'alta' : 'baja';
+          const emailResult = await sendOnboardingUpdateEmail(
+            request,
+            `Completado: ${accessType}`,
+            `Ya completamos <strong>${escapeHtml(accessType)}</strong> como parte del proceso de ${escapeHtml(typeLabel)} de ${escapeHtml(request.employee_name)}.`
+          );
+
+          // Only log it as an "update sent" if the email actually went out -
+          // otherwise the history would claim the client was notified when
+          // they weren't. The checkbox state itself is saved either way.
+          if (emailResult?.success) {
+            db.run(
+              `INSERT INTO onboarding_updates (id, onboarding_request_id, kind, message) VALUES (?, ?, 'checklist', ?)`,
+              [crypto.randomUUID(), id, `Completado: ${accessType}`],
+              (noteErr) => {
+                if (noteErr) console.error('❌ Error logging checklist update:', noteErr);
+              }
+            );
+          }
+
+          return res.json({ success: true, accessTypesDone, emailSent: Boolean(emailResult?.success) });
+        }
+
+        res.json({ success: true, accessTypesDone, emailSent: false });
+      }
+    );
+  });
+});
+
+// Admin: send a free-text progress update email for anything outside the checklist
+app.post('/api/admin/onboarding/:id/update', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { message } = req.body;
+
+  if (!message || !message.trim()) {
+    return res.status(400).json({ error: 'message is required' });
+  }
+
+  db.get('SELECT * FROM onboarding_requests WHERE id = ?', [id], async (err, request) => {
+    if (err) {
+      console.error('❌ Error fetching onboarding request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!request) {
+      return res.status(404).json({ error: 'Onboarding request not found' });
+    }
+    if (!resend) {
+      return res.status(400).json({ error: 'RESEND_API_KEY is not configured on the server' });
+    }
+
+    const trimmedMessage = message.trim();
+    const result = await sendOnboardingUpdateEmail(
+      request,
+      'Actualización',
+      escapeHtml(trimmedMessage).replace(/\n/g, '<br/>')
+    );
+
+    if (!result?.success) {
+      return res.status(502).json({ error: 'Resend rejected the email', details: result?.error });
+    }
+
+    db.run(
+      `INSERT INTO onboarding_updates (id, onboarding_request_id, kind, message) VALUES (?, ?, 'note', ?)`,
+      [crypto.randomUUID(), id, trimmedMessage],
+      (noteErr) => {
+        if (noteErr) console.error('❌ Error logging update note:', noteErr);
+      }
+    );
+
+    res.json({ success: true });
+  });
+});
+
+// Admin: history of update emails sent for a request (checklist + free-text)
+app.get('/api/admin/onboarding/:id/updates', authenticateToken, (req, res) => {
+  db.all(
+    'SELECT * FROM onboarding_updates WHERE onboarding_request_id = ? ORDER BY created_at ASC',
+    [req.params.id],
+    (err, rows) => {
+      if (err) {
+        console.error('❌ Error fetching onboarding updates:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(rows.map((r) => ({
+        id: r.id,
+        onboardingRequestId: r.onboarding_request_id,
+        kind: r.kind,
+        message: r.message,
+        createdAt: r.created_at
+      })));
+    }
+  );
 });
 
 // Periodically remind the team about onboarding/offboarding requests that
