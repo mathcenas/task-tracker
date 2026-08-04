@@ -169,6 +169,25 @@ const runMigrations = async () => {
     {
       name: 'Add recurring_task_id to tasks',
       sql: `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`
+    },
+    {
+      name: 'Add access_types to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN access_types TEXT`
+    },
+    {
+      name: 'Add access_types_done to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN access_types_done TEXT`
+    },
+    {
+      name: 'Create onboarding_updates table',
+      sql: `CREATE TABLE IF NOT EXISTS onboarding_updates (
+        id TEXT PRIMARY KEY,
+        onboarding_request_id INTEGER NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'note' CHECK(kind IN ('checklist', 'note')),
+        message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (onboarding_request_id) REFERENCES onboarding_requests (id) ON DELETE CASCADE
+      )`
     }
   ];
 

@@ -63,17 +63,13 @@ export function PublicOnboardingForm() {
 
     setSubmitting(true);
     try {
-      const accessLine = form.accessTypes.length > 0
-        ? `Accesos solicitados: ${form.accessTypes.join(', ')}`
-        : '';
-      const combinedDetails = [accessLine, form.details].filter(Boolean).join('\n\n');
-
       await api.submitOnboardingRequest({
         managerEmail: form.managerEmail,
         type: form.type,
         employeeName: form.employeeName,
         effectiveDate: form.effectiveDate || undefined,
-        details: combinedDetails || undefined
+        details: form.details || undefined,
+        accessTypes: form.accessTypes
       });
       setSubmitted(true);
       setForm(initialState);

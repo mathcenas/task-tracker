@@ -34,6 +34,16 @@ export interface OnboardingRequest {
   taskId?: string;
   extraServices?: string[];
   ccEmails?: string[];
+  accessTypes?: string[];
+  accessTypesDone?: Record<string, string>;
+}
+
+export interface OnboardingUpdate {
+  id: string;
+  onboardingRequestId: number;
+  kind: 'checklist' | 'note';
+  message: string;
+  createdAt?: string;
 }
 
 export interface Project {
