@@ -961,7 +961,8 @@ const sendTaskCloseSummaryEmail = async (task, client, project, notes) => {
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: client.email,
-      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail } : {}),
+      reply_to: emailReplyTo,
       subject: `${typeLabel} resuelto - ${task.description.slice(0, 80)}`,
       html
     });
@@ -2461,6 +2462,11 @@ const getFromAddressForType = (type) => {
 
 const adminNotificationEmail = process.env.ADMIN_NOTIFICATION_EMAIL || null;
 
+// Where replies to any outgoing email (onboarding, offboarding, task close
+// summaries, stale-request reminders) should land - independent of the bcc
+// address above, since that's often a shared inbox rather than a person.
+const emailReplyTo = process.env.EMAIL_REPLY_TO || 'mathias@cenas.uy';
+
 // Public: acknowledge that a request was received, before it's processed
 const sendOnboardingReceivedEmail = async (request) => {
   if (!resend) return;
@@ -2485,7 +2491,8 @@ const sendOnboardingReceivedEmail = async (request) => {
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: request.managerEmail,
-      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail } : {}),
+      reply_to: emailReplyTo,
       subject: `Recibimos tu solicitud de ${typeLabel.toLowerCase()} de ${request.employeeName}`,
       html
     });
@@ -2554,7 +2561,8 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
       from: fromAddress,
       to: request.manager_email,
       ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
-      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail } : {}),
+      reply_to: emailReplyTo,
       subject: `${typeLabel} de ${request.employee_name} - Proceso finalizado`,
       html
     });
@@ -2761,7 +2769,8 @@ const sendOnboardingUpdateEmail = async (request, headline, bodyHtml) => {
       from: fromAddress,
       to: request.manager_email,
       ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
-      ...(adminNotificationEmail ? { bcc: adminNotificationEmail, reply_to: adminNotificationEmail } : {}),
+      ...(adminNotificationEmail ? { bcc: adminNotificationEmail } : {}),
+      reply_to: emailReplyTo,
       subject: `${headline} - ${request.employee_name}`,
       html
     });
@@ -2957,6 +2966,7 @@ const checkStaleOnboardingRequests = () => {
         const { data, error } = await resend.emails.send({
           from: getFromAddressForType('alta'),
           to: adminNotificationEmail,
+          reply_to: emailReplyTo,
           subject: `${rows.length} solicitud(es) de alta/baja pendiente(s) hace más de ${ONBOARDING_STALE_DAYS} día(s)`,
           html
         });
