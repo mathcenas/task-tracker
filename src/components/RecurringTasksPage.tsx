@@ -27,6 +27,7 @@ interface RecurringTask {
 
 export function RecurringTasksPage() {
   const { clients, projects, getClient, getProject } = useApp();
+  const activeClients = clients.filter(c => !c.archived);
   const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterClient, setFilterClient] = useState<string>('all');
@@ -317,7 +318,7 @@ export function RecurringTasksPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="all">All Clients</option>
-              {clients.map(client => (
+              {activeClients.map(client => (
                 <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>
@@ -422,7 +423,7 @@ export function RecurringTasksPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="">Select client</option>
-                {clients.map(client => (
+                {activeClients.map(client => (
                   <option key={client.id} value={client.id}>{client.name}</option>
                 ))}
               </select>
@@ -744,8 +745,8 @@ export function RecurringTasksPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
                     <option value="">Select client</option>
-                    {clients.map(client => (
-                      <option key={client.id} value={client.id}>{client.name}</option>
+                    {clients.filter(c => !c.archived || c.id === editingTask.clientId).map(client => (
+                      <option key={client.id} value={client.id}>{client.archived ? `${client.name} (archived)` : client.name}</option>
                     ))}
                   </select>
                 </div>

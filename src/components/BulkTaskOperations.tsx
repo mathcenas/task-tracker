@@ -13,6 +13,7 @@ const UNCHANGED = '__unchanged__';
 
 export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, onClose }: BulkTaskOperationsProps) {
   const { tasks, updateTask, deleteTask, clients, projects } = useApp();
+  const activeClients = clients.filter(c => !c.archived);
   const [isProcessing, setIsProcessing] = useState(false);
   const [bulkAction, setBulkAction] = useState<'complete' | 'delete' | 'reschedule' | 'edit' | null>(null);
   const [newDate, setNewDate] = useState('');
@@ -234,7 +235,7 @@ export function BulkTaskOperations({ selectedTasks, onSelectionChange, isOpen, o
                       className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value={UNCHANGED}>No change</option>
-                      {clients.map(c => (
+                      {activeClients.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>

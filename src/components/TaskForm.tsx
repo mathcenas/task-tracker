@@ -8,6 +8,7 @@ export function TaskForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { clients, getClientProjects, addProject, addTask, tasks, getClient } = useApp();
+  const activeClients = clients.filter(c => !c.archived);
   const returnPath = (location.state as { from?: string })?.from || (document.referrer ? -1 : '/') as any;
   const [selectedClient, setSelectedClient] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -458,7 +459,7 @@ export function TaskForm() {
               }}
             >
               <option value="">Select a client</option>
-              {clients.map(client => (
+              {activeClients.map(client => (
                 <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>

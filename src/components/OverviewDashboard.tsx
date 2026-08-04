@@ -16,7 +16,6 @@ interface MonthStat {
   hours: number;
   serviceRevenue: number;
   suppliesCost: number;
-  net: number;
   taskCount: number;
   incidentCount: number;
   requestCount: number;
@@ -95,7 +94,6 @@ export function OverviewDashboard() {
         hours,
         serviceRevenue,
         suppliesCost,
-        net: serviceRevenue - suppliesCost,
         taskCount: monthTasks.length,
         incidentCount: monthTasks.filter(t => t.type === 'incident').length,
         requestCount: monthTasks.filter(t => t.type === 'request').length,
@@ -109,7 +107,6 @@ export function OverviewDashboard() {
     hours: months.reduce((s, m) => s + m.hours, 0),
     serviceRevenue: months.reduce((s, m) => s + m.serviceRevenue, 0),
     suppliesCost: months.reduce((s, m) => s + m.suppliesCost, 0),
-    net: months.reduce((s, m) => s + m.net, 0),
     taskCount: months.reduce((s, m) => s + m.taskCount, 0),
   }), [months]);
 
@@ -137,11 +134,11 @@ export function OverviewDashboard() {
       }
     });
 
-    return Object.values(map).sort((a, b) => (b.revenue - b.suppliesCost) - (a.revenue - a.suppliesCost));
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
   }, [tasks, range, getClient]);
 
   // Bar chart scale
-  const maxNet = Math.max(...months.map(m => m.net), 1);
+  const maxServiceRevenue = Math.max(...months.map(m => m.serviceRevenue), 1);
 
   const lastMonth = months[months.length - 1];
   const prevMonth = months[months.length - 2] ?? null;
@@ -177,14 +174,14 @@ export function OverviewDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Revenue</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Service Revenue</p>
             <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
               <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">${totals.net.toFixed(0)}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">${totals.serviceRevenue.toFixed(0)}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Services ${totals.serviceRevenue.toFixed(0)} — Supplies ${totals.suppliesCost.toFixed(0)}
+            Labor only — supplies tracked separately (${totals.suppliesCost.toFixed(0)})
           </p>
         </div>
 
@@ -222,12 +219,12 @@ export function OverviewDashboard() {
             </div>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            ${lastMonth?.net.toFixed(0) ?? '—'}
+            ${lastMonth?.serviceRevenue.toFixed(0) ?? '—'}
           </p>
           <div className="mt-1">
-            <TrendBadge value={pct(lastMonth?.net ?? 0, prevMonth?.net ?? 0)} />
+            <TrendBadge value={pct(lastMonth?.serviceRevenue ?? 0, prevMonth?.serviceRevenue ?? 0)} />
             {prevMonth && (
-              <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">vs ${prevMonth.net.toFixed(0)}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">vs ${prevMonth.serviceRevenue.toFixed(0)}</span>
             )}
           </div>
         </div>
@@ -239,36 +236,27 @@ export function OverviewDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-blue-500" />
-            Net Revenue by Month
+            Service Revenue by Month
           </h2>
           <div className="space-y-3">
             {months.map(m => {
-              const barPct = maxNet > 0 ? (m.net / maxNet) * 100 : 0;
+              const barPct = maxServiceRevenue > 0 ? (m.serviceRevenue / maxServiceRevenue) * 100 : 0;
               const isLast = m.key === lastMonth?.key;
               return (
                 <div key={m.key}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-20 flex-shrink-0">{m.label}</span>
                     <span className={`text-xs font-semibold ${isLast ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                      ${m.net.toFixed(0)}
+                      ${m.serviceRevenue.toFixed(0)}
                     </span>
                   </div>
                   <div className="relative h-6 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
-                    {/* service bar */}
                     <div
                       className={`absolute left-0 top-0 h-full rounded-md transition-all duration-500 ${isLast ? 'bg-blue-500' : 'bg-blue-300 dark:bg-blue-700'}`}
                       style={{ width: `${barPct}%` }}
                     />
-                    {/* supplies overlay (red subtraction) */}
-                    {m.suppliesCost > 0 && (
-                      <div
-                        className="absolute right-0 top-0 h-full bg-red-300/60 dark:bg-red-700/40 rounded-r-md"
-                        style={{ width: `${Math.min((m.suppliesCost / Math.max(m.serviceRevenue, 1)) * barPct, barPct)}%` }}
-                        title={`Supplies: $${m.suppliesCost.toFixed(0)}`}
-                      />
-                    )}
                     <span className="absolute inset-0 flex items-center pl-2 text-xs text-white font-medium">
-                      {m.hours.toFixed(1)}h · {m.taskCount} tasks
+                      {m.hours.toFixed(1)}h · {m.taskCount} tasks{m.suppliesCost > 0 ? ` · +$${m.suppliesCost.toFixed(0)} supplies` : ''}
                     </span>
                   </div>
                 </div>
@@ -276,8 +264,7 @@ export function OverviewDashboard() {
             })}
           </div>
           <div className="flex items-center gap-4 mt-4 text-xs text-gray-500 dark:text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded bg-blue-400 inline-block" /> Net revenue</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded bg-red-300 inline-block" /> Supplies cost</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded bg-blue-400 inline-block" /> Service revenue (labor only)</span>
           </div>
         </div>
 
@@ -294,14 +281,13 @@ export function OverviewDashboard() {
                   <th className="pb-2 pr-3">Month</th>
                   <th className="pb-2 pr-3 text-right">Hours</th>
                   <th className="pb-2 pr-3 text-right">Services</th>
-                  <th className="pb-2 pr-3 text-right">Supplies</th>
-                  <th className="pb-2 text-right">Net</th>
+                  <th className="pb-2 text-right">Supplies</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                 {months.map((m, i) => {
                   const prev = i > 0 ? months[i - 1] : null;
-                  const netTrend = pct(m.net, prev?.net ?? 0);
+                  const revenueTrend = pct(m.serviceRevenue, prev?.serviceRevenue ?? 0);
                   const isLast = i === months.length - 1;
                   return (
                     <tr key={m.key} className={isLast ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}>
@@ -309,16 +295,15 @@ export function OverviewDashboard() {
                         {m.label}
                       </td>
                       <td className="py-2.5 pr-3 text-right text-gray-600 dark:text-gray-400">{m.hours.toFixed(1)}h</td>
-                      <td className="py-2.5 pr-3 text-right text-gray-700 dark:text-gray-300">${m.serviceRevenue.toFixed(0)}</td>
-                      <td className="py-2.5 pr-3 text-right text-red-500 dark:text-red-400">{m.suppliesCost > 0 ? `-$${m.suppliesCost.toFixed(0)}` : '—'}</td>
-                      <td className="py-2.5 text-right">
-                        <span className="font-semibold text-gray-900 dark:text-white">${m.net.toFixed(0)}</span>
+                      <td className="py-2.5 pr-3 text-right">
+                        <span className="font-semibold text-gray-900 dark:text-white">${m.serviceRevenue.toFixed(0)}</span>
                         {prev !== null && (
                           <span className="ml-1">
-                            <TrendBadge value={netTrend} />
+                            <TrendBadge value={revenueTrend} />
                           </span>
                         )}
                       </td>
+                      <td className="py-2.5 text-right text-gray-500 dark:text-gray-400">{m.suppliesCost > 0 ? `$${m.suppliesCost.toFixed(0)}` : '—'}</td>
                     </tr>
                   );
                 })}
@@ -327,9 +312,8 @@ export function OverviewDashboard() {
                 <tr className="border-t-2 border-gray-200 dark:border-gray-600">
                   <td className="pt-3 pr-3 font-bold text-gray-900 dark:text-white text-xs uppercase">Total</td>
                   <td className="pt-3 pr-3 text-right font-bold text-gray-900 dark:text-white">{totals.hours.toFixed(1)}h</td>
-                  <td className="pt-3 pr-3 text-right font-bold text-gray-900 dark:text-white">${totals.serviceRevenue.toFixed(0)}</td>
-                  <td className="pt-3 pr-3 text-right font-bold text-red-500 dark:text-red-400">-${totals.suppliesCost.toFixed(0)}</td>
-                  <td className="pt-3 text-right font-bold text-green-600 dark:text-green-400 text-base">${totals.net.toFixed(0)}</td>
+                  <td className="pt-3 pr-3 text-right font-bold text-green-600 dark:text-green-400 text-base">${totals.serviceRevenue.toFixed(0)}</td>
+                  <td className="pt-3 text-right font-bold text-gray-500 dark:text-gray-400">${totals.suppliesCost.toFixed(0)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -429,8 +413,7 @@ export function OverviewDashboard() {
                   <th className="pb-2 pr-4 text-center">Tasks</th>
                   <th className="pb-2 pr-4 text-right">Hours</th>
                   <th className="pb-2 pr-4 text-right">Services</th>
-                  <th className="pb-2 pr-4 text-right">Supplies</th>
-                  <th className="pb-2 text-right">Net</th>
+                  <th className="pb-2 text-right">Supplies</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -439,11 +422,8 @@ export function OverviewDashboard() {
                     <td className="py-3 pr-4 font-medium text-gray-900 dark:text-white">{c.name}</td>
                     <td className="py-3 pr-4 text-center text-gray-600 dark:text-gray-400">{c.taskCount}</td>
                     <td className="py-3 pr-4 text-right text-gray-600 dark:text-gray-400">{c.hours.toFixed(1)}h</td>
-                    <td className="py-3 pr-4 text-right text-gray-700 dark:text-gray-300">${c.revenue.toFixed(0)}</td>
-                    <td className="py-3 pr-4 text-right text-red-500 dark:text-red-400">{c.suppliesCost > 0 ? `-$${c.suppliesCost.toFixed(0)}` : '—'}</td>
-                    <td className="py-3 text-right font-semibold text-gray-900 dark:text-white">
-                      ${(c.revenue - c.suppliesCost).toFixed(0)}
-                    </td>
+                    <td className="py-3 pr-4 text-right font-semibold text-gray-900 dark:text-white">${c.revenue.toFixed(0)}</td>
+                    <td className="py-3 text-right text-gray-500 dark:text-gray-400">{c.suppliesCost > 0 ? `$${c.suppliesCost.toFixed(0)}` : '—'}</td>
                   </tr>
                 ))}
               </tbody>

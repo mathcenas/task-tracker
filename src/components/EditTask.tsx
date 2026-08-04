@@ -71,6 +71,12 @@ export function EditTask() {
     return projects.filter(p => p.clientId === formData.clientId);
   }, [projects, formData.clientId]);
 
+  // Active clients, plus the task's current client even if it's since been
+  // archived - so editing an old task doesn't make its client vanish from the list
+  const selectableClients = useMemo(() => {
+    return clients.filter(c => !c.archived || c.id === formData.clientId);
+  }, [clients, formData.clientId]);
+
   const isProblemOrChange = task?.type === 'problem' || task?.type === 'change';
 
   const [taskNotes, setTaskNotes] = useState<TaskNote[]>([]);
@@ -249,8 +255,8 @@ export function EditTask() {
                 }));
               }}
             >
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {selectableClients.map(c => (
+                <option key={c.id} value={c.id}>{c.archived ? `${c.name} (archived)` : c.name}</option>
               ))}
             </select>
           </div>

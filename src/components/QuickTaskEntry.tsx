@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 
 export function QuickTaskEntry() {
   const { clients, getClientProjects, addTask } = useApp();
+  const activeClients = clients.filter(c => !c.archived);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState('');
   const [formData, setFormData] = useState({
@@ -109,7 +110,7 @@ export function QuickTaskEntry() {
                     required
                   >
                     <option value="">Select client</option>
-                    {clients.map(client => (
+                    {activeClients.map(client => (
                       <option key={client.id} value={client.id}>{client.name}</option>
                     ))}
                   </select>
