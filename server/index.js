@@ -117,6 +117,7 @@ const initDB = () => {
       invoiceNumber TEXT,
       reported_by TEXT,
       published_at DATETIME,
+      recurring_task_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -311,6 +312,7 @@ const runMigrations = () => {
     `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
+    `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
   ];
 
   migrations.forEach(sql => {
@@ -2790,6 +2792,156 @@ setTimeout(() => {
   checkStaleOnboardingRequests();
   setInterval(checkStaleOnboardingRequests, ONBOARDING_STALE_CHECK_INTERVAL_MS);
 }, 60 * 1000);
+
+// Generate real `tasks` rows from `recurring_tasks` definitions once they're
+// due. This is the ONLY place that does this generation - it runs server-side
+// on a timer, independent of any page being open, and is idempotent: each
+// generated task is linked back to its recurring definition via
+// recurring_task_id, so a task is never generated twice for the same
+// definition + due date even if this check overlaps a previous run.
+const RECURRING_TASK_CHECK_INTERVAL_MS = 60 * 60 * 1000; // every hour
+
+const getNextWeekendDate = (weekendType, weekendDay, baseDate) => {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const lastDay = new Date(year, month + 1, 0);
+  const targetDay = weekendDay === 'saturday' ? 6 : 0;
+  const weekends = [];
+  for (let date = 1; date <= lastDay.getDate(); date++) {
+    if (new Date(year, month, date).getDay() === targetDay) weekends.push(date);
+  }
+  if (weekends.length === 0) return null;
+  let targetDate;
+  switch (weekendType) {
+    case 'first': targetDate = weekends[0]; break;
+    case 'second': targetDate = weekends[1]; break;
+    case 'third': targetDate = weekends[2]; break;
+    case 'fourth': targetDate = weekends[3]; break;
+    case 'last': targetDate = weekends[weekends.length - 1]; break;
+    default: targetDate = weekends[0];
+  }
+  return targetDate ? new Date(year, month, targetDate) : null;
+};
+
+const formatDateOnly = (d) => d.toISOString().split('T')[0];
+
+const computeNextDue = (recurringTask, fromDateStr) => {
+  const currentDate = new Date(fromDateStr);
+  const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+
+  if (recurringTask.recurring_weekend) {
+    const weekendType = recurringTask.recurring_weekend_type || 'first';
+    const weekendDay = recurringTask.recurring_weekend_day || 'saturday';
+    let nextWeekendDate = getNextWeekendDate(weekendType, weekendDay, nextMonth);
+    if (!nextWeekendDate) {
+      const nextNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 1);
+      nextWeekendDate = getNextWeekendDate(weekendType, weekendDay, nextNextMonth) || nextNextMonth;
+    }
+    return formatDateOnly(nextWeekendDate);
+  }
+
+  const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+  const targetDay = Math.min(recurringTask.day_of_month || 1, daysInNextMonth);
+  return formatDateOnly(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), targetDay));
+};
+
+const generateDueRecurringTasks = () => {
+  const today = formatDateOnly(new Date());
+
+  db.all(
+    `SELECT * FROM recurring_tasks
+     WHERE is_active = 1
+       AND next_due <= ?
+       AND (recurring_start_date IS NULL OR recurring_start_date <= ?)
+       AND (recurring_end_date IS NULL OR recurring_end_date >= ?)`,
+    [today, today, today],
+    (err, dueTasks) => {
+      if (err) {
+        console.error('❌ [Recurring] Error fetching due recurring tasks:', err);
+        return;
+      }
+      if (!dueTasks || dueTasks.length === 0) return;
+
+      dueTasks.forEach((recurringTask) => {
+        const dueDate = recurringTask.next_due;
+
+        // Idempotency guard: a task for this recurring definition + due date
+        // may already exist (e.g. a previous run generated it but the
+        // next_due advance below didn't get to run yet). Never insert twice.
+        db.get(
+          `SELECT id FROM tasks WHERE recurring_task_id = ? AND date = ?`,
+          [recurringTask.id, dueDate],
+          (checkErr, existing) => {
+            if (checkErr) {
+              console.error('❌ [Recurring] Error checking for existing generated task:', checkErr);
+              return;
+            }
+
+            const nextDue = computeNextDue(recurringTask, dueDate);
+
+            if (existing) {
+              db.run(
+                `UPDATE recurring_tasks SET last_generated = ?, next_due = ? WHERE id = ? AND next_due = ?`,
+                [dueDate, nextDue, recurringTask.id, dueDate],
+                (advanceErr) => {
+                  if (advanceErr) console.error('❌ [Recurring] Error advancing next_due:', advanceErr);
+                }
+              );
+              return;
+            }
+
+            const taskId = crypto.randomUUID();
+
+            db.run(
+              `INSERT INTO tasks (
+                id, client_id, project_id, description, hours, cost, date, type,
+                status, priority, finished, notes, is_recurring, recurring_weekend,
+                recurring_weekend_type, recurring_weekend_day, recurring_task_id
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                taskId, recurringTask.client_id, recurringTask.project_id,
+                `[Recurring] ${recurringTask.description}`,
+                recurringTask.estimated_hours, recurringTask.estimated_cost, dueDate,
+                recurringTask.type, 'in_progress', recurringTask.priority, 0,
+                `Auto-generated from recurring task: ${recurringTask.name}`,
+                1, recurringTask.recurring_weekend ? 1 : 0,
+                recurringTask.recurring_weekend_type, recurringTask.recurring_weekend_day,
+                recurringTask.id
+              ],
+              (insertErr) => {
+                if (insertErr) {
+                  console.error('❌ [Recurring] Error generating task from recurring definition:', insertErr);
+                  return;
+                }
+
+                console.log(`✅ [Recurring] Generated task ${taskId} from recurring task ${recurringTask.id} for ${dueDate}`);
+                logActivity('created', 'task', taskId, `[Recurring] ${recurringTask.description}`, {
+                  source: 'recurring',
+                  recurringTaskId: recurringTask.id
+                }, 'system');
+
+                // Only advance if next_due hasn't moved since we read it, so
+                // a concurrent run can't double-advance or clobber progress.
+                db.run(
+                  `UPDATE recurring_tasks SET last_generated = ?, next_due = ? WHERE id = ? AND next_due = ?`,
+                  [dueDate, nextDue, recurringTask.id, dueDate],
+                  (advanceErr) => {
+                    if (advanceErr) console.error('❌ [Recurring] Error advancing next_due:', advanceErr);
+                  }
+                );
+              }
+            );
+          }
+        );
+      });
+    }
+  );
+};
+
+setTimeout(() => {
+  generateDueRecurringTasks();
+  setInterval(generateDueRecurringTasks, RECURRING_TASK_CHECK_INTERVAL_MS);
+}, 45 * 1000);
 
 // Serve static files in production - MUST BE AFTER all API routes
 if (process.env.NODE_ENV === 'production') {

@@ -95,11 +95,12 @@ const initDB = async () => {
       approval_status TEXT DEFAULT 'pending',
       reported_by TEXT,
       published_at DATETIME,
+      recurring_task_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS recurring_tasks (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -227,6 +228,8 @@ const initDB = async () => {
     // Problem/Change tasks: who reported it, and when it was published externally
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
+    // Link auto-generated tasks back to the recurring definition that created them
+    `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
     // Update old status values to new workflow statuses
     `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`,
     `UPDATE tasks SET status = 'in_progress' WHERE status = 'in-progress'`,
