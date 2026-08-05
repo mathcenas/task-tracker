@@ -188,6 +188,10 @@ const runMigrations = async () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (onboarding_request_id) REFERENCES onboarding_requests (id) ON DELETE CASCADE
       )`
+    },
+    {
+      name: 'Add source to onboarding_requests',
+      sql: `ALTER TABLE onboarding_requests ADD COLUMN source TEXT`
     }
   ];
 

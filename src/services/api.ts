@@ -740,7 +740,8 @@ class ApiService {
       extraServices: r.extra_services ? JSON.parse(r.extra_services) : [],
       ccEmails: r.cc_emails ? JSON.parse(r.cc_emails) : [],
       accessTypes: r.access_types ? JSON.parse(r.access_types) : [],
-      accessTypesDone: r.access_types_done ? JSON.parse(r.access_types_done) : {}
+      accessTypesDone: r.access_types_done ? JSON.parse(r.access_types_done) : {},
+      source: r.source
     }));
   }
 
@@ -751,10 +752,10 @@ class ApiService {
     });
   }
 
-  async sendOnboardingUpdate(id: number, message: string) {
+  async sendOnboardingUpdate(id: number, message: string, cc?: string[]) {
     return this.request(`/admin/onboarding/${id}/update`, {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, cc: cc || [] }),
     });
   }
 
