@@ -3191,7 +3191,10 @@ setTimeout(() => {
 // "received" acknowledgment email is sent for these - there's no person who
 // submitted a request to acknowledge.
 const onboardingImportDir = process.env.ONBOARDING_IMPORT_DIR || null;
-const ONBOARDING_IMPORT_CHECK_INTERVAL_MS = 10 * 60 * 1000; // every 10 minutes
+// Runs once a day at this local hour (24h, see TZ env var - defaults to
+// America/Montevideo) rather than on a fixed interval, since these reports
+// land once a day and there's no reason to poll more often than that.
+const ONBOARDING_IMPORT_HOUR = parseInt(process.env.ONBOARDING_IMPORT_HOUR || '12', 10);
 
 const dbRunAsync = (sql, params = []) => new Promise((resolve, reject) => {
   db.run(sql, params, function (err) {
@@ -3215,7 +3218,7 @@ const processOnboardingImportFile = async (fileName, payload) => {
     return false;
   }
 
-  const matches = await dbAllAsync('SELECT * FROM clients WHERE LOWER(name) = LOWER(?)', [client]);
+  const matches = await dbAllAsync('SELECT * FROM clients WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [client]);
   const matchedClient = matches[0];
   if (!matchedClient) {
     console.error(`❌ [Onboarding Import] ${fileName}: no client matches "${client}"`);
@@ -3296,10 +3299,21 @@ const processOnboardingImports = async () => {
   }
 };
 
-setTimeout(() => {
-  processOnboardingImports();
-  setInterval(processOnboardingImports, ONBOARDING_IMPORT_CHECK_INTERVAL_MS);
-}, 20 * 1000);
+const msUntilNextOnboardingImportRun = () => {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), ONBOARDING_IMPORT_HOUR, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next.getTime() - now.getTime();
+};
+
+const scheduleOnboardingImport = () => {
+  setTimeout(() => {
+    processOnboardingImports();
+    scheduleOnboardingImport();
+  }, msUntilNextOnboardingImportRun());
+};
+
+scheduleOnboardingImport();
 
 // Serve static files in production - MUST BE AFTER all API routes
 if (process.env.NODE_ENV === 'production') {

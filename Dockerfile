@@ -21,7 +21,7 @@ RUN npm run build
 FROM node:20-alpine
 
 # Install security updates and tools
-RUN apk update && apk upgrade && apk add --no-cache ca-certificates sqlite dcron
+RUN apk update && apk upgrade && apk add --no-cache ca-certificates sqlite dcron tzdata
 
 # Create app directory and data directory
 WORKDIR /app
