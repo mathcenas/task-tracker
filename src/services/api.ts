@@ -751,10 +751,10 @@ class ApiService {
     });
   }
 
-  async sendOnboardingUpdate(id: number, message: string) {
+  async sendOnboardingUpdate(id: number, message: string, cc?: string[]) {
     return this.request(`/admin/onboarding/${id}/update`, {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, cc: cc || [] }),
     });
   }
 

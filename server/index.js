@@ -2744,11 +2744,11 @@ app.post('/api/admin/onboarding/:id/resend', authenticateToken, async (req, res)
 // Send a progress-update email to the requester while a request is still
 // being worked on (some offboardings happen in stages - revoke mail today,
 // VPN tomorrow, etc.) and log it so there's a record of what was sent when.
-const sendOnboardingUpdateEmail = async (request, headline, bodyHtml) => {
+const sendOnboardingUpdateEmail = async (request, headline, bodyHtml, extraCc = []) => {
   if (!resend) return { success: false, error: 'Resend is not configured' };
 
   const typeLabel = request.type === 'alta' ? 'Alta' : 'Baja';
-  const ccEmails = parseJsonArray(request.cc_emails);
+  const ccEmails = Array.from(new Set(normalizeEmailList([...parseJsonArray(request.cc_emails), ...extraCc])));
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
@@ -2859,11 +2859,13 @@ app.put('/api/admin/onboarding/:id/access-types', authenticateToken, (req, res) 
 // Admin: send a free-text progress update email for anything outside the checklist
 app.post('/api/admin/onboarding/:id/update', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { message } = req.body;
+  const { message, cc } = req.body;
 
   if (!message || !message.trim()) {
     return res.status(400).json({ error: 'message is required' });
   }
+
+  const extraCc = normalizeEmailList(cc);
 
   db.get('SELECT * FROM onboarding_requests WHERE id = ?', [id], async (err, request) => {
     if (err) {
@@ -2881,11 +2883,26 @@ app.post('/api/admin/onboarding/:id/update', authenticateToken, async (req, res)
     const result = await sendOnboardingUpdateEmail(
       request,
       'Actualización',
-      escapeHtml(trimmedMessage).replace(/\n/g, '<br/>')
+      escapeHtml(trimmedMessage).replace(/\n/g, '<br/>'),
+      extraCc
     );
 
     if (!result?.success) {
       return res.status(502).json({ error: 'Resend rejected the email', details: result?.error });
+    }
+
+    // Any new CC addresses stick to the request, so later updates (including
+    // the automatic checklist emails) keep including them without having to
+    // retype them every time.
+    if (extraCc.length > 0) {
+      const mergedCc = Array.from(new Set([...parseJsonArray(request.cc_emails), ...extraCc]));
+      db.run(
+        'UPDATE onboarding_requests SET cc_emails = ? WHERE id = ?',
+        [JSON.stringify(mergedCc), id],
+        (ccErr) => {
+          if (ccErr) console.error('❌ Error persisting cc_emails:', ccErr);
+        }
+      );
     }
 
     db.run(

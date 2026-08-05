@@ -264,6 +264,7 @@ function ProgressUpdates({ request, onChanged }: ProgressUpdatesProps) {
   const [togglingItem, setTogglingItem] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [cc, setCc] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -282,14 +283,20 @@ function ProgressUpdates({ request, onChanged }: ProgressUpdatesProps) {
     }
   };
 
+  const openComposer = () => {
+    setCc(request.ccEmails || []);
+    setComposerOpen(true);
+  };
+
   const sendUpdate = async () => {
     if (!message.trim()) return;
     setSending(true);
     setSendError(null);
     try {
-      await api.sendOnboardingUpdate(request.id, message.trim());
+      await api.sendOnboardingUpdate(request.id, message.trim(), cc);
       setMessage('');
       setComposerOpen(false);
+      onChanged();
       if (historyOpen) loadHistory();
     } catch (err) {
       console.error('Error sending onboarding update:', err);
@@ -347,7 +354,7 @@ function ProgressUpdates({ request, onChanged }: ProgressUpdatesProps) {
       <div className="flex items-center gap-3">
         {!composerOpen ? (
           <button
-            onClick={() => setComposerOpen(true)}
+            onClick={openComposer}
             className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
           >
             <MessageSquarePlus className="w-3.5 h-3.5 mr-1" />
@@ -364,7 +371,7 @@ function ProgressUpdates({ request, onChanged }: ProgressUpdatesProps) {
       </div>
 
       {composerOpen && (
-        <div className="mt-2">
+        <div className="mt-2 space-y-2">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -374,8 +381,18 @@ function ProgressUpdates({ request, onChanged }: ProgressUpdatesProps) {
                      focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
                      dark:bg-gray-700 dark:text-white transition-all duration-200"
           />
-          {sendError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{sendError}</p>}
-          <div className="mt-1.5 flex justify-end gap-2">
+          <TagListInput
+            label="CC (opcional)"
+            placeholder="otro.mail@cliente.com"
+            inputType="email"
+            values={cc}
+            onChange={setCc}
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Estos mails quedan guardados para esta solicitud, así las próximas actualizaciones (incluidas las del checklist) también los incluyen.
+          </p>
+          {sendError && <p className="text-xs text-red-600 dark:text-red-400">{sendError}</p>}
+          <div className="flex justify-end gap-2">
             <button
               onClick={() => { setComposerOpen(false); setMessage(''); setSendError(null); }}
               className="px-2.5 py-1 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
