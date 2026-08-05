@@ -253,7 +253,8 @@ const initDB = () => {
       cc_emails TEXT,
       reminder_sent_at DATETIME,
       access_types TEXT,
-      access_types_done TEXT
+      access_types_done TEXT,
+      source TEXT
     )`,
 
     `CREATE TABLE IF NOT EXISTS task_notes (
@@ -323,6 +324,7 @@ const runMigrations = () => {
     `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
     `ALTER TABLE onboarding_requests ADD COLUMN access_types TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN access_types_done TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN source TEXT`,
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
     `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
@@ -3164,6 +3166,140 @@ setTimeout(() => {
   generateDueRecurringTasks();
   setInterval(generateDueRecurringTasks, RECURRING_TASK_CHECK_INTERVAL_MS);
 }, 45 * 1000);
+
+// ============================================================
+// Inbound onboarding/offboarding report import (file-drop)
+// ============================================================
+// Some external systems (access audits, NAS reports, etc.) can name pending
+// user actions but have no notion of our clients/projects and no human
+// "manager" submitting a request through the public form. Rather than
+// exposing a network endpoint, they drop timestamped JSON files into a
+// folder bind-mounted into both containers (ONBOARDING_IMPORT_DIR). Expected
+// shape:
+//   {
+//     "service": "NAS Sistemaris",
+//     "client": "Sistemaris SRL",          // matched by name against our clients table
+//     "generated_at": "2026-08-05T14:00:00Z",
+//     "reviewed_at": "2026-08-05T13:45:00Z",
+//     "pending_actions": [
+//       { "user": "jperez", "action": "eliminar", "note": "Ya no trabaja en la empresa" }
+//     ]
+//   }
+// Each pending_action becomes its own onboarding_requests row (type 'alta'),
+// using the matched client's stored email as the requester so it flows
+// through the normal admin panel / checklist / update-email machinery. No
+// "received" acknowledgment email is sent for these - there's no person who
+// submitted a request to acknowledge.
+const onboardingImportDir = process.env.ONBOARDING_IMPORT_DIR || null;
+const ONBOARDING_IMPORT_CHECK_INTERVAL_MS = 10 * 60 * 1000; // every 10 minutes
+
+const dbRunAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.run(sql, params, function (err) {
+    if (err) reject(err); else resolve(this);
+  });
+});
+
+const dbAllAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.all(sql, params, (err, rows) => {
+    if (err) reject(err); else resolve(rows);
+  });
+});
+
+// Returns true if the file was successfully processed (safe to move to
+// processed/), false if it should be moved to failed/ for manual review.
+const processOnboardingImportFile = async (fileName, payload) => {
+  const { service, client, pending_actions: pendingActions } = payload;
+
+  if (!service || !client || !Array.isArray(pendingActions) || pendingActions.length === 0) {
+    console.error(`❌ [Onboarding Import] ${fileName}: missing service, client, or pending_actions`);
+    return false;
+  }
+
+  const matches = await dbAllAsync('SELECT * FROM clients WHERE LOWER(name) = LOWER(?)', [client]);
+  const matchedClient = matches[0];
+  if (!matchedClient) {
+    console.error(`❌ [Onboarding Import] ${fileName}: no client matches "${client}"`);
+    return false;
+  }
+  if (!matchedClient.email) {
+    console.error(`❌ [Onboarding Import] ${fileName}: client "${client}" has no email on file`);
+    return false;
+  }
+
+  const source = `import:${service}`;
+  let inserted = 0;
+
+  for (const action of pendingActions) {
+    if (!action?.user || !action?.action) continue;
+
+    const details = [
+      `Servicio: ${service}`,
+      `Acción solicitada: ${action.action}`,
+      action.note ? `Nota: ${action.note}` : null,
+      payload.generated_at ? `Reporte generado: ${payload.generated_at}` : null,
+      payload.reviewed_at ? `Revisado: ${payload.reviewed_at}` : null
+    ].filter(Boolean).join('\n');
+
+    await dbRunAsync(
+      `INSERT INTO onboarding_requests (manager_email, type, employee_name, details, source)
+       VALUES (?, 'alta', ?, ?, ?)`,
+      [matchedClient.email, action.user, details, source]
+    );
+    inserted++;
+  }
+
+  if (inserted === 0) {
+    console.error(`❌ [Onboarding Import] ${fileName}: no valid pending_actions (each needs user + action)`);
+    return false;
+  }
+
+  console.log(`✅ [Onboarding Import] ${fileName}: created ${inserted} request(s) for ${client}`);
+  return true;
+};
+
+let onboardingImportInProgress = false;
+
+const processOnboardingImports = async () => {
+  if (!onboardingImportDir || onboardingImportInProgress) return;
+  if (!fs.existsSync(onboardingImportDir)) return;
+
+  onboardingImportInProgress = true;
+  try {
+    const files = fs.readdirSync(onboardingImportDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => entry.name)
+      .sort();
+
+    for (const fileName of files) {
+      const filePath = path.join(onboardingImportDir, fileName);
+      let succeeded = false;
+
+      try {
+        const payload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        succeeded = await processOnboardingImportFile(fileName, payload);
+      } catch (err) {
+        console.error(`❌ [Onboarding Import] Error processing ${fileName}:`, err.message);
+      }
+
+      const destDir = path.join(onboardingImportDir, succeeded ? 'processed' : 'failed');
+      try {
+        fs.mkdirSync(destDir, { recursive: true });
+        fs.renameSync(filePath, path.join(destDir, fileName));
+      } catch (moveErr) {
+        console.error(`❌ [Onboarding Import] Error moving ${fileName} to ${destDir}:`, moveErr);
+      }
+    }
+  } catch (err) {
+    console.error('❌ [Onboarding Import] Error scanning import directory:', err);
+  } finally {
+    onboardingImportInProgress = false;
+  }
+};
+
+setTimeout(() => {
+  processOnboardingImports();
+  setInterval(processOnboardingImports, ONBOARDING_IMPORT_CHECK_INTERVAL_MS);
+}, 20 * 1000);
 
 // Serve static files in production - MUST BE AFTER all API routes
 if (process.env.NODE_ENV === 'production') {

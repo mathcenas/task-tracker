@@ -185,9 +185,14 @@ function RequestCard({ request, clientName, projectName, resendState, onProcess,
                   Pendiente
                 </span>
               )}
+              {request.source?.startsWith('import:') && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                  {request.source.slice('import:'.length)}
+                </span>
+              )}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Solicitado por {request.managerEmail}
+              {request.source?.startsWith('import:') ? 'Notifica a' : 'Solicitado por'} {request.managerEmail}
               {request.effectiveDate && <> · Efectividad: {request.effectiveDate}</>}
               {request.createdAt && <> · {new Date(request.createdAt).toLocaleDateString('es-UY')}</>}
             </p>

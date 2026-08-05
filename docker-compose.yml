@@ -8,6 +8,11 @@ services:
     restart: unless-stopped
     volumes:
       - tasktracker_data:/app/data
+      # Shared with other systems on the host (each mounts its own copy of
+      # this same host path) so they can drop onboarding/offboarding report
+      # JSON files here for import. Leave ONBOARDING_IMPORT_DIR unset to
+      # disable the import entirely.
+      - ${ONBOARDING_IMPORT_HOST_DIR:-/srv/shared/onboarding-import}:/app/import
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -23,6 +28,7 @@ services:
       - ONBOARDING_STALE_DAYS=${ONBOARDING_STALE_DAYS:-2}
       - EXTERNAL_PORTAL_WEBHOOK_URL=${EXTERNAL_PORTAL_WEBHOOK_URL:-}
       - EXTERNAL_PORTAL_WEBHOOK_TOKEN=${EXTERNAL_PORTAL_WEBHOOK_TOKEN:-}
+      - ONBOARDING_IMPORT_DIR=${ONBOARDING_IMPORT_DIR:-/app/import}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s

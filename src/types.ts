@@ -36,6 +36,7 @@ export interface OnboardingRequest {
   ccEmails?: string[];
   accessTypes?: string[];
   accessTypesDone?: Record<string, string>;
+  source?: string;
 }
 
 export interface OnboardingUpdate {

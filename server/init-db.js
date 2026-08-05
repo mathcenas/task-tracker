@@ -181,7 +181,8 @@ const initDB = async () => {
       cc_emails TEXT,
       reminder_sent_at DATETIME,
       access_types TEXT,
-      access_types_done TEXT
+      access_types_done TEXT,
+      source TEXT
     )`,
 
     `CREATE TABLE IF NOT EXISTS task_notes (
@@ -238,6 +239,7 @@ const initDB = async () => {
     `ALTER TABLE onboarding_requests ADD COLUMN reminder_sent_at DATETIME`,
     `ALTER TABLE onboarding_requests ADD COLUMN access_types TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN access_types_done TEXT`,
+    `ALTER TABLE onboarding_requests ADD COLUMN source TEXT`,
     // Problem/Change tasks: who reported it, and when it was published externally
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
