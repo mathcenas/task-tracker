@@ -4,7 +4,7 @@ import { parseISO, isToday, isTomorrow, isYesterday, format } from 'date-fns';
 import {
   AlertTriangle, FileText, Package, Check, Pencil, Plus, ChevronDown, ChevronUp,
   Filter, Clock, Flame, CalendarClock, CheckCircle2, MoreHorizontal, X,
-  Timer, StopCircle, Play, AlertOctagon, GitBranch
+  Timer, StopCircle, Play, AlertOctagon, GitBranch, Repeat
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
@@ -95,6 +95,12 @@ export function WorkQueue() {
 
   const priorityOrder = { high: 0, medium: 1, low: 2 };
   const sorted = [...displayed].sort((a, b) => {
+    // Recurring items sink to the bottom - they're routine, not something
+    // to triage like an incident/request, so they shouldn't compete with
+    // real work for attention at the top of the queue.
+    const aRecurring = a.isRecurring ? 1 : 0;
+    const bRecurring = b.isRecurring ? 1 : 0;
+    if (aRecurring !== bRecurring) return aRecurring - bRecurring;
     const aOverdue = parseISO(a.date + 'T00:00:00') < now ? 0 : 1;
     const bOverdue = parseISO(b.date + 'T00:00:00') < now ? 0 : 1;
     if (aOverdue !== bOverdue) return aOverdue - bOverdue;
@@ -309,9 +315,11 @@ export function WorkQueue() {
               <div
                 key={task.id}
                 className={`group bg-white dark:bg-gray-800 rounded-xl border transition-all ${
-                  overdue
-                    ? 'border-red-200 dark:border-red-900/60'
-                    : 'border-gray-200 dark:border-gray-700'
+                  task.isRecurring
+                    ? 'opacity-60 hover:opacity-100 border-gray-200 dark:border-gray-700'
+                    : overdue
+                      ? 'border-red-200 dark:border-red-900/60'
+                      : 'border-gray-200 dark:border-gray-700'
                 } hover:shadow-sm`}
               >
                 <div className="flex items-start gap-3 p-3.5">
@@ -328,7 +336,12 @@ export function WorkQueue() {
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         {typeIcon(task.type)}
                         {priorityDot(task.priority)}
-                        <span className="font-medium text-gray-900 dark:text-white text-sm leading-snug">
+                        {task.isRecurring && (
+                          <Repeat className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        )}
+                        <span className={`font-medium text-sm leading-snug ${
+                          task.isRecurring ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'
+                        }`}>
                           {task.description}
                         </span>
                       </div>
@@ -370,9 +383,9 @@ export function WorkQueue() {
 
                     {/* Meta row */}
                     <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
-                      <span className={`text-xs font-medium ${overdue ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                      <span className={`text-xs font-medium ${overdue && !task.isRecurring ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
                         {getRelativeDate(task.date)}
-                        {overdue && ' · overdue'}
+                        {overdue && !task.isRecurring && ' · overdue'}
                       </span>
                       {client && (
                         <span className="text-xs text-gray-400 dark:text-gray-500">{client.name}</span>
