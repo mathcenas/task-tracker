@@ -202,6 +202,7 @@ const initDB = () => {
       email TEXT,
       website TEXT,
       tax_id TEXT,
+      pdf_footer_message TEXT DEFAULT 'Thank you for your business!',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
@@ -325,6 +326,7 @@ const runMigrations = () => {
     `ALTER TABLE onboarding_requests ADD COLUMN access_types TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN access_types_done TEXT`,
     `ALTER TABLE onboarding_requests ADD COLUMN source TEXT`,
+    `ALTER TABLE company_settings ADD COLUMN pdf_footer_message TEXT DEFAULT 'Thank you for your business!'`,
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
     `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
@@ -2055,7 +2057,8 @@ app.get('/api/company-settings', authenticateToken, (req, res) => {
         phone: null,
         email: null,
         website: null,
-        tax_id: null
+        tax_id: null,
+        pdf_footer_message: 'Thank you for your business!'
       });
     }
 
@@ -2078,7 +2081,8 @@ app.get('/api/public/company-settings', (req, res) => {
         phone: null,
         email: null,
         website: null,
-        tax_id: null
+        tax_id: null,
+        pdf_footer_message: 'Thank you for your business!'
       });
     }
 
@@ -2087,11 +2091,11 @@ app.get('/api/public/company-settings', (req, res) => {
 });
 
 app.post('/api/company-settings', authenticateToken, (req, res) => {
-  const { company_name, logo_url, address, phone, email, website, tax_id } = req.body;
+  const { company_name, logo_url, address, phone, email, website, tax_id, pdf_footer_message } = req.body;
 
   db.run(
-    `INSERT INTO company_settings (id, company_name, logo_url, address, phone, email, website, tax_id)
-     VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO company_settings (id, company_name, logo_url, address, phone, email, website, tax_id, pdf_footer_message)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        company_name = excluded.company_name,
        logo_url = excluded.logo_url,
@@ -2100,8 +2104,9 @@ app.post('/api/company-settings', authenticateToken, (req, res) => {
        email = excluded.email,
        website = excluded.website,
        tax_id = excluded.tax_id,
+       pdf_footer_message = excluded.pdf_footer_message,
        updated_at = CURRENT_TIMESTAMP`,
-    [company_name, logo_url, address, phone, email, website, tax_id],
+    [company_name, logo_url, address, phone, email, website, tax_id, pdf_footer_message],
     function(err) {
       if (err) {
         console.error('Error saving company settings:', err);

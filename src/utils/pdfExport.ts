@@ -10,6 +10,7 @@ interface CompanySettings {
   email: string | null;
   website: string | null;
   tax_id: string | null;
+  pdf_footer_message?: string | null;
 }
 
 export interface ReportTask {
@@ -247,6 +248,10 @@ export class PDFExporter {
     });
   }
 
+  addThankYouNote() {
+    this.addNotes('Thank you', this.companySettings.pdf_footer_message || 'Thank you for your business!');
+  }
+
   addNotes(title: string, content: string) {
     if (!content) return;
 
@@ -288,8 +293,10 @@ export class PDFExporter {
     getProject: (id: string) => ReportProject | undefined,
     hourlyRate: number
   ) {
-    const servicesTasks = tasks.filter(t => t.type !== 'insumos');
-    const suppliesTasks = tasks.filter(t => t.type === 'insumos');
+    // Newest first, regardless of what order the caller passed them in
+    const sortedTasks = [...tasks].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const servicesTasks = sortedTasks.filter(t => t.type !== 'insumos');
+    const suppliesTasks = sortedTasks.filter(t => t.type === 'insumos');
 
     // ── Services table ────────────────────────────────────────────────
     if (servicesTasks.length > 0) {

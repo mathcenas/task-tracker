@@ -192,6 +192,10 @@ const runMigrations = async () => {
     {
       name: 'Add source to onboarding_requests',
       sql: `ALTER TABLE onboarding_requests ADD COLUMN source TEXT`
+    },
+    {
+      name: 'Add pdf_footer_message to company_settings',
+      sql: `ALTER TABLE company_settings ADD COLUMN pdf_footer_message TEXT DEFAULT 'Thank you for your business!'`
     }
   ];
 
