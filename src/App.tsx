@@ -37,18 +37,22 @@ import { ReportsPage } from './components/ReportsPage';
 
 export default function App() {
   return (
-    <AppProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* Public routes - no authentication required */}
-          <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
-          <Route path="/status/:slug" element={<PublicStatusPage />} />
-          <Route path="/onboarding" element={<PublicOnboardingForm />} />
-          <Route path="/about" element={<AboutPage />} />
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Routes>
+        {/* Public routes - no authentication required. None of these read
+            from AppContext (they fetch their own data from public
+            endpoints), so AppProvider stays out of this subtree entirely -
+            otherwise it tries to load authenticated app data on every public
+            page load and fails with noisy 401s in the console. */}
+        <Route path="/report/:clientSlug/:year/:month" element={<PublicMonthlyReport />} />
+        <Route path="/status/:slug" element={<PublicStatusPage />} />
+        <Route path="/onboarding" element={<PublicOnboardingForm />} />
+        <Route path="/about" element={<AboutPage />} />
 
-          {/* Protected routes - authentication required */}
-          <Route path="/*" element={
-            <ProtectedRoute>
+        {/* Protected routes - authentication required */}
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AppProvider>
               <Layout>
                 <Routes>
                   <Route path="/" element={<WorkQueue />} />
@@ -82,10 +86,10 @@ export default function App() {
                   <Route path="/edit-task/:taskId" element={<EditTask />} />
                 </Routes>
               </Layout>
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </Router>
-    </AppProvider>
+            </AppProvider>
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </Router>
   );
 }

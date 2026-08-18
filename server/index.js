@@ -3072,9 +3072,23 @@ const computeNextDue = (recurringTask, fromDateStr) => {
 const generateDueRecurringTasks = () => {
   const today = formatDateOnly(new Date());
 
+  // A recurring_tasks row with no id (blank/NULL - seen once from old,
+  // pre-migration data) is unrecoverable here: every idempotency/advance
+  // check below is keyed on id, and `WHERE recurring_task_id = NULL` never
+  // matches in SQL, so a corrupted row would silently regenerate a
+  // duplicate task every single run forever instead of just once. Exclude
+  // it up front and log loudly so it gets fixed by hand instead of quietly
+  // flooding the tasks table.
+  db.all(`SELECT name FROM recurring_tasks WHERE id IS NULL OR TRIM(id) = ''`, [], (idErr, brokenRows) => {
+    if (!idErr && brokenRows && brokenRows.length > 0) {
+      console.error(`⚠️ [Recurring] ${brokenRows.length} recurring_tasks row(s) have no id and will be skipped (never generate) until fixed by hand: ${brokenRows.map((r) => r.name).join(', ')}`);
+    }
+  });
+
   db.all(
     `SELECT * FROM recurring_tasks
      WHERE is_active = 1
+       AND id IS NOT NULL AND TRIM(id) != ''
        AND next_due <= ?
        AND (recurring_start_date IS NULL OR recurring_start_date <= ?)
        AND (recurring_end_date IS NULL OR recurring_end_date >= ?)`,
