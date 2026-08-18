@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Building2, Save, Image, Mail, Phone, Globe, FileText, Upload, X } from 'lucide-react';
+import { Building2, Save, Image, Mail, Phone, Globe, FileText, Upload, X, MessageSquare } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface CompanySettings {
@@ -10,6 +10,7 @@ interface CompanySettings {
   email: string | null;
   website: string | null;
   tax_id: string | null;
+  pdf_footer_message: string | null;
 }
 
 export function CompanySettings() {
@@ -20,7 +21,8 @@ export function CompanySettings() {
     phone: null,
     email: null,
     website: null,
-    tax_id: null
+    tax_id: null,
+    pdf_footer_message: null
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -271,6 +273,25 @@ export function CompanySettings() {
                 placeholder="12-3456789"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                PDF Report Footer Message
+              </div>
+            </label>
+            <textarea
+              value={settings.pdf_footer_message || ''}
+              onChange={(e) => setSettings({ ...settings, pdf_footer_message: e.target.value })}
+              rows={2}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Thank you for your business!"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Shown at the bottom of every client PDF report. Leave blank to use the default above.
+            </p>
           </div>
         </div>
 

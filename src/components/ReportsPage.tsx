@@ -127,7 +127,7 @@ export function ReportsPage() {
           'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
         });
         pdf.addClientReportSections(exportTasks, getProject, hourlyRate);
-        pdf.addNotes('Thank you', 'Thank you for your business!');
+        pdf.addThankYouNote();
         pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-monthly-${format(selectedMonth, 'yyyy-MM')}.pdf`);
 
       } else if (exportMode === 'multimonth') {
@@ -155,7 +155,7 @@ export function ReportsPage() {
           'Service Rate(s)': ratesDisplay
         });
         pdf.addClientReportSections(exportTasks, getProject, selectedClient.hourlyRate);
-        pdf.addNotes('Thank you', 'Thank you for your business!');
+        pdf.addThankYouNote();
         pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}.pdf`);
 
       } else {
@@ -188,7 +188,7 @@ export function ReportsPage() {
           'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
         });
         pdf.addClientReportSections(exportTasks, getProject, hourlyRate);
-        pdf.addNotes('Thank you', 'Thank you for your business!');
+        pdf.addThankYouNote();
         const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
         const yearSlug = selectedYear === 'all' ? 'all-years' : selectedYear;
         pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-${yearSlug}.pdf`);

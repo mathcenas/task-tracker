@@ -157,7 +157,7 @@ export function ClientDashboard() {
       });
 
       pdf.addClientReportSections(exportTasks, getProject, hourlyRate);
-      pdf.addNotes('Thank you', 'Thank you for your business!');
+      pdf.addThankYouNote();
 
       pdf.save(`${clientData.name.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`);
     } catch (error: any) {
@@ -239,7 +239,7 @@ export function ClientDashboard() {
       });
 
       pdf.addClientReportSections(filteredTasks, getProject, hourlyRate);
-      pdf.addNotes('Thank you', 'Thank you for your business!');
+      pdf.addThankYouNote();
 
       const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
       pdf.save(`${clientName.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-complete.pdf`);
@@ -438,7 +438,7 @@ export function ClientDashboard() {
         { label: 'Total Amount:', value: `$${totalAmount.toFixed(2)}`, bold: true }
       ]);
 
-      pdf.addNotes('Thank you', 'Thank you for your business!');
+      pdf.addThankYouNote();
 
       const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-report-${format(start, 'yyyy-MM')}-to-${format(end, 'yyyy-MM')}.pdf`;
       pdf.save(filename);

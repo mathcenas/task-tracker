@@ -280,7 +280,7 @@ export function PublicMonthlyReport() {
       });
 
       pdf.addClientReportSections(monthlyTasks, getProject, hourlyRate);
-      pdf.addNotes('Thank you', 'Thank you for your business!');
+      pdf.addThankYouNote();
 
       pdf.save(`${clientName.toLowerCase().replace(/\s+/g, '-')}-report-${year}-${month.padStart(2, '0')}.pdf`);
     } catch (error) {
