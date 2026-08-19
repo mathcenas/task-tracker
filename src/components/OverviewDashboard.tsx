@@ -42,14 +42,16 @@ export function OverviewDashboard() {
   const { tasks, clients, getClient } = useApp();
   const [range, setRange] = useState<Range>(3);
 
-  // Unbilled: finished service tasks (not insumos) that have billed !== true
+  // Unbilled: finished service tasks (not insumos) that have billed !== true,
+  // for clients that aren't archived - an archived client isn't getting
+  // billed going forward, so their old unbilled tasks shouldn't nag here.
   const unbilledByClient = useMemo(() => {
     const map: Record<string, { name: string; hours: number; revenue: number; count: number }> = {};
     tasks
       .filter(t => t.finished && t.type !== 'insumos' && !t.billed)
       .forEach(t => {
         const c = getClient(t.clientId);
-        if (!c) return;
+        if (!c || c.archived) return;
         if (!map[t.clientId]) map[t.clientId] = { name: c.name, hours: 0, revenue: 0, count: 0 };
         map[t.clientId].hours += t.hours || 0;
         map[t.clientId].revenue += (t.hours || 0) * (c.hourlyRate || 0);
