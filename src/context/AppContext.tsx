@@ -19,6 +19,7 @@ interface AppContextType {
   deleteProject: (projectId: string) => Promise<void>;
   updateClient: (client: Client) => Promise<void>;
   archiveClient: (clientId: string, archived: boolean) => Promise<void>;
+  setClientTaskSelectionEnabled: (clientId: string, enabled: boolean) => Promise<void>;
   updateProject: (project: Project) => Promise<void>;
   reloadTasks: () => Promise<void>;
   refreshClientYearlyRates: (clientId: string) => Promise<void>;
@@ -250,6 +251,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setClientTaskSelectionEnabled = async (clientId: string, enabled: boolean) => {
+    try {
+      await apiService.setClientTaskSelectionEnabled(clientId, enabled);
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, taskSelectionEnabled: enabled } : c));
+    } catch (error) {
+      console.error('Error toggling client task selection:', error);
+      throw error;
+    }
+  };
+
   const updateClient = async (client: Client) => {
     try {
       await apiService.updateClient(client.id, client);
@@ -321,6 +332,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteProject,
       updateClient,
       archiveClient,
+      setClientTaskSelectionEnabled,
       updateProject
     }}>
       {children}

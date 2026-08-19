@@ -124,6 +124,7 @@ class ApiService {
       phone: c.phone,
       createdAt: c.created_at,
       archived: Boolean(c.archived),
+      taskSelectionEnabled: Boolean(c.task_selection_enabled),
       yearlyRates: c.yearly_rates?.map((r: any) => ({
         id: r.id,
         clientId: r.client_id,
@@ -186,6 +187,13 @@ class ApiService {
     return this.request(`/clients/${id}/archive`, {
       method: 'PATCH',
       body: JSON.stringify({ archived }),
+    });
+  }
+
+  async setClientTaskSelectionEnabled(id: string, enabled: boolean) {
+    return this.request(`/clients/${id}/task-selection`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
     });
   }
 

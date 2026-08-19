@@ -16,6 +16,13 @@ export function PublicMonthlyReport() {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [companySettings, setCompanySettings] = useState<{ company_name: string; logo_url: string | null } | null>(null);
 
+  // Temporary feature: lets a client mark which tasks on this report they're
+  // claiming, only shown when enabled for this specific client.
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [submittingSelections, setSubmittingSelections] = useState(false);
+  const [selectionsSubmitted, setSelectionsSubmitted] = useState(false);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+
   // Load report data from public API (including 6 months of data for trend)
   useEffect(() => {
     const loadReportData = async () => {
@@ -43,6 +50,11 @@ export function PublicMonthlyReport() {
         setClient(data.client);
         setTasks(data.tasks);
         setProjects(data.projects);
+        setSelectedTaskIds(new Set(
+          (data.tasks as Task[]).filter((t) => t.clientSelected).map((t) => t.id)
+        ));
+        setSelectionsSubmitted(false);
+        setSelectionError(null);
 
         // Load company settings for logo/branding
         try {
@@ -254,6 +266,41 @@ export function PublicMonthlyReport() {
     requestHours: 0,
     requestCount: 0
   });
+
+  const toggleTaskSelected = (taskId: string) => {
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId); else next.add(taskId);
+      return next;
+    });
+    setSelectionsSubmitted(false);
+  };
+
+  const submitSelections = async () => {
+    if (!clientSlug || !year || !month) return;
+
+    setSubmittingSelections(true);
+    setSelectionError(null);
+    try {
+      const apiUrl = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+      const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}/selections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedTaskIds: Array.from(selectedTaskIds) })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save selections');
+      }
+
+      setSelectionsSubmitted(true);
+    } catch (err) {
+      console.error('Error submitting task selections:', err);
+      setSelectionError('No pudimos guardar tu selección. Por favor intentá de nuevo.');
+    } finally {
+      setSubmittingSelections(false);
+    }
+  };
 
   const exportPDF = async () => {
     if (!client || !year || !month) return;
@@ -667,20 +714,36 @@ export function PublicMonthlyReport() {
 
               {/* Tasks List */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Completed Tasks ({monthlyTasks.length})
                 </h3>
-                
+
+                {client.taskSelectionEnabled && (
+                  <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-800 dark:text-blue-300">
+                      Marcá las tareas que vas a pagar vos. Las que dejes sin marcar se facturan a otra cuenta.
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   {monthlyTasks
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                     .map(task => {
                       const project = getProject(task.projectId);
-                      
+
                       return (
                         <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
                           <div className="flex justify-between items-start">
                             <div className="flex items-start space-x-3 flex-1">
+                              {client.taskSelectionEnabled && (
+                                <input
+                                  type="checkbox"
+                                  checked={selectedTaskIds.has(task.id)}
+                                  onChange={() => toggleTaskSelected(task.id)}
+                                  className="mt-1 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                                />
+                              )}
                               {getTaskIcon(task.type)}
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2 mb-1">
@@ -745,6 +808,24 @@ export function PublicMonthlyReport() {
                       );
                     })}
                 </div>
+
+                {client.taskSelectionEnabled && (
+                  <div className="mt-6 flex items-center gap-3">
+                    <button
+                      onClick={submitSelections}
+                      disabled={submittingSelections}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      {submittingSelections ? 'Guardando...' : 'Enviar mi selección'}
+                    </button>
+                    {selectionsSubmitted && (
+                      <span className="text-sm text-green-600 dark:text-green-400">¡Gracias! Tu selección fue guardada.</span>
+                    )}
+                    {selectionError && (
+                      <span className="text-sm text-red-600 dark:text-red-400">{selectionError}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           ) : (

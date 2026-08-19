@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
-import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck } from 'lucide-react';
+import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck, ListChecks } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PDFExporter } from '../utils/pdfExport';
 import { apiService } from '../services/api';
 import { ClientYearlyRates } from './ClientYearlyRates';
 
 export function ClientDashboard() {
-  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient, archiveClient, updateTask } = useApp();
+  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, updateTask } = useApp();
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMultiMonthModal, setShowMultiMonthModal] = useState(false);
@@ -69,6 +69,15 @@ export function ClientDashboard() {
       }
     } catch (error) {
       console.error('Error archiving client:', error);
+      alert('Failed to update client. Please try again.');
+    }
+  };
+
+  const handleToggleTaskSelection = async (clientId: string, enabled: boolean) => {
+    try {
+      await setClientTaskSelectionEnabled(clientId, enabled);
+    } catch (error) {
+      console.error('Error toggling client task selection:', error);
       alert('Failed to update client. Please try again.');
     }
   };
@@ -796,6 +805,21 @@ export function ClientDashboard() {
                       >
                         {client.archived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
                         {client.archived ? 'Unarchive' : 'Archive'}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleTaskSelection(client.id, !client.taskSelectionEnabled);
+                        }}
+                        className={`inline-flex items-center px-3 py-2 border rounded-lg shadow-sm text-sm font-medium ${
+                          client.taskSelectionEnabled
+                            ? 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 dark:border-purple-700 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30'
+                            : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                        }`}
+                        title="Temporary feature: lets this client mark on their public report which tasks they're paying for"
+                      >
+                        <ListChecks className="w-4 h-4 mr-2" />
+                        {client.taskSelectionEnabled ? 'Task Selection: On' : 'Task Selection: Off'}
                       </button>
                       <button
                         onClick={(e) => {
