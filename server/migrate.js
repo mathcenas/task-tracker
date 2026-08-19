@@ -196,6 +196,14 @@ const runMigrations = async () => {
     {
       name: 'Add pdf_footer_message to company_settings',
       sql: `ALTER TABLE company_settings ADD COLUMN pdf_footer_message TEXT DEFAULT 'Thank you for your business!'`
+    },
+    {
+      name: 'Add task_selection_enabled to clients',
+      sql: `ALTER TABLE clients ADD COLUMN task_selection_enabled BOOLEAN DEFAULT 0`
+    },
+    {
+      name: 'Add client_selected_at to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN client_selected_at DATETIME`
     }
   ];
 

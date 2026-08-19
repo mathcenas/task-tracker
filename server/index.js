@@ -118,6 +118,7 @@ const initDB = () => {
       reported_by TEXT,
       published_at DATETIME,
       recurring_task_id TEXT,
+      client_selected_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -308,6 +309,7 @@ initDB();
 const runMigrations = () => {
   const migrations = [
     `ALTER TABLE clients ADD COLUMN archived BOOLEAN DEFAULT 0`,
+    `ALTER TABLE clients ADD COLUMN task_selection_enabled BOOLEAN DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN billed BOOLEAN DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN billedAt DATETIME`,
     `ALTER TABLE tasks ADD COLUMN paid BOOLEAN DEFAULT 0`,
@@ -330,6 +332,7 @@ const runMigrations = () => {
     `ALTER TABLE tasks ADD COLUMN reported_by TEXT`,
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
     `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
+    `ALTER TABLE tasks ADD COLUMN client_selected_at DATETIME`,
   ];
 
   migrations.forEach(sql => {
@@ -534,6 +537,22 @@ app.patch('/api/clients/:id/archive', authenticateToken, (req, res) => {
       logActivity(archived ? 'archived' : 'unarchived', 'client', id, client?.name || id, {}, req.user?.id);
     });
     res.json({ success: true, archived: Boolean(archived) });
+  });
+});
+
+// Toggle a temporary feature: lets this client mark which tasks on their
+// public report they're claiming (see the /selections endpoint below).
+// Off by default for every client; turn it on only for the one client who
+// needs it for a given report.
+app.patch('/api/clients/:id/task-selection', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { enabled } = req.body;
+  db.run(`UPDATE clients SET task_selection_enabled = ? WHERE id = ?`, [enabled ? 1 : 0, id], function(err) {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    db.get('SELECT name FROM clients WHERE id = ?', [id], (_, client) => {
+      logActivity(enabled ? 'enabled task selection' : 'disabled task selection', 'client', id, client?.name || id, {}, req.user?.id);
+    });
+    res.json({ success: true, taskSelectionEnabled: Boolean(enabled) });
   });
 });
 
@@ -1364,7 +1383,8 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
               hourlyRate: client.hourly_rate,
               contactPerson: client.contact_person,
               email: client.email,
-              phone: client.phone
+              phone: client.phone,
+              taskSelectionEnabled: Boolean(client.task_selection_enabled)
             };
 
             // Map tasks to camelCase so frontend fields work correctly
@@ -1387,7 +1407,8 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
               approvedBy: t.approved_by,
               receiptRef: t.receipt_ref,
               approvalStatus: t.approval_status || 'pending',
-              createdAt: t.created_at
+              createdAt: t.created_at,
+              clientSelected: Boolean(t.client_selected_at)
             }));
 
             const mappedProjects = projects.map(p => ({
@@ -1408,6 +1429,68 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
             });
           }
         );
+      }
+    );
+  });
+});
+
+// Temporary feature: lets a client mark which tasks on their report they're
+// claiming (see task_selection_enabled on the client). Only touches that
+// client's own tasks within this exact month/year - can't be used to select
+// anything else. 403s unless the toggle is on for this client, so it can't
+// be hit even by accident for clients it wasn't turned on for.
+app.post('/api/public/client-report/:slug/:year/:month/selections', (req, res) => {
+  const { slug, year, month } = req.params;
+  const { selectedTaskIds } = req.body;
+
+  if (!Array.isArray(selectedTaskIds)) {
+    return res.status(400).json({ error: 'selectedTaskIds must be an array' });
+  }
+
+  db.get('SELECT * FROM clients WHERE slug = ?', [slug], (err, client) => {
+    if (err) {
+      console.error('Error fetching client:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    if (!client.task_selection_enabled) {
+      return res.status(403).json({ error: 'Task selection is not enabled for this client' });
+    }
+
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+
+    db.all(
+      `SELECT id FROM tasks WHERE client_id = ? AND date >= ? AND date <= ? AND (finished = 1 OR type = 'insumos')`,
+      [client.id, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]],
+      (rowsErr, rows) => {
+        if (rowsErr) {
+          console.error('Error fetching tasks for selection:', rowsErr);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        const validIds = rows.map((r) => r.id);
+        const selectedSet = new Set(selectedTaskIds.filter((id) => validIds.includes(id)));
+
+        const updates = validIds.map((id) => new Promise((resolve, reject) => {
+          db.run(
+            `UPDATE tasks SET client_selected_at = ? WHERE id = ?`,
+            [selectedSet.has(id) ? new Date().toISOString() : null, id],
+            (updateErr) => updateErr ? reject(updateErr) : resolve()
+          );
+        }));
+
+        Promise.all(updates)
+          .then(() => {
+            logActivity('client task selection', 'client', client.id, client.name, { month, year, selectedCount: selectedSet.size }, 'system');
+            res.json({ success: true, selectedCount: selectedSet.size });
+          })
+          .catch((updateErr) => {
+            console.error('Error saving client task selections:', updateErr);
+            res.status(500).json({ error: 'Database error' });
+          });
       }
     );
   });

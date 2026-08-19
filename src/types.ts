@@ -8,6 +8,7 @@ export interface Client {
   phone?: string;
   archived?: boolean;
   yearlyRates?: ClientYearlyRate[];
+  taskSelectionEnabled?: boolean;
 }
 
 export interface ClientYearlyRate {
@@ -72,6 +73,7 @@ export interface Task {
   completedAt?: string;
   assignedTo?: string;
   isRecurring?: boolean;
+  clientSelected?: boolean;
   recurringDay?: number; // Day of the month for recurring tasks
   recurringWeekend?: boolean; // Whether this is a weekend-based recurring task
   recurringWeekendType?: 'first' | 'second' | 'third' | 'fourth' | 'last'; // Which weekend of the month

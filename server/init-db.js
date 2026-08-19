@@ -96,6 +96,7 @@ const initDB = async () => {
       reported_by TEXT,
       published_at DATETIME,
       recurring_task_id TEXT,
+      client_selected_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -245,6 +246,7 @@ const initDB = async () => {
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
     // Link auto-generated tasks back to the recurring definition that created them
     `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
+    `ALTER TABLE tasks ADD COLUMN client_selected_at DATETIME`,
     // Update old status values to new workflow statuses
     `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`,
     `UPDATE tasks SET status = 'in_progress' WHERE status = 'in-progress'`,
