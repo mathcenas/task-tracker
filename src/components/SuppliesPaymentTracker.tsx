@@ -182,11 +182,13 @@ export function SuppliesPaymentTracker() {
                 className="block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
                 <option value="all">All Clients</option>
-                {clients.map(client => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
+                {clients
+                  .filter(client => !client.archived || client.id === selectedClient)
+                  .map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.archived ? `${client.name} (archived)` : client.name}
+                    </option>
+                  ))}
               </select>
             </div>
 

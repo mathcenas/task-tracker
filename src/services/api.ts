@@ -402,6 +402,31 @@ class ApiService {
     });
   }
 
+  // Quick Notes - free-text scratchpad, not linked to a client/task
+  async getNotes() {
+    return this.request('/notes');
+  }
+
+  async addNote(content: string) {
+    return this.request('/notes', {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async updateNote(id: string, content: string) {
+    return this.request(`/notes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async deleteNote(id: string) {
+    return this.request(`/notes/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Close a Problem/Change: marks it completed, publishes to the external
   // portal webhook (if configured) and emails the client a summary
   async closeTask(taskId: string): Promise<{ success: boolean; webhook: { attempted: boolean; success?: boolean }; email: { attempted: boolean; success?: boolean; reason?: string } }> {

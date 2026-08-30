@@ -274,6 +274,13 @@ const initDB = () => {
       message TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (onboarding_request_id) REFERENCES onboarding_requests (id) ON DELETE CASCADE
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS notes (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`
   ];
 
@@ -1053,6 +1060,68 @@ app.delete('/api/tasks/:id/notes/:noteId', authenticateToken, (req, res) => {
       res.json({ success: true });
     }
   );
+});
+
+// Quick Notes - free-text scratchpad, not linked to any client/task/ticket.
+// Deliberately minimal (no title, tags, or client): a fast-capture list,
+// newest first.
+app.get('/api/notes', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM notes ORDER BY created_at DESC', (err, rows) => {
+    if (err) {
+      console.error('❌ Error fetching notes:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(rows.map((r) => ({ id: r.id, content: r.content, createdAt: r.created_at, updatedAt: r.updated_at })));
+  });
+});
+
+app.post('/api/notes', authenticateToken, (req, res) => {
+  const { content } = req.body;
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: 'content is required' });
+  }
+
+  const id = crypto.randomUUID();
+  db.run(
+    'INSERT INTO notes (id, content) VALUES (?, ?)',
+    [id, content.trim()],
+    (err) => {
+      if (err) {
+        console.error('❌ Error creating note:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id, content: content.trim() });
+    }
+  );
+});
+
+app.put('/api/notes/:id', authenticateToken, (req, res) => {
+  const { content } = req.body;
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: 'content is required' });
+  }
+
+  db.run(
+    'UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [content.trim(), req.params.id],
+    (err) => {
+      if (err) {
+        console.error('❌ Error updating note:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+app.delete('/api/notes/:id', authenticateToken, (req, res) => {
+  db.run('DELETE FROM notes WHERE id = ?', [req.params.id], (err) => {
+    if (err) {
+      console.error('❌ Error deleting note:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ success: true });
+  });
 });
 
 // Close a Problem/Change task: mark it completed, publish it to the external
@@ -3416,6 +3485,66 @@ const scheduleOnboardingImport = () => {
 };
 
 scheduleOnboardingImport();
+
+// ============================================================
+// Client sync export (for the separate "servicios cliente" system -
+// another container on the same host)
+// ============================================================
+// Writes a JSON snapshot of active (non-archived) clients to a folder
+// bind-mounted into both containers, so that other system can read it
+// without needing network access into this one. One-way: this app only
+// ever writes the file, never reads anything back from that folder.
+// Prep step - the other side may not be wired up to read this yet.
+const clientExportDir = process.env.CLIENT_EXPORT_DIR || null;
+const CLIENT_EXPORT_INTERVAL_MS = 60 * 60 * 1000; // every hour
+
+const exportClientsForSync = async () => {
+  if (!clientExportDir) return;
+  if (!fs.existsSync(clientExportDir)) return;
+
+  try {
+    const clients = await dbAllAsync(
+      `SELECT id, name, slug, email, phone, contact_person FROM clients WHERE archived = 0 OR archived IS NULL ORDER BY name`
+    );
+
+    const payload = {
+      generated_at: new Date().toISOString(),
+      clients: clients.map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        email: c.email,
+        phone: c.phone,
+        contactPerson: c.contact_person
+      }))
+    };
+
+    // Write to a temp file then rename, so the other container never reads
+    // a half-written file mid-write.
+    const finalPath = path.join(clientExportDir, 'clients.json');
+    const tmpPath = `${finalPath}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2));
+    fs.renameSync(tmpPath, finalPath);
+
+    console.log(`✅ [Client Export] Wrote ${payload.clients.length} client(s) to ${finalPath}`);
+  } catch (err) {
+    console.error('❌ [Client Export] Error writing client export file:', err);
+  }
+};
+
+// Manual trigger for testing, while the other side is still being built
+app.post('/api/admin/client-export/run', authenticateToken, async (req, res) => {
+  if (!clientExportDir) {
+    return res.status(400).json({ error: 'CLIENT_EXPORT_DIR is not configured on the server' });
+  }
+  await exportClientsForSync();
+  res.json({ success: true });
+});
+
+setTimeout(() => {
+  exportClientsForSync();
+  setInterval(exportClientsForSync, CLIENT_EXPORT_INTERVAL_MS);
+}, 30 * 1000);
 
 // Serve static files in production - MUST BE AFTER all API routes
 if (process.env.NODE_ENV === 'production') {
