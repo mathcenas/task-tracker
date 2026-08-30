@@ -13,6 +13,10 @@ services:
       # JSON files here for import. Leave ONBOARDING_IMPORT_DIR unset to
       # disable the import entirely.
       - ${ONBOARDING_IMPORT_HOST_DIR:-/srv/shared/onboarding-import}:/app/import
+      # Shared with the "servicios cliente" system (another container on
+      # this host) - this app writes clients.json here, the other system
+      # reads it. One-way, this app never reads anything back from here.
+      - ${CLIENT_EXPORT_HOST_DIR:-/srv/shared/client-export}:/app/client-export
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -31,6 +35,7 @@ services:
       - EXTERNAL_PORTAL_WEBHOOK_TOKEN=${EXTERNAL_PORTAL_WEBHOOK_TOKEN:-}
       - ONBOARDING_IMPORT_DIR=${ONBOARDING_IMPORT_DIR:-/app/import}
       - ONBOARDING_IMPORT_HOUR=${ONBOARDING_IMPORT_HOUR:-12}
+      - CLIENT_EXPORT_DIR=${CLIENT_EXPORT_DIR:-/app/client-export}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s

@@ -34,6 +34,7 @@ import { SuppliesPage } from './components/SuppliesPage';
 import { SuppliesPaymentTracker } from './components/SuppliesPaymentTracker';
 import { OverviewDashboard } from './components/OverviewDashboard';
 import { ReportsPage } from './components/ReportsPage';
+import { NotesPage } from './components/NotesPage';
 
 export default function App() {
   return (
@@ -63,6 +64,7 @@ export default function App() {
                   <Route path="/tasks" element={<AllTasksPage />} />
                   <Route path="/kanban" element={<KanbanBoard />} />
                   <Route path="/ideas" element={<IdeasBoard />} />
+                  <Route path="/notes" element={<NotesPage />} />
                   <Route path="/supplies" element={<SuppliesPage />} />
                   <Route path="/supplies/payments" element={<SuppliesPaymentTracker />} />
                   <Route path="/recurring-tasks" element={<RecurringTasksPage />} />
