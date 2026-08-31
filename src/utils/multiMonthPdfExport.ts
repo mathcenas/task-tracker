@@ -1,6 +1,7 @@
 import { PDFExporter } from './pdfExport';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import type { Task, Client, Project } from '../types';
+import { getHourlyRateForYear } from './clientRates';
 
 interface MonthData {
   month: string;
@@ -144,7 +145,7 @@ export async function exportMultiMonthPDF(
     } else {
       const hours = task.hours || 0;
       clientStats[task.clientId].hours += hours;
-      clientStats[task.clientId].revenue += hours * client.hourlyRate;
+      clientStats[task.clientId].revenue += hours * getHourlyRateForYear(client, parseISO(task.date).getFullYear());
     }
   });
 
@@ -232,7 +233,7 @@ export async function exportMultiMonthPDF(
           amount = `$${(task.cost || 0).toFixed(2)}`;
         } else {
           const hours = task.hours || 0;
-          amount = `$${(hours * client.hourlyRate).toFixed(2)}`;
+          amount = `$${(hours * getHourlyRateForYear(client, parseISO(task.date).getFullYear())).toFixed(2)}`;
         }
 
         return [
@@ -277,7 +278,9 @@ export async function exportMultiMonthPDF(
         .filter(t => t.type !== 'insumos')
         .reduce((sum, t) => sum + (t.hours || 0), 0);
 
-      const clientServiceRevenue = clientHours * client.hourlyRate;
+      const clientServiceRevenue = clientTasks
+        .filter(t => t.type !== 'insumos')
+        .reduce((sum, t) => sum + (t.hours || 0) * getHourlyRateForYear(client, parseISO(t.date).getFullYear()), 0);
 
       const clientSupplies = clientTasks
         .filter(t => t.type === 'insumos')

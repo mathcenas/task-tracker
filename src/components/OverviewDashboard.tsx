@@ -7,6 +7,7 @@ import {
   TrendingUp, TrendingDown, Clock, DollarSign, Package, AlertTriangle,
   FileText, CheckCircle, BarChart3, Users, Receipt
 } from 'lucide-react';
+import { getHourlyRateForYear } from '../utils/clientRates';
 
 type Range = 3 | 6;
 
@@ -54,7 +55,7 @@ export function OverviewDashboard() {
         if (!c || c.archived) return;
         if (!map[t.clientId]) map[t.clientId] = { name: c.name, hours: 0, revenue: 0, count: 0 };
         map[t.clientId].hours += t.hours || 0;
-        map[t.clientId].revenue += (t.hours || 0) * (c.hourlyRate || 0);
+        map[t.clientId].revenue += (t.hours || 0) * getHourlyRateForYear(c, parseISO(t.date).getFullYear());
         map[t.clientId].count++;
       });
     return Object.values(map).sort((a, b) => b.revenue - a.revenue);
@@ -83,7 +84,7 @@ export function OverviewDashboard() {
         .filter(t => t.type !== 'insumos')
         .reduce((s, t) => {
           const c = getClient(t.clientId);
-          return s + (t.hours || 0) * (c?.hourlyRate || 0);
+          return s + (t.hours || 0) * (c ? getHourlyRateForYear(c, ref.getFullYear()) : 0);
         }, 0);
 
       const suppliesCost = monthTasks
@@ -132,7 +133,7 @@ export function OverviewDashboard() {
         map[t.clientId].suppliesCost += t.cost || 0;
       } else {
         map[t.clientId].hours += t.hours || 0;
-        map[t.clientId].revenue += (t.hours || 0) * (c.hourlyRate || 0);
+        map[t.clientId].revenue += (t.hours || 0) * getHourlyRateForYear(c, parseISO(t.date).getFullYear());
       }
     });
 

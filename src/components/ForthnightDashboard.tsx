@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { parseISO, format, isWithinInterval, subDays } from 'date-fns';
+import { getHourlyRateForYear } from '../utils/clientRates';
 import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, BookTemplate as Template, Repeat, CalendarDays } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
@@ -63,10 +64,12 @@ export function ForthnightDashboard() {
       });
       const completedTasks = projectTasks.filter(t => t.finished).length;
       const pendingTasks = projectTasks.filter(t => !t.finished).length;
-      const totalHours = projectTasks
-        .filter(t => t.finished && t.type !== 'insumos')
-        .reduce((sum, task) => sum + (task.hours || 0), 0);
+      const finishedServiceTasks = projectTasks.filter(t => t.finished && t.type !== 'insumos');
+      const totalHours = finishedServiceTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
       const client = getClient(project.clientId);
+      const revenue = client
+        ? finishedServiceTasks.reduce((sum, task) => sum + (task.hours || 0) * getHourlyRateForYear(client, parseISO(task.date).getFullYear()), 0)
+        : 0;
 
       return {
         ...project,
@@ -75,7 +78,7 @@ export function ForthnightDashboard() {
         completedTasks,
         pendingTasks,
         totalHours,
-        revenue: totalHours * (client?.hourlyRate || 0)
+        revenue
       };
     })
     .filter(p => p.totalTasks > 0)
@@ -90,7 +93,7 @@ export function ForthnightDashboard() {
       return sum - (task.cost || 0);
     }
     const client = getClient(task.clientId);
-    return sum + ((task.hours || 0) * (client?.hourlyRate || 0));
+    return sum + ((task.hours || 0) * (client ? getHourlyRateForYear(client, parseISO(task.date).getFullYear()) : 0));
   }, 0);
 
   const handleMarkAsComplete = (taskId: string) => {

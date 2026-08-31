@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { exportMultiMonthPDF } from '../utils/multiMonthPdfExport';
 import { apiService } from '../services/api';
+import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function MonthlyDashboard() {
   const { tasks, getClient, getProject } = useApp();
@@ -48,7 +49,7 @@ export function MonthlyDashboard() {
     .filter(task => task.type !== 'insumos')
     .reduce((sum, task) => {
       const client = getClient(task.clientId);
-      return sum + ((task.hours || 0) * (client?.hourlyRate || 0));
+      return sum + ((task.hours || 0) * (client ? getHourlyRateForYear(client, currentDate.getFullYear()) : 0));
     }, 0);
 
   const suppliesCost = monthlyTasks
@@ -74,7 +75,7 @@ export function MonthlyDashboard() {
 
     if (task.type !== 'insumos') {
       acc[clientId].hours += task.hours || 0;
-      acc[clientId].revenue += (task.hours || 0) * client.hourlyRate;
+      acc[clientId].revenue += (task.hours || 0) * getHourlyRateForYear(client, currentDate.getFullYear());
     } else {
       acc[clientId].revenue -= task.cost || 0;
     }
@@ -149,7 +150,7 @@ export function MonthlyDashboard() {
           .filter(task => task.type !== 'insumos')
           .reduce((sum, task) => {
             const client = getClient(task.clientId);
-            return sum + ((task.hours || 0) * (client?.hourlyRate || 0));
+            return sum + ((task.hours || 0) * (client ? getHourlyRateForYear(client, monthDate.getFullYear()) : 0));
           }, 0);
 
         const monthSuppliesCost = monthTasks
@@ -418,9 +419,9 @@ export function MonthlyDashboard() {
             .map(task => {
             const client = getClient(task.clientId);
             const project = getProject(task.projectId);
-            const amount = task.type === 'insumos' 
+            const amount = task.type === 'insumos'
               ? task.cost || 0
-              : (task.hours || 0) * (client?.hourlyRate || 0);
+              : (task.hours || 0) * (client ? getHourlyRateForYear(client, currentDate.getFullYear()) : 0);
             
             return (
               <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md group relative">

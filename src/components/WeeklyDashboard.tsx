@@ -4,6 +4,7 @@ import { startOfWeek, endOfWeek, parseISO, format, isToday, isTomorrow, isYester
 import { AlertTriangle, FileText, CheckCircle, Package, Clock, Calendar, TrendingUp, Plus, Pencil, Folder, Users, Target, Zap, X, BarChart3, DollarSign, CheckSquare, LayoutTemplate as Template, Repeat, CalendarDays, Download } from 'lucide-react';
 import { CompletionModal } from './CompletionModal';
 import { BulkTaskOperations } from './BulkTaskOperations';
+import { getHourlyRateForYear } from '../utils/clientRates';
 import { TaskTemplates } from './TaskTemplates';
 import { CalendarSync } from './CalendarSync';
 import { TaskFilters } from './ui/TaskFilters';
@@ -111,11 +112,15 @@ export function WeeklyDashboard() {
       const projectTasks = getProjectTasks(project.id);
       const completedTasks = projectTasks.filter(t => t.finished).length;
       const pendingTasks = projectTasks.filter(t => !t.finished).length;
-      const totalHours = projectTasks
-        .filter(t => t.finished && t.type !== 'insumos')
-        .reduce((sum, task) => sum + (task.hours || 0), 0);
+      const finishedServiceTasks = projectTasks.filter(t => t.finished && t.type !== 'insumos');
+      const totalHours = finishedServiceTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
       const client = getClient(project.clientId);
-      
+      // All-time total, so it can span years with different rates - bill
+      // each task at whatever rate was in effect the year it happened.
+      const revenue = client
+        ? finishedServiceTasks.reduce((sum, task) => sum + (task.hours || 0) * getHourlyRateForYear(client, parseISO(task.date).getFullYear()), 0)
+        : 0;
+
       return {
         ...project,
         client,
@@ -123,7 +128,7 @@ export function WeeklyDashboard() {
         completedTasks,
         pendingTasks,
         totalHours,
-        revenue: totalHours * (client?.hourlyRate || 0)
+        revenue
       };
     })
     .sort((a, b) => b.pendingTasks - a.pendingTasks); // Sort by pending tasks (most active first)
@@ -137,7 +142,7 @@ export function WeeklyDashboard() {
       return sum - (task.cost || 0);
     }
     const client = getClient(task.clientId);
-    return sum + ((task.hours || 0) * (client?.hourlyRate || 0));
+    return sum + ((task.hours || 0) * (client ? getHourlyRateForYear(client, parseISO(task.date).getFullYear()) : 0));
   }, 0);
 
   const getRelativeDate = (date: string) => {
@@ -251,7 +256,7 @@ export function WeeklyDashboard() {
             ...task,
             clientName: client?.name || 'Unknown',
             projectName: project?.name || 'Unknown',
-            revenue: (task.hours || 0) * (client?.hourlyRate || 0)
+            revenue: (task.hours || 0) * (client ? getHourlyRateForYear(client, parseISO(task.date).getFullYear()) : 0)
           };
         }).sort((a, b) => (b.hours || 0) - (a.hours || 0))
       },
@@ -261,9 +266,9 @@ export function WeeklyDashboard() {
         data: weeklyTasks.map(task => {
           const client = getClient(task.clientId);
           const project = getProject(task.projectId);
-          const revenue = task.type === 'insumos' 
+          const revenue = task.type === 'insumos'
             ? -(task.cost || 0)
-            : (task.hours || 0) * (client?.hourlyRate || 0);
+            : (task.hours || 0) * (client ? getHourlyRateForYear(client, parseISO(task.date).getFullYear()) : 0);
           return {
             ...task,
             clientName: client?.name || 'Unknown',
@@ -1029,7 +1034,7 @@ export function WeeklyDashboard() {
                             {task.hours?.toFixed(1)}h
                           </p>
                           <p className="text-sm text-green-600 dark:text-green-400">
-                            ${((task.hours || 0) * (client?.hourlyRate || 0)).toFixed(2)}
+                            ${((task.hours || 0) * (client ? getHourlyRateForYear(client, parseISO(task.date).getFullYear()) : 0)).toFixed(2)}
                           </p>
                         </div>
                       )}

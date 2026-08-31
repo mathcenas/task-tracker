@@ -5,6 +5,7 @@ import { Clock, AlertTriangle, FileText, Package, DollarSign, Calendar, Download
 import { PDFExporter } from '../utils/pdfExport';
 import { exportMonthlyReportToCSV } from '../utils/csvExport';
 import { Client, Project, Task } from '../types';
+import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function PublicMonthlyReport() {
   const { clientSlug, year, month } = useParams<{ clientSlug: string; year: string; month: string }>();
@@ -223,7 +224,7 @@ export function PublicMonthlyReport() {
       hours,
       incidentHours,
       requestHours,
-      revenue: hours * client.hourlyRate,
+      revenue: hours * getHourlyRateForYear(client, trendDate.getFullYear()),
       tasks: monthTasks.length
     });
   }
@@ -232,7 +233,8 @@ export function PublicMonthlyReport() {
   const incidentHours = monthlyTasks.filter(t => t.type === 'incident').reduce((sum, task) => sum + (task.hours || 0), 0);
   const requestHours = monthlyTasks.filter(t => t.type === 'request').reduce((sum, task) => sum + (task.hours || 0), 0);
   const hours = incidentHours + requestHours;
-  const revenue = hours * client.hourlyRate;
+  const currentHourlyRate = getHourlyRateForYear(client, reportDate.getFullYear());
+  const revenue = hours * currentHourlyRate;
 
   // Helper function to get project by ID
   const getProject = (projectId: string) => {
@@ -245,7 +247,7 @@ export function PublicMonthlyReport() {
       stats.suppliesCount += 1;
     } else {
       stats.totalHours += task.hours || 0;
-      stats.serviceRevenue += (task.hours || 0) * client.hourlyRate;
+      stats.serviceRevenue += (task.hours || 0) * currentHourlyRate;
 
       if (task.type === 'incident') {
         stats.incidentHours += task.hours || 0;
@@ -313,7 +315,7 @@ export function PublicMonthlyReport() {
       const pdf = new PDFExporter(companySettings);
       const clientName = client.name;
       const monthYear = format(reportDate, 'MMMM yyyy');
-      const hourlyRate = client.hourlyRate;
+      const hourlyRate = getHourlyRateForYear(client, reportDate.getFullYear());
       const reportNumber = `RPT-${year}${month.toString().padStart(2, '0')}-${client.id.slice(-6)}`;
 
       await pdf.addHeader('Monthly Report');
@@ -443,7 +445,7 @@ export function PublicMonthlyReport() {
                 </h2>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Service Rate: ${client.hourlyRate}/hour • {format(reportDate, 'MMMM yyyy')}
+                Service Rate: ${currentHourlyRate}/hour • {format(reportDate, 'MMMM yyyy')}
               </p>
             </div>
             
@@ -552,7 +554,7 @@ export function PublicMonthlyReport() {
                         <div className="flex justify-between text-sm">
                           <span className="text-red-700 dark:text-red-400">Cost:</span>
                           <span className="font-semibold text-red-900 dark:text-red-300">
-                            ${(clientStats.incidentHours * client.hourlyRate).toFixed(0)}
+                            ${(clientStats.incidentHours * currentHourlyRate).toFixed(0)}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm pt-2 border-t border-red-200 dark:border-red-700">
@@ -587,7 +589,7 @@ export function PublicMonthlyReport() {
                         <div className="flex justify-between text-sm">
                           <span className="text-blue-700 dark:text-blue-400">Cost:</span>
                           <span className="font-semibold text-blue-900 dark:text-blue-300">
-                            ${(clientStats.requestHours * client.hourlyRate).toFixed(0)}
+                            ${(clientStats.requestHours * currentHourlyRate).toFixed(0)}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm pt-2 border-t border-blue-200 dark:border-blue-700">
@@ -798,7 +800,7 @@ export function PublicMonthlyReport() {
                                     {task.hours?.toFixed(1)}h
                                   </p>
                                   <p className="text-sm text-green-600 dark:text-green-400">
-                                    ${((task.hours || 0) * client.hourlyRate).toFixed(2)}
+                                    ${((task.hours || 0) * currentHourlyRate).toFixed(2)}
                                   </p>
                                 </div>
                               )}

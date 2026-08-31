@@ -32,7 +32,12 @@ export interface ReportMeta {
   client: Client;
   period: string;
   generatedAt: Date;
-  hourlyRate?: number;
+  // Rate can vary by year (client.yearlyRates), so callers whose tasks span
+  // more than one year pass a resolver instead of a flat number.
+  hourlyRate?: number | ((task: Task) => number);
+  // Display string for the "Service Rate" row when hourlyRate is a resolver
+  // (e.g. "2024: $50.00/hour, 2025: $60.00/hour"). Ignored for a flat number.
+  rateLabel?: string;
 }
 
 function fmtDate(dateStr: string) {
@@ -80,9 +85,10 @@ function buildDuplicateSection(tasks: Task[], getProject: (id: string) => Projec
   return md;
 }
 
-function buildTaskTable(tasks: Task[], getProject: (id: string) => Project | undefined, hourlyRate?: number): string {
+function buildTaskTable(tasks: Task[], getProject: (id: string) => Project | undefined, hourlyRate?: number | ((task: Task) => number)): string {
   if (tasks.length === 0) return '_No tasks in this period._\n\n';
 
+  const getRate = typeof hourlyRate === 'function' ? hourlyRate : (hourlyRate ? () => hourlyRate : undefined);
   const serviceTasks = tasks.filter(t => t.type !== 'insumos');
   const supplyTasks = tasks.filter(t => t.type === 'insumos');
 
@@ -97,7 +103,7 @@ function buildTaskTable(tasks: Task[], getProject: (id: string) => Project | und
       .forEach(t => {
         const proj = getProject(t.projectId)?.name || '—';
         const hrs = t.hours != null ? `${t.hours}` : '—';
-        const rev = (t.hours != null && hourlyRate) ? `$${(t.hours * hourlyRate).toFixed(2)}` : '—';
+        const rev = (t.hours != null && getRate) ? `$${(t.hours * getRate(t)).toFixed(2)}` : '—';
         const desc = t.description.replace(/\|/g, '\\|');
         md += `| ${shortId(t.id)} | ${fmtDate(t.date)} | ${desc} | ${proj} | ${t.type} | ${t.priority} | ${t.status} | ${hrs} | ${rev} |\n`;
       });
@@ -129,8 +135,9 @@ export function generateMarkdownReport(
 ): string {
   const serviceTasks = tasks.filter(t => t.type !== 'insumos');
   const supplyTasks = tasks.filter(t => t.type === 'insumos');
+  const getRate = typeof meta.hourlyRate === 'function' ? meta.hourlyRate : (meta.hourlyRate ? () => meta.hourlyRate as number : undefined);
   const totalHours = serviceTasks.reduce((s, t) => s + (t.hours || 0), 0);
-  const totalRevenue = serviceTasks.reduce((s, t) => s + (t.hours || 0) * (meta.hourlyRate || 0), 0);
+  const totalRevenue = getRate ? serviceTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0) : 0;
   const totalSupplies = supplyTasks.reduce((s, t) => s + (t.cost || 0), 0);
   const incidents = serviceTasks.filter(t => t.type === 'incident').length;
   const requests = serviceTasks.filter(t => t.type === 'request').length;
@@ -145,7 +152,8 @@ export function generateMarkdownReport(
   md += `| Client | ${meta.client.name} |\n`;
   md += `| Period | ${meta.period} |\n`;
   if (meta.client.email) md += `| Email | ${meta.client.email} |\n`;
-  if (meta.hourlyRate) md += `| Service Rate | $${meta.hourlyRate.toFixed(2)}/hour |\n`;
+  if (meta.rateLabel) md += `| Service Rate | ${meta.rateLabel} |\n`;
+  else if (typeof meta.hourlyRate === 'number') md += `| Service Rate | $${meta.hourlyRate.toFixed(2)}/hour |\n`;
   md += `\n`;
 
   md += `## Summary\n\n`;
@@ -156,7 +164,7 @@ export function generateMarkdownReport(
   md += `| Requests | ${requests} |\n`;
   if (supplyTasks.length > 0) md += `| Supplies | ${supplyTasks.length} |\n`;
   md += `| Total Hours | ${totalHours.toFixed(1)}h |\n`;
-  if (meta.hourlyRate) md += `| Service Revenue | $${totalRevenue.toFixed(2)} |\n`;
+  if (getRate) md += `| Service Revenue | $${totalRevenue.toFixed(2)} |\n`;
   if (supplyTasks.length > 0) md += `| Supplies Cost | $${totalSupplies.toFixed(2)} |\n`;
   md += `\n`;
 

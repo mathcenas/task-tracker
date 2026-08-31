@@ -1439,63 +1439,80 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
               return res.status(500).json({ error: 'Database error' });
             }
 
-            console.log('✅ Public report data:', {
-              client: client.name,
-              tasks: tasks.length,
-              projects: projects.length
-            });
+            db.all(
+              'SELECT * FROM client_yearly_rates WHERE client_id = ? ORDER BY year DESC',
+              [client.id],
+              (err, yearlyRates) => {
+                if (err) {
+                  console.error('Error fetching yearly rates:', err);
+                  return res.status(500).json({ error: 'Database error' });
+                }
 
-            const clientData = {
-              id: client.id,
-              name: client.name,
-              slug: client.slug,
-              hourlyRate: client.hourly_rate,
-              contactPerson: client.contact_person,
-              email: client.email,
-              phone: client.phone,
-              taskSelectionEnabled: Boolean(client.task_selection_enabled)
-            };
+                console.log('✅ Public report data:', {
+                  client: client.name,
+                  tasks: tasks.length,
+                  projects: projects.length
+                });
 
-            // Map tasks to camelCase so frontend fields work correctly
-            const mappedTasks = tasks.map(t => ({
-              id: t.id,
-              clientId: t.client_id,
-              projectId: t.project_id,
-              description: t.description,
-              hours: t.hours,
-              cost: t.cost,
-              date: t.date,
-              type: t.type,
-              status: t.status,
-              priority: t.priority,
-              finished: Boolean(t.finished),
-              notes: t.notes,
-              completedAt: t.completed_at,
-              isRecurring: Boolean(t.is_recurring),
-              vendor: t.vendor,
-              approvedBy: t.approved_by,
-              receiptRef: t.receipt_ref,
-              approvalStatus: t.approval_status || 'pending',
-              createdAt: t.created_at,
-              clientSelected: Boolean(t.client_selected_at)
-            }));
+                const clientData = {
+                  id: client.id,
+                  name: client.name,
+                  slug: client.slug,
+                  hourlyRate: client.hourly_rate,
+                  contactPerson: client.contact_person,
+                  email: client.email,
+                  phone: client.phone,
+                  taskSelectionEnabled: Boolean(client.task_selection_enabled),
+                  yearlyRates: (yearlyRates || []).map(r => ({
+                    id: r.id,
+                    clientId: r.client_id,
+                    year: r.year,
+                    hourlyRate: r.hourly_rate
+                  }))
+                };
 
-            const mappedProjects = projects.map(p => ({
-              id: p.id,
-              clientId: p.client_id,
-              name: p.name,
-              description: p.description,
-              startDate: p.start_date,
-              status: p.status
-            }));
+                // Map tasks to camelCase so frontend fields work correctly
+                const mappedTasks = tasks.map(t => ({
+                  id: t.id,
+                  clientId: t.client_id,
+                  projectId: t.project_id,
+                  description: t.description,
+                  hours: t.hours,
+                  cost: t.cost,
+                  date: t.date,
+                  type: t.type,
+                  status: t.status,
+                  priority: t.priority,
+                  finished: Boolean(t.finished),
+                  notes: t.notes,
+                  completedAt: t.completed_at,
+                  isRecurring: Boolean(t.is_recurring),
+                  vendor: t.vendor,
+                  approvedBy: t.approved_by,
+                  receiptRef: t.receipt_ref,
+                  approvalStatus: t.approval_status || 'pending',
+                  createdAt: t.created_at,
+                  clientSelected: Boolean(t.client_selected_at)
+                }));
 
-            res.json({
-              client: clientData,
-              tasks: mappedTasks,
-              projects: mappedProjects,
-              month: parseInt(month),
-              year: parseInt(year)
-            });
+                const mappedProjects = projects.map(p => ({
+                  id: p.id,
+                  clientId: p.client_id,
+                  name: p.name,
+                  description: p.description,
+                  startDate: p.start_date,
+                  status: p.status
+                }));
+
+                res.json({
+                  client: clientData,
+                  tasks: mappedTasks,
+                  projects: mappedProjects,
+                  month: parseInt(month),
+                  year: parseInt(year)
+                });
+              }
+            );
           }
         );
       }
