@@ -12,6 +12,7 @@ import { PDFExporter } from '../utils/pdfExport';
 import { generateMarkdownReport, downloadMarkdown } from '../utils/markdownExport';
 import { apiService } from '../services/api';
 import { MarkdownImportModal } from './MarkdownImportModal';
+import { getHourlyRateForYear } from '../utils/clientRates';
 
 type ExportMode = 'monthly' | 'multimonth' | 'project';
 
@@ -46,14 +47,6 @@ export function ReportsPage() {
     const years = [...new Set(clientTasks.map(t => new Date(t.date).getFullYear()))].sort((a, b) => b - a);
     return years;
   }, [selectedClientId, getClientTasks]);
-
-  const getHourlyRateForYear = (client: any, year: number): number => {
-    if (client.yearlyRates?.length > 0) {
-      const yr = client.yearlyRates.find((r: any) => r.year === year);
-      if (yr) return yr.hourlyRate;
-    }
-    return client.hourlyRate;
-  };
 
   // Preview stats for the current selection
   const previewStats = useMemo(() => {
@@ -154,7 +147,7 @@ export function ReportsPage() {
           'Generated': format(new Date(), 'MMM dd, yyyy'),
           'Service Rate(s)': ratesDisplay
         });
-        pdf.addClientReportSections(exportTasks, getProject, selectedClient.hourlyRate);
+        pdf.addClientReportSections(exportTasks, getProject, (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear()));
         pdf.addThankYouNote();
         pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}.pdf`);
 
@@ -172,8 +165,20 @@ export function ReportsPage() {
         const periodLabel = selectedYear === 'all'
           ? `${format(new Date(sortedTasks[0].date), 'MMM d, yyyy')} – ${format(new Date(sortedTasks[sortedTasks.length - 1].date), 'MMM d, yyyy')}`
           : `${selectedYear}`;
-        const rateYear = selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear);
-        const hourlyRate = getHourlyRateForYear(selectedClient, rateYear);
+        let hourlyRate: number | ((t: { date: string }) => number);
+        let rateDisplay: string;
+        if (selectedYear === 'all') {
+          const uniqueYears = [...new Set(exportTasks.map(t => parseISO(t.date).getFullYear()))].sort();
+          const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(selectedClient, year) }));
+          rateDisplay = yearlyRatesUsed.length > 1
+            ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
+            : `$${yearlyRatesUsed[0]?.rate.toFixed(2)}/hour`;
+          hourlyRate = (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear());
+        } else {
+          const rate = getHourlyRateForYear(selectedClient, parseInt(selectedYear));
+          rateDisplay = `$${rate.toFixed(2)}/hour`;
+          hourlyRate = rate;
+        }
 
         const pdf = new PDFExporter(companySettings);
         await pdf.addHeader('Project Report');
@@ -185,7 +190,7 @@ export function ReportsPage() {
           'Period': periodLabel,
           'Total Tasks': exportTasks.length.toString(),
           'Generated': format(new Date(), 'MMM dd, yyyy'),
-          'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
+          'Service Rate': rateDisplay
         });
         pdf.addClientReportSections(exportTasks, getProject, hourlyRate);
         pdf.addThankYouNote();
@@ -207,7 +212,8 @@ export function ReportsPage() {
     let exportTasks: typeof allTasks = [];
     let period = '';
     let filename = '';
-    let hourlyRate = selectedClient.hourlyRate;
+    let hourlyRate: number | ((t: { date: string }) => number) = selectedClient.hourlyRate;
+    let rateLabel: string | undefined;
 
     if (exportMode === 'monthly') {
       const s = startOfMonth(selectedMonth);
@@ -221,6 +227,12 @@ export function ReportsPage() {
       const e = endOfMonth(endMonth);
       exportTasks = allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
       period = `${format(s, 'MMM yyyy')} – ${format(e, 'MMM yyyy')}`;
+      const uniqueYears = [...new Set(exportTasks.map(t => parseISO(t.date).getFullYear()))].sort();
+      const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(selectedClient, year) }));
+      rateLabel = yearlyRatesUsed.length > 1
+        ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
+        : undefined;
+      hourlyRate = (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear());
       filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}.md`;
     } else {
       exportTasks = allTasks.filter(t =>
@@ -230,7 +242,16 @@ export function ReportsPage() {
       );
       const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Project';
       period = `${projectName}${selectedYear !== 'all' ? ` · ${selectedYear}` : ' · All Years'}`;
-      hourlyRate = getHourlyRateForYear(selectedClient, selectedYear !== 'all' ? parseInt(selectedYear) : new Date().getFullYear());
+      if (selectedYear === 'all') {
+        const uniqueYears = [...new Set(exportTasks.map(t => parseISO(t.date).getFullYear()))].sort();
+        const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(selectedClient, year) }));
+        rateLabel = yearlyRatesUsed.length > 1
+          ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
+          : undefined;
+        hourlyRate = (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear());
+      } else {
+        hourlyRate = getHourlyRateForYear(selectedClient, parseInt(selectedYear));
+      }
       const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
       filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-${selectedYear === 'all' ? 'all-years' : selectedYear}.md`;
     }
@@ -243,6 +264,7 @@ export function ReportsPage() {
       period,
       generatedAt: new Date(),
       hourlyRate,
+      rateLabel,
     }, getProject);
 
     downloadMarkdown(md, filename);

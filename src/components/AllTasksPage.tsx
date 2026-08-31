@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
+import { getHourlyRateForYear } from '../utils/clientRates';
 import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown, Copy, AlertOctagon, GitBranch } from 'lucide-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
@@ -729,7 +730,7 @@ export function AllTasksPage() {
                               {task.hours?.toFixed(1)}h
                             </p>
                             <p className="text-sm text-green-600 dark:text-green-400">
-                              ${((task.hours || 0) * (client?.hourlyRate || 0)).toFixed(2)}
+                              ${((task.hours || 0) * (client ? getHourlyRateForYear(client, parseISO(task.date).getFullYear()) : 0)).toFixed(2)}
                             </p>
                           </div>
                         ) : (

@@ -291,8 +291,12 @@ export class PDFExporter {
   addClientReportSections(
     tasks: ReportTask[],
     getProject: (id: string) => ReportProject | undefined,
-    hourlyRate: number
+    hourlyRate: number | ((task: ReportTask) => number)
   ) {
+    // Rate can vary by year (client.yearlyRates), so callers whose tasks span
+    // more than one year pass a resolver instead of a flat number.
+    const getRate = typeof hourlyRate === 'function' ? hourlyRate : () => hourlyRate;
+
     // Newest first, regardless of what order the caller passed them in
     const sortedTasks = [...tasks].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const servicesTasks = sortedTasks.filter(t => t.type !== 'insumos');
@@ -310,10 +314,10 @@ export class PDFExporter {
         task.type === 'change' ? 'Change' : 'Request',
         task.description,
         `${(task.hours || 0).toFixed(1)}h`,
-        `$${((task.hours || 0) * hourlyRate).toFixed(2)}`
+        `$${((task.hours || 0) * getRate(task)).toFixed(2)}`
       ]);
 
-      const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * hourlyRate, 0);
+      const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
       const totalHoursStr = `${servicesTasks.reduce((s, t) => s + (t.hours || 0), 0).toFixed(1)}h`;
 
       // Total row appended as a styled body row (more reliable than foot across jspdf-autotable versions)
@@ -379,12 +383,12 @@ export class PDFExporter {
     if (incidentTasks.length > 0 || requestTasks.length > 0) {
       this.addSectionTitle('Service Breakdown');
 
-      const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * hourlyRate, 0);
+      const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
       const breakdownRows: any[][] = [];
 
       if (incidentTasks.length > 0) {
         const h = incidentTasks.reduce((s, t) => s + (t.hours || 0), 0);
-        const amt = h * hourlyRate;
+        const amt = incidentTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
         breakdownRows.push([
           'Incidents',
           incidentTasks.length.toString(),
@@ -395,7 +399,7 @@ export class PDFExporter {
       }
       if (requestTasks.length > 0) {
         const h = requestTasks.reduce((s, t) => s + (t.hours || 0), 0);
-        const amt = h * hourlyRate;
+        const amt = requestTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
         breakdownRows.push([
           'Requests',
           requestTasks.length.toString(),
@@ -424,7 +428,7 @@ export class PDFExporter {
 
     // ── Grand totals block ────────────────────────────────────────────
     const totalHours    = servicesTasks.reduce((s, t) => s + (t.hours || 0), 0);
-    const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * hourlyRate, 0);
+    const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
     const suppliesTotal = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
     const grandTotal    = servicesTotal + suppliesTotal;
 

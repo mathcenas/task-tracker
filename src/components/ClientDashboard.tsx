@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PDFExporter } from '../utils/pdfExport';
 import { apiService } from '../services/api';
 import { ClientYearlyRates } from './ClientYearlyRates';
+import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function ClientDashboard() {
   const { clients, getClientTasks, getProject, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, updateTask } = useApp();
@@ -130,16 +131,6 @@ export function ClientDashboard() {
     return format(taskDate, 'MMM d, yyyy');
   };
 
-  const getHourlyRateForYear = (client: any, year: number): number => {
-    if (client.yearlyRates && client.yearlyRates.length > 0) {
-      const yearRate = client.yearlyRates.find((r: any) => r.year === year);
-      if (yearRate) {
-        return yearRate.hourlyRate;
-      }
-    }
-    return client.hourlyRate;
-  };
-
   const exportMonthlyReport = async (clientData: any, clientTasks: any[], exportMonth = selectedMonth) => {
     try {
       const exportMonthStart = startOfMonth(exportMonth);
@@ -230,7 +221,11 @@ export function ClientDashboard() {
       const pdf = new PDFExporter(companySettings);
 
       const clientName = projectFilterClient.name;
-      const hourlyRate = projectFilterClient.hourlyRate;
+      const uniqueYears = [...new Set(filteredTasks.map(t => parseISO(t.date).getFullYear()))].sort();
+      const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(projectFilterClient, year) }));
+      const rateDisplay = yearlyRatesUsed.length > 1
+        ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
+        : `$${yearlyRatesUsed[0]?.rate.toFixed(2)}/hour`;
       const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Unknown Project';
       const reportNumber = `RPT-PROJECT-${projectFilterClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}`;
       const periodText = `${format(new Date(firstTaskDate), 'MMM d, yyyy')} - ${format(new Date(lastTaskDate), 'MMM d, yyyy')}`;
@@ -244,10 +239,10 @@ export function ClientDashboard() {
         'Period': periodText,
         'Total Tasks': filteredTasks.length.toString(),
         'Generated': format(new Date(), 'MMM dd, yyyy'),
-        'Service Rate': `$${hourlyRate.toFixed(2)}/hour`
+        'Service Rate': rateDisplay
       });
 
-      pdf.addClientReportSections(filteredTasks, getProject, hourlyRate);
+      pdf.addClientReportSections(filteredTasks, getProject, (t) => getHourlyRateForYear(projectFilterClient, parseISO(t.date).getFullYear()));
       pdf.addThankYouNote();
 
       const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
@@ -491,7 +486,7 @@ export function ClientDashboard() {
       isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
     );
     const hours = monthlyTasks.filter(t => t.type !== 'insumos').reduce((s, t) => s + (t.hours || 0), 0);
-    return sum + (hours * client.hourlyRate);
+    return sum + (hours * getHourlyRateForYear(client, monthStart.getFullYear()));
   }, 0);
 
   return (

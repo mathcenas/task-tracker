@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { Folder, AlertTriangle, FileText, Package, Clock, CheckCircle, DollarSign, Repeat, ChevronDown, ChevronUp } from 'lucide-react';
 import { filterOutPendingRecurringReminders, getPendingRecurringReminders } from '../utils/taskFilters';
 import { Link } from 'react-router-dom';
+import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function ProjectsDashboard() {
   const { projects, clients, tasks, getClient, getProjectTasks } = useApp();
@@ -114,7 +115,16 @@ export function ProjectsDashboard() {
               return sum + tasks.reduce((s, t) => s + (t.hours || 0), 0);
             }, 0);
 
-            const clientTotalRevenue = clientTotalHours * (client.hourlyRate || 0);
+            // Hours here span every year the client has worked with us, and
+            // the rate may have changed over that time, so revenue can't be
+            // a single hours*rate multiply - each task bills at whatever
+            // rate was in effect the year it happened.
+            const clientTotalRevenue = clientProjects.reduce((sum, proj) => {
+              const tasks = filterOutPendingRecurringReminders(getProjectTasks(proj.id));
+              return sum + tasks
+                .filter(t => t.type !== 'insumos')
+                .reduce((s, t) => s + (t.hours || 0) * getHourlyRateForYear(client, parseISO(t.date).getFullYear()), 0);
+            }, 0);
 
             return (
               <div key={client.id} className="border-b pb-6 last:border-b-0 dark:border-gray-700">
@@ -187,7 +197,9 @@ export function ProjectsDashboard() {
                     );
 
                     const totalHours = projectTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-                    const revenue = totalHours * (client.hourlyRate || 0);
+                    const revenue = projectTasks
+                      .filter(t => t.type !== 'insumos')
+                      .reduce((sum, t) => sum + (t.hours || 0) * getHourlyRateForYear(client, parseISO(t.date).getFullYear()), 0);
                     const totalCost = projectTasks
                       .filter(t => t.type === 'insumos')
                       .reduce((sum, task) => sum + (task.cost || 0), 0);
