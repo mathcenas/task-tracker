@@ -35,6 +35,7 @@ import { SuppliesPaymentTracker } from './components/SuppliesPaymentTracker';
 import { OverviewDashboard } from './components/OverviewDashboard';
 import { ReportsPage } from './components/ReportsPage';
 import { NotesPage } from './components/NotesPage';
+import { ManualPage } from './components/ManualPage';
 
 export default function App() {
   return (
@@ -76,6 +77,7 @@ export default function App() {
                   <Route path="/activity-log" element={<ActivityLog />} />
                   <Route path="/integrations/monitors" element={<MonitorIntegration />} />
                   <Route path="/integrations/status-pages" element={<StatusPageSettings />} />
+                  <Route path="/manual" element={<ManualPage />} />
                   <Route path="/settings/company" element={<CompanySettings />} />
                   <Route path="/quotes" element={<QuotesList />} />
                   <Route path="/quotes/new" element={<QuoteForm />} />
