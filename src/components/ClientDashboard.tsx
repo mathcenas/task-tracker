@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
-import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck, ListChecks } from 'lucide-react';
+import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck, ListChecks, Folders, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PDFExporter } from '../utils/pdfExport';
 import { apiService } from '../services/api';
@@ -25,6 +25,20 @@ export function ClientDashboard() {
   const [showYearlyRatesModal, setShowYearlyRatesModal] = useState(false);
   const [yearlyRatesClient, setYearlyRatesClient] = useState<any>(null);
   const [showArchived, setShowArchived] = useState(false);
+  // Which projects to leave out of this month's billing round, per client -
+  // e.g. a client has 3 projects but only 2 are ready to invoice this time.
+  // Excluded tasks are simply skipped by Export PDF / Mark Billed; nothing
+  // about them changes, so they keep showing as unbilled everywhere else.
+  const [excludedProjectsByClient, setExcludedProjectsByClient] = useState<Record<string, Set<string>>>({});
+
+  const toggleProjectExclusion = (clientId: string, projectId: string) => {
+    setExcludedProjectsByClient(prev => {
+      const current = new Set(prev[clientId] || []);
+      if (current.has(projectId)) current.delete(projectId);
+      else current.add(projectId);
+      return { ...prev, [clientId]: current };
+    });
+  };
   const navigate = useNavigate();
 
   const toggleClient = (clientId: string) => {
@@ -576,6 +590,12 @@ export function ClientDashboard() {
               task.finished &&
               isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
             );
+            const excludedProjectIds = excludedProjectsByClient[client.id] || new Set<string>();
+            const billableMonthlyTasks = monthlyTasks.filter(task => !task.projectId || !excludedProjectIds.has(task.projectId));
+            const monthlyProjectIds = [...new Set(monthlyTasks.map(t => t.projectId).filter(Boolean))];
+            const monthlyProjectsWithActivity = monthlyProjectIds
+              .map(id => getProject(id))
+              .filter((p): p is NonNullable<typeof p> => Boolean(p));
             const monthlyRate = getHourlyRateForYear(client, selectedMonth.getFullYear());
 
             const clientStats = monthlyTasks.reduce((stats, task) => {
@@ -687,6 +707,38 @@ export function ClientDashboard() {
                 {/* Expanded Details */}
                 {isExpanded && (
                   <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-6 space-y-6">
+                    {/* Projects to bill this month */}
+                    {monthlyProjectsWithActivity.length > 1 && (
+                      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 flex items-center">
+                          <Folders className="w-4 h-4 text-teal-500 mr-2" />
+                          Projects to bill this month
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          Untick a project to leave it out of "Export PDF" and "Mark Billed" below - its tasks stay unbilled until you include it another time.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {monthlyProjectsWithActivity.map(p => {
+                            const excluded = excludedProjectIds.has(p.id);
+                            return (
+                              <button
+                                key={p.id}
+                                onClick={(e) => { e.stopPropagation(); toggleProjectExclusion(client.id, p.id); }}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                  excluded
+                                    ? 'border-gray-300 bg-gray-100 text-gray-400 line-through dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500'
+                                    : 'border-teal-300 bg-teal-50 text-teal-700 dark:border-teal-700 dark:bg-teal-900/20 dark:text-teal-400'
+                                }`}
+                              >
+                                {excluded ? <X className="w-3 h-3" /> : <CheckCheck className="w-3 h-3" />}
+                                {p.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -712,38 +764,38 @@ export function ClientDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          exportMonthlyReport(client, allClientTasks, selectedMonth);
+                          exportMonthlyReport(client, billableMonthlyTasks, selectedMonth);
                         }}
-                        disabled={monthlyTasks.length === 0}
+                        disabled={billableMonthlyTasks.length === 0}
                         className="inline-flex items-center px-3 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Export PDF
                       </button>
                       {(() => {
-                        const unbilledCount = monthlyTasks.filter(t => !t.billed).length;
-                        const allBilled = monthlyTasks.length > 0 && unbilledCount === 0;
+                        const unbilledCount = billableMonthlyTasks.filter(t => !t.billed).length;
+                        const allBilled = billableMonthlyTasks.length > 0 && unbilledCount === 0;
                         return (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!allBilled && unbilledCount > 0) {
-                                handleMarkMonthBilled(client.id, monthlyTasks);
+                                handleMarkMonthBilled(client.id, billableMonthlyTasks);
                               }
                             }}
-                            disabled={monthlyTasks.length === 0 || allBilled}
+                            disabled={billableMonthlyTasks.length === 0 || allBilled}
                             title={allBilled ? 'All tasks billed' : `Mark ${unbilledCount} task${unbilledCount !== 1 ? 's' : ''} as billed`}
                             className={`inline-flex items-center px-3 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${
                               allBilled
                                 ? 'border-green-300 bg-green-50 text-green-700 dark:border-green-700 dark:bg-green-900/20 dark:text-green-400 cursor-default'
-                                : monthlyTasks.length === 0
+                                : billableMonthlyTasks.length === 0
                                 ? 'bg-gray-400 text-white cursor-not-allowed border-transparent'
                                 : 'border-orange-300 bg-white text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-orange-900/20'
                             }`}
                           >
                             {allBilled
                               ? <><CheckCheck className="w-4 h-4 mr-2" />Billed</>
-                              : <><Receipt className="w-4 h-4 mr-2" />Mark Billed{unbilledCount > 0 && monthlyTasks.length > 0 ? ` (${unbilledCount})` : ''}</>
+                              : <><Receipt className="w-4 h-4 mr-2" />Mark Billed{unbilledCount > 0 && billableMonthlyTasks.length > 0 ? ` (${unbilledCount})` : ''}</>
                             }
                           </button>
                         );
@@ -940,6 +992,11 @@ export function ClientDashboard() {
                                         ) : (
                                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
                                             Unbilled
+                                          </span>
+                                        )}
+                                        {!task.billed && task.projectId && excludedProjectIds.has(task.projectId) && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                            Excluded this round
                                           </span>
                                         )}
                                       </div>
