@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Package, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, Filter, CreditCard as Edit2, X } from 'lucide-react';
+import { Package, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, Filter, CreditCard as Edit2, X, ArrowLeft } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { api } from '../services/api';
 
@@ -158,14 +159,23 @@ export function SuppliesPaymentTracker() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Supplies Billing</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Step 2: track billing and payment status for approved costs</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Supplies Payment Tracker</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Track billing and payment status</p>
-            </div>
+            <Link
+              to="/supplies"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Step 1: Supplies Intake
+            </Link>
           </div>
 
           {/* Filters */}

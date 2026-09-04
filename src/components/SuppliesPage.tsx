@@ -191,8 +191,8 @@ export function SuppliesPage() {
                 <Package className="w-6 h-6 text-slate-600 dark:text-slate-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Supplies Tracker</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Track all purchases and supplies</p>
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Supplies Intake</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Step 1: log purchases, then approve or reject each cost</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -201,7 +201,7 @@ export function SuppliesPage() {
                 className="inline-flex items-center px-4 py-2 border border-blue-600 dark:border-blue-500 rounded-lg shadow-sm text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 <DollarSign className="w-4 h-4 mr-2" />
-                Payment Tracker
+                Step 2: Supplies Billing
               </Link>
               <button
                 onClick={handleExport}
