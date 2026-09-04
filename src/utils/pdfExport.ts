@@ -389,37 +389,35 @@ export class PDFExporter {
     }
 
     // ── Service type breakdown ────────────────────────────────────────
-    const incidentTasks = servicesTasks.filter(t => t.type === 'incident');
-    const requestTasks  = servicesTasks.filter(t => t.type === 'request');
+    // Every non-supply type gets its own row here - this used to only
+    // track incidents/requests, which silently dropped Problem/Change
+    // tasks from the summary (and skewed the "% of Services" column,
+    // since their hours still counted toward the total).
+    const breakdownTypes: { type: string; label: string }[] = [
+      { type: 'incident', label: 'Incidents' },
+      { type: 'request', label: 'Requests' },
+      { type: 'problem', label: 'Problems' },
+      { type: 'change', label: 'Changes' }
+    ];
+    const breakdownGroups = breakdownTypes
+      .map(({ type, label }) => ({ label, tasks: servicesTasks.filter(t => t.type === type) }))
+      .filter(g => g.tasks.length > 0);
 
-    if (incidentTasks.length > 0 || requestTasks.length > 0) {
+    if (breakdownGroups.length > 0) {
       this.addSectionTitle('Service Breakdown', 35);
 
       const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
-      const breakdownRows: any[][] = [];
-
-      if (incidentTasks.length > 0) {
-        const h = incidentTasks.reduce((s, t) => s + (t.hours || 0), 0);
-        const amt = incidentTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
-        breakdownRows.push([
-          'Incidents',
-          incidentTasks.length.toString(),
+      const breakdownRows: any[][] = breakdownGroups.map(({ label, tasks }) => {
+        const h = tasks.reduce((s, t) => s + (t.hours || 0), 0);
+        const amt = tasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
+        return [
+          label,
+          tasks.length.toString(),
           `${h.toFixed(1)}h`,
           `$${amt.toFixed(2)}`,
           servicesTotal > 0 ? `${((amt / servicesTotal) * 100).toFixed(0)}%` : '0%'
-        ]);
-      }
-      if (requestTasks.length > 0) {
-        const h = requestTasks.reduce((s, t) => s + (t.hours || 0), 0);
-        const amt = requestTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
-        breakdownRows.push([
-          'Requests',
-          requestTasks.length.toString(),
-          `${h.toFixed(1)}h`,
-          `$${amt.toFixed(2)}`,
-          servicesTotal > 0 ? `${((amt / servicesTotal) * 100).toFixed(0)}%` : '0%'
-        ]);
-      }
+        ];
+      });
 
       this.addTable(
         ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],

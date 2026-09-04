@@ -47,8 +47,14 @@ export async function exportMultiMonthPDF(
   const totalSuppliesCost = monthsData.reduce((sum, m) => sum + m.suppliesCost, 0);
   const totalNetRevenue = monthsData.reduce((sum, m) => sum + m.netRevenue, 0);
   const totalTasks = monthsData.reduce((sum, m) => sum + m.tasks.length, 0);
-  const totalIncidents = monthsData.reduce((sum, m) => sum + m.incidentCount, 0);
-  const totalRequests = monthsData.reduce((sum, m) => sum + m.requestCount, 0);
+  // Derived straight from the tasks rather than the passed-in incidentCount/
+  // requestCount fields, which only ever tracked those two types and
+  // silently dropped Problem/Change tasks from every summary.
+  const allMonthsTasks = monthsData.flatMap(m => m.tasks);
+  const totalIncidents = allMonthsTasks.filter(t => t.type === 'incident').length;
+  const totalRequests = allMonthsTasks.filter(t => t.type === 'request').length;
+  const totalProblems = allMonthsTasks.filter(t => t.type === 'problem').length;
+  const totalChanges = allMonthsTasks.filter(t => t.type === 'change').length;
   const totalSupplies = monthsData.reduce((sum, m) => sum + m.suppliesCount, 0);
 
   pdf.addSection('Executive Summary', {
@@ -99,6 +105,8 @@ export async function exportMultiMonthPDF(
   const taskTypeData = [
     ['Incidents', totalIncidents.toString(), `${((totalIncidents / totalTasks) * 100).toFixed(1)}%`],
     ['Requests', totalRequests.toString(), `${((totalRequests / totalTasks) * 100).toFixed(1)}%`],
+    ...(totalProblems > 0 ? [['Problems', totalProblems.toString(), `${((totalProblems / totalTasks) * 100).toFixed(1)}%`]] : []),
+    ...(totalChanges > 0 ? [['Changes', totalChanges.toString(), `${((totalChanges / totalTasks) * 100).toFixed(1)}%`]] : []),
     ['Supplies', totalSupplies.toString(), `${((totalSupplies / totalTasks) * 100).toFixed(1)}%`]
   ];
 
@@ -194,6 +202,8 @@ export async function exportMultiMonthPDF(
     pdf.addSectionTitle(`Detailed Breakdown: ${monthData.month}`);
 
     // Month summary
+    const monthProblems = monthData.tasks.filter(t => t.type === 'problem').length;
+    const monthChanges = monthData.tasks.filter(t => t.type === 'change').length;
     pdf.addSection('Month Summary', {
       'Total Tasks': monthData.tasks.length.toString(),
       'Service Hours': `${monthData.totalHours.toFixed(1)} hours`,
@@ -202,6 +212,8 @@ export async function exportMultiMonthPDF(
       'Net Revenue': `$${monthData.netRevenue.toFixed(2)}`,
       'Incidents': monthData.incidentCount.toString(),
       'Requests': monthData.requestCount.toString(),
+      ...(monthProblems > 0 ? { 'Problems': monthProblems.toString() } : {}),
+      ...(monthChanges > 0 ? { 'Changes': monthChanges.toString() } : {}),
       'Supplies': monthData.suppliesCount.toString()
     });
 
@@ -358,11 +370,19 @@ export async function exportMultiMonthPDF(
     { label: 'NET REVENUE:', value: `$${totalNetRevenue.toFixed(2)}`, bold: true }
   ]);
 
+  const breakdownParts = [
+    `${totalIncidents} incidents`,
+    `${totalRequests} requests`,
+    ...(totalProblems > 0 ? [`${totalProblems} problems`] : []),
+    ...(totalChanges > 0 ? [`${totalChanges} changes`] : []),
+    `${totalSupplies} supplies`
+  ];
+
   pdf.addNotes(
     'Report Notes',
     `This report covers ${monthsData.length} month(s) from ${dateRange}. ` +
     `Total of ${totalTasks} tasks completed across all clients. ` +
-    `Breakdown: ${totalIncidents} incidents, ${totalRequests} requests, ${totalSupplies} supplies.`
+    `Breakdown: ${breakdownParts.join(', ')}.`
   );
 
   pdf.save(filename);

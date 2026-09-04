@@ -215,7 +215,8 @@ export function PublicMonthlyReport() {
 
     const incidentHours = monthTasks.filter(t => t.type === 'incident').reduce((sum, task) => sum + (task.hours || 0), 0);
     const requestHours = monthTasks.filter(t => t.type === 'request').reduce((sum, task) => sum + (task.hours || 0), 0);
-    const hours = incidentHours + requestHours;
+    const otherHours = monthTasks.filter(t => t.type !== 'incident' && t.type !== 'request' && t.type !== 'insumos').reduce((sum, task) => sum + (task.hours || 0), 0);
+    const hours = incidentHours + requestHours + otherHours;
 
     trendData.push({
       month: format(trendDate, 'MMM'),
@@ -229,12 +230,7 @@ export function PublicMonthlyReport() {
     });
   }
 
-  // Current month stats for the main report
-  const incidentHours = monthlyTasks.filter(t => t.type === 'incident').reduce((sum, task) => sum + (task.hours || 0), 0);
-  const requestHours = monthlyTasks.filter(t => t.type === 'request').reduce((sum, task) => sum + (task.hours || 0), 0);
-  const hours = incidentHours + requestHours;
   const currentHourlyRate = getHourlyRateForYear(client, reportDate.getFullYear());
-  const revenue = hours * currentHourlyRate;
 
   // Helper function to get project by ID
   const getProject = (projectId: string) => {
@@ -252,9 +248,15 @@ export function PublicMonthlyReport() {
       if (task.type === 'incident') {
         stats.incidentHours += task.hours || 0;
         stats.incidentCount += 1;
-      } else {
+      } else if (task.type === 'request') {
         stats.requestHours += task.hours || 0;
         stats.requestCount += 1;
+      } else if (task.type === 'problem') {
+        stats.problemHours += task.hours || 0;
+        stats.problemCount += 1;
+      } else if (task.type === 'change') {
+        stats.changeHours += task.hours || 0;
+        stats.changeCount += 1;
       }
     }
     return stats;
@@ -266,7 +268,11 @@ export function PublicMonthlyReport() {
     incidentHours: 0,
     incidentCount: 0,
     requestHours: 0,
-    requestCount: 0
+    requestCount: 0,
+    problemHours: 0,
+    problemCount: 0,
+    changeHours: 0,
+    changeCount: 0
   });
 
   const toggleTaskSelected = (taskId: string) => {
@@ -527,12 +533,13 @@ export function PublicMonthlyReport() {
                 </div>
               </div>
 
-              {/* Incident vs Request Breakdown */}
-              {(clientStats.incidentCount > 0 || clientStats.requestCount > 0) && (
+              {/* Service Type Breakdown */}
+              {(clientStats.incidentCount > 0 || clientStats.requestCount > 0 || clientStats.problemCount > 0 || clientStats.changeCount > 0) && (
                 <div className="bg-gray-50 rounded-lg p-4 sm:p-6 mb-8 dark:bg-gray-700">
                   <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Service Type Breakdown</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {/* Incidents */}
+                    {clientStats.incidentCount > 0 && (
                     <div className="bg-red-50 p-4 rounded-lg dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
@@ -566,8 +573,10 @@ export function PublicMonthlyReport() {
                         </div>
                       </div>
                     </div>
+                    )}
 
                     {/* Requests */}
+                    {clientStats.requestCount > 0 && (
                     <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
@@ -601,6 +610,81 @@ export function PublicMonthlyReport() {
                         </div>
                       </div>
                     </div>
+                    )}
+
+                    {/* Problems */}
+                    {clientStats.problemCount > 0 && (
+                    <div className="bg-orange-50 p-4 rounded-lg dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-800">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <AlertTriangle className="w-5 h-5 text-orange-500 mr-2" />
+                          <div>
+                            <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">Problems</p>
+                            <p className="text-xs text-orange-600 dark:text-orange-500">Root Cause Work</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-semibold text-orange-900 dark:text-orange-300">{clientStats.problemCount}</p>
+                          <p className="text-xs text-orange-600 dark:text-orange-400">tasks</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-orange-700 dark:text-orange-400">Hours:</span>
+                          <span className="font-semibold text-orange-900 dark:text-orange-300">{clientStats.problemHours.toFixed(1)}h</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-orange-700 dark:text-orange-400">Cost:</span>
+                          <span className="font-semibold text-orange-900 dark:text-orange-300">
+                            ${(clientStats.problemHours * currentHourlyRate).toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm pt-2 border-t border-orange-200 dark:border-orange-700">
+                          <span className="text-orange-700 dark:text-orange-400">% of Services:</span>
+                          <span className="font-semibold text-orange-900 dark:text-orange-300">
+                            {clientStats.totalHours > 0 ? ((clientStats.problemHours / clientStats.totalHours) * 100).toFixed(0) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    )}
+
+                    {/* Changes */}
+                    {clientStats.changeCount > 0 && (
+                    <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-800">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <FileText className="w-5 h-5 text-purple-500 mr-2" />
+                          <div>
+                            <p className="text-sm font-semibold text-purple-700 dark:text-purple-400">Changes</p>
+                            <p className="text-xs text-purple-600 dark:text-purple-500">Change Requests</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-semibold text-purple-900 dark:text-purple-300">{clientStats.changeCount}</p>
+                          <p className="text-xs text-purple-600 dark:text-purple-400">tasks</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-purple-700 dark:text-purple-400">Hours:</span>
+                          <span className="font-semibold text-purple-900 dark:text-purple-300">{clientStats.changeHours.toFixed(1)}h</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-purple-700 dark:text-purple-400">Cost:</span>
+                          <span className="font-semibold text-purple-900 dark:text-purple-300">
+                            ${(clientStats.changeHours * currentHourlyRate).toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm pt-2 border-t border-purple-200 dark:border-purple-700">
+                          <span className="text-purple-700 dark:text-purple-400">% of Services:</span>
+                          <span className="font-semibold text-purple-900 dark:text-purple-300">
+                            {clientStats.totalHours > 0 ? ((clientStats.changeHours / clientStats.totalHours) * 100).toFixed(0) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    )}
                   </div>
                 </div>
               )}

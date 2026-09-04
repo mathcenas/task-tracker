@@ -86,6 +86,8 @@ export function ReportsPage() {
       supplyCount: supplyTasks.length,
       incidentCount: serviceTasks.filter(t => t.type === 'incident').length,
       requestCount: serviceTasks.filter(t => t.type === 'request').length,
+      problemCount: serviceTasks.filter(t => t.type === 'problem').length,
+      changeCount: serviceTasks.filter(t => t.type === 'change').length,
       hours,
       revenue,
       suppliesCost,
@@ -234,7 +236,7 @@ export function ReportsPage() {
       const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(selectedClient, year) }));
       rateLabel = yearlyRatesUsed.length > 1
         ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
-        : undefined;
+        : `$${yearlyRatesUsed[0]?.rate.toFixed(2)}/hour`;
       hourlyRate = (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear());
       filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}.md`;
     } else {
@@ -250,7 +252,7 @@ export function ReportsPage() {
         const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(selectedClient, year) }));
         rateLabel = yearlyRatesUsed.length > 1
           ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
-          : undefined;
+          : `$${yearlyRatesUsed[0]?.rate.toFixed(2)}/hour`;
         hourlyRate = (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear());
       } else {
         hourlyRate = getHourlyRateForYear(selectedClient, parseInt(selectedYear));
@@ -522,6 +524,18 @@ export function ReportsPage() {
                     <p className="text-sm font-bold text-gray-900 dark:text-white">{previewStats.requestCount}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">requests</p>
                   </div>
+                  {previewStats.problemCount > 0 && (
+                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-2">
+                      <p className="text-sm font-bold text-orange-900 dark:text-orange-300">{previewStats.problemCount}</p>
+                      <p className="text-xs text-orange-600 dark:text-orange-400">problems</p>
+                    </div>
+                  )}
+                  {previewStats.changeCount > 0 && (
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2">
+                      <p className="text-sm font-bold text-purple-900 dark:text-purple-300">{previewStats.changeCount}</p>
+                      <p className="text-xs text-purple-600 dark:text-purple-400">changes</p>
+                    </div>
+                  )}
                   {previewStats.supplyCount > 0 && (
                     <div className="col-span-2 bg-slate-50 dark:bg-slate-900/20 rounded-lg p-2">
                       <p className="text-sm font-bold text-slate-900 dark:text-slate-300">{previewStats.supplyCount} supplies · ${previewStats.suppliesCost.toFixed(0)}</p>

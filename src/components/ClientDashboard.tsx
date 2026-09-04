@@ -383,23 +383,19 @@ export function ClientDashboard() {
         );
       }
 
-      const incidentTasks = servicesTasks.filter(task => task.type === 'incident');
-      const requestTasks = servicesTasks.filter(task => task.type === 'request');
-      const incidentHours = incidentTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-      const requestHours = requestTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
-
-      // Calculate totals using year-specific rates
-      const incidentTotal = incidentTasks.reduce((sum, task) => {
-        const taskYear = new Date(task.date).getFullYear();
-        const taskRate = getHourlyRateForYear(multiMonthClient, taskYear);
-        return sum + ((task.hours || 0) * taskRate);
-      }, 0);
-
-      const requestTotal = requestTasks.reduce((sum, task) => {
-        const taskYear = new Date(task.date).getFullYear();
-        const taskRate = getHourlyRateForYear(multiMonthClient, taskYear);
-        return sum + ((task.hours || 0) * taskRate);
-      }, 0);
+      // Every non-supply type gets its own breakdown row - used to only
+      // track incidents/requests, which silently dropped Problem/Change
+      // tasks from the summary (and skewed "% of Services", since their
+      // hours still counted toward the total).
+      const breakdownTypeLabels: { type: string; label: string }[] = [
+        { type: 'incident', label: 'Incidents' },
+        { type: 'request', label: 'Requests' },
+        { type: 'problem', label: 'Problems' },
+        { type: 'change', label: 'Changes' }
+      ];
+      const breakdownGroups = breakdownTypeLabels
+        .map(({ type, label }) => ({ label, tasks: servicesTasks.filter(task => task.type === type) }))
+        .filter(g => g.tasks.length > 0);
 
       const servicesTotal = servicesTasks.reduce((sum, task) => {
         const taskYear = new Date(task.date).getFullYear();
@@ -410,26 +406,22 @@ export function ClientDashboard() {
       const suppliesTotal = suppliesTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
       const totalAmount = servicesTotal + suppliesTotal;
 
-      if (incidentTasks.length > 0 || requestTasks.length > 0) {
-        const breakdownData = [];
-        if (incidentTasks.length > 0) {
-          breakdownData.push([
-            'Incidents',
-            incidentTasks.length.toString(),
-            `${incidentHours.toFixed(1)}h`,
-            `$${incidentTotal.toFixed(2)}`,
-            servicesTotal > 0 ? `${((incidentTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
-          ]);
-        }
-        if (requestTasks.length > 0) {
-          breakdownData.push([
-            'Requests',
-            requestTasks.length.toString(),
-            `${requestHours.toFixed(1)}h`,
-            `$${requestTotal.toFixed(2)}`,
-            servicesTotal > 0 ? `${((requestTotal / servicesTotal) * 100).toFixed(0)}%` : '0%'
-          ]);
-        }
+      if (breakdownGroups.length > 0) {
+        const breakdownData = breakdownGroups.map(({ label, tasks }) => {
+          const hours = tasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+          const total = tasks.reduce((sum, task) => {
+            const taskYear = new Date(task.date).getFullYear();
+            const taskRate = getHourlyRateForYear(multiMonthClient, taskYear);
+            return sum + ((task.hours || 0) * taskRate);
+          }, 0);
+          return [
+            label,
+            tasks.length.toString(),
+            `${hours.toFixed(1)}h`,
+            `$${total.toFixed(2)}`,
+            servicesTotal > 0 ? `${((total / servicesTotal) * 100).toFixed(0)}%` : '0%'
+          ];
+        });
 
         pdf.addTable(
           ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],
