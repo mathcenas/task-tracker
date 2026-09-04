@@ -156,6 +156,7 @@ export function ClientDashboard() {
 
       const companySettings = await apiService.getCompanySettings();
       const pdf = new PDFExporter(companySettings);
+      pdf.setFooterContext(`${clientData.name} — ${format(exportMonth, 'MMMM yyyy')}`);
 
       const hourlyRate = getHourlyRateForYear(clientData, exportMonth.getFullYear());
       const reportNumber = `RPT-${format(exportMonth, 'yyyyMM')}-${clientData.id.slice(-6)}`;
@@ -243,6 +244,7 @@ export function ClientDashboard() {
       const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Unknown Project';
       const reportNumber = `RPT-PROJECT-${projectFilterClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}`;
       const periodText = `${format(new Date(firstTaskDate), 'MMM d, yyyy')} - ${format(new Date(lastTaskDate), 'MMM d, yyyy')}`;
+      pdf.setFooterContext(`${clientName} — ${periodText}`);
 
       await pdf.addHeader('Project Report');
 
@@ -300,6 +302,7 @@ export function ClientDashboard() {
       const clientName = multiMonthClient.name;
       const dateRange = `${format(start, 'MMM yyyy')} - ${format(end, 'MMM yyyy')}`;
       const reportNumber = `RPT-${format(start, 'yyyyMM')}-${format(end, 'yyyyMM')}-${multiMonthClient.id.slice(-6)}`;
+      pdf.setFooterContext(`${clientName} — ${dateRange}`);
 
       const uniqueYears = [...new Set(filteredTasks.map(task => new Date(task.date).getFullYear()))].sort();
       const yearlyRatesUsed = uniqueYears.map(year => ({

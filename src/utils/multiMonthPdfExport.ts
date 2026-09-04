@@ -37,6 +37,7 @@ export async function exportMultiMonthPDF(
   const dateRange = monthsData.length > 0
     ? `${monthsData[0].month} - ${monthsData[monthsData.length - 1].month}`
     : 'Multi-Month Report';
+  pdf.setFooterContext(`All Clients — ${dateRange}`);
 
   await pdf.addHeader(`Multi-Month Report: ${dateRange}`);
 
@@ -60,7 +61,7 @@ export async function exportMultiMonthPDF(
   });
 
   // Monthly Breakdown Table
-  pdf.addSectionTitle('Monthly Performance Overview');
+  pdf.addSectionTitle('Monthly Performance Overview', 30);
 
   const monthlyBreakdown = monthsData.map(month => [
     month.month,
@@ -93,7 +94,7 @@ export async function exportMultiMonthPDF(
   );
 
   // Task Type Distribution
-  pdf.addSectionTitle('Task Type Distribution');
+  pdf.addSectionTitle('Task Type Distribution', 30);
 
   const taskTypeData = [
     ['Incidents', totalIncidents.toString(), `${((totalIncidents / totalTasks) * 100).toFixed(1)}%`],
@@ -149,7 +150,7 @@ export async function exportMultiMonthPDF(
     }
   });
 
-  pdf.addSectionTitle('Client Performance Analysis');
+  pdf.addSectionTitle('Client Performance Analysis', 30);
 
   const clientData = Object.entries(clientStats)
     .sort((a, b) => (b[1].revenue - b[1].suppliesCost) - (a[1].revenue - a[1].suppliesCost))
@@ -219,7 +220,7 @@ export async function exportMultiMonthPDF(
       const client = getClient(clientId);
       if (!client) return;
 
-      pdf.addSectionTitle(`${client.name} - ${clientTasks.length} task(s)`);
+      pdf.addSectionTitle(`${client.name} - ${clientTasks.length} task(s)`, 30);
 
       const taskRows = clientTasks.map(task => {
         const project = getProject(task.projectId);
@@ -289,7 +290,7 @@ export async function exportMultiMonthPDF(
       // Supplies detail sub-table if client has any supply tasks
       const clientSupplyTasks = clientTasks.filter(t => t.type === 'insumos');
       if (clientSupplyTasks.length > 0) {
-        pdf.addSectionTitle(`${client.name} — Supplies Detail`);
+        pdf.addSectionTitle(`${client.name} — Supplies Detail`, 30);
 
         const supplyRows = clientSupplyTasks.map(task => {
           const approvalLabel = task.approvalStatus === 'approved' ? 'Approved' :

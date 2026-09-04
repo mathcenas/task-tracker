@@ -50,6 +50,7 @@ export async function exportProjectIdeasPDF(
   companySettings: CompanySettings
 ) {
   const pdf = new PDFExporter(companySettings);
+  pdf.setFooterContext(`${client.name} — ${project.name}`);
 
   await pdf.addHeader('Project Summary & Future Tasks');
 
@@ -88,7 +89,7 @@ export async function exportProjectIdeasPDF(
   const withoutNotes = overdueOrActive.filter(t => !t.notes);
 
   if (overdueOrActive.length > 0) {
-    pdf.addSectionTitle(`Planned Tasks (${overdueOrActive.length})`);
+    pdf.addSectionTitle(`Planned Tasks (${overdueOrActive.length})`, 30);
 
     const headers = ['Priority', 'Type', 'Task Description', 'Status', 'Target Date', 'Est. Hours', 'Est. Cost'];
     const rows = overdueOrActive.map(task => {
