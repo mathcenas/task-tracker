@@ -317,6 +317,7 @@ export function PublicMonthlyReport() {
       const monthYear = format(reportDate, 'MMMM yyyy');
       const hourlyRate = getHourlyRateForYear(client, reportDate.getFullYear());
       const reportNumber = `RPT-${year}${month.toString().padStart(2, '0')}-${client.id.slice(-6)}`;
+      pdf.setFooterContext(`${clientName} — ${monthYear}`);
 
       await pdf.addHeader('Monthly Report');
 

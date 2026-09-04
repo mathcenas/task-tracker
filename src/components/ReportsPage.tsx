@@ -110,6 +110,7 @@ export function ReportsPage() {
         const pdf = new PDFExporter(companySettings);
         const hourlyRate = getHourlyRateForYear(selectedClient, selectedMonth.getFullYear());
         const reportNumber = `RPT-${format(selectedMonth, 'yyyyMM')}-${selectedClient.id.slice(-6)}`;
+        pdf.setFooterContext(`${selectedClient.name} — ${format(selectedMonth, 'MMMM yyyy')}`);
 
         await pdf.addHeader('Monthly Report');
         pdf.addSection('Report Details', {
@@ -138,6 +139,7 @@ export function ReportsPage() {
         const ratesDisplay = yearlyRatesUsed.length > 1
           ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
           : `$${yearlyRatesUsed[0]?.rate.toFixed(2)}/hour`;
+        pdf.setFooterContext(`${selectedClient.name} — ${format(s, 'MMM yyyy')} – ${format(e, 'MMM yyyy')}`);
 
         await pdf.addHeader('Multi-Month Report');
         pdf.addSection('Report Details', {
@@ -181,6 +183,7 @@ export function ReportsPage() {
         }
 
         const pdf = new PDFExporter(companySettings);
+        pdf.setFooterContext(`${selectedClient.name} — ${periodLabel}`);
         await pdf.addHeader('Project Report');
         pdf.addSection('Report Details', {
           'Report Number': `RPT-PROJECT-${selectedClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}${selectedYear !== 'all' ? '-' + selectedYear : ''}`,
