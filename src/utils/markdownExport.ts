@@ -141,6 +141,8 @@ export function generateMarkdownReport(
   const totalSupplies = supplyTasks.reduce((s, t) => s + (t.cost || 0), 0);
   const incidents = serviceTasks.filter(t => t.type === 'incident').length;
   const requests = serviceTasks.filter(t => t.type === 'request').length;
+  const problems = serviceTasks.filter(t => t.type === 'problem').length;
+  const changes = serviceTasks.filter(t => t.type === 'change').length;
 
   let md = '';
   md += `# ${meta.title}\n\n`;
@@ -160,8 +162,10 @@ export function generateMarkdownReport(
   md += `| Metric | Value |\n`;
   md += `|--------|-------|\n`;
   md += `| Total Tasks | ${tasks.length} |\n`;
-  md += `| Incidents | ${incidents} |\n`;
-  md += `| Requests | ${requests} |\n`;
+  if (incidents > 0) md += `| Incidents | ${incidents} |\n`;
+  if (requests > 0) md += `| Requests | ${requests} |\n`;
+  if (problems > 0) md += `| Problems | ${problems} |\n`;
+  if (changes > 0) md += `| Changes | ${changes} |\n`;
   if (supplyTasks.length > 0) md += `| Supplies | ${supplyTasks.length} |\n`;
   md += `| Total Hours | ${totalHours.toFixed(1)}h |\n`;
   if (getRate) md += `| Service Revenue | $${totalRevenue.toFixed(2)} |\n`;
