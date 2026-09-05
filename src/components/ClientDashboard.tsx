@@ -327,6 +327,14 @@ export function ClientDashboard() {
       const servicesTasks = filteredTasks.filter(task => task.type !== 'insumos');
       const suppliesTasks = filteredTasks.filter(task => task.type === 'insumos');
 
+      const upfrontHours = servicesTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+      const upfrontServicesTotal = servicesTasks.reduce((sum, task) => {
+        const taskRate = getHourlyRateForYear(multiMonthClient, new Date(task.date).getFullYear());
+        return sum + ((task.hours || 0) * taskRate);
+      }, 0);
+      const upfrontSuppliesTotal = suppliesTasks.reduce((sum, task) => sum + (task.cost || 0), 0);
+      pdf.addSummaryBox(upfrontHours, upfrontServicesTotal, upfrontSuppliesTotal);
+
       if (servicesTasks.length > 0) {
         const servicesTableData = servicesTasks.map(task => {
           const taskYear = new Date(task.date).getFullYear();

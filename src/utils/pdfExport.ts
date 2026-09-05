@@ -296,6 +296,46 @@ export class PDFExporter {
     this.currentY += 3;
   }
 
+  // A prominent "how much do I owe" box, meant to sit right after Report
+  // Details on page 1 - the full totals block at the end of the report
+  // answers the same question but is easy to miss on a multi-page PDF.
+  addSummaryBox(hours: number, servicesTotal: number, suppliesTotal: number) {
+    const total = servicesTotal + suppliesTotal;
+    const boxHeight = 30;
+
+    if (this.currentY + boxHeight > 272) { this.doc.addPage(); this.currentY = 20; }
+
+    const startY = this.currentY;
+    this.doc.setFillColor(239, 246, 255);
+    this.doc.setDrawColor(37, 99, 235);
+    this.doc.setLineWidth(0.4);
+    this.doc.roundedRect(15, startY, 180, boxHeight, 2, 2, 'FD');
+
+    this.doc.setFontSize(9);
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setTextColor(30, 64, 175);
+    this.doc.text('TOTAL AMOUNT DUE', 22, startY + 9);
+
+    this.doc.setFontSize(20);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setTextColor(29, 78, 216);
+    this.doc.text(`$${total.toFixed(2)}`, 22, startY + 22);
+
+    this.doc.setFontSize(9);
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setTextColor(70, 70, 70);
+    let breakdownY = startY + 9;
+    this.doc.text(`Hours: ${hours.toFixed(1)}h`, 193, breakdownY, { align: 'right' });
+    breakdownY += 6;
+    this.doc.text(`Services: $${servicesTotal.toFixed(2)}`, 193, breakdownY, { align: 'right' });
+    if (suppliesTotal > 0) {
+      breakdownY += 6;
+      this.doc.text(`Supplies: $${suppliesTotal.toFixed(2)}`, 193, breakdownY, { align: 'right' });
+    }
+
+    this.currentY = startY + boxHeight + 8;
+  }
+
   /**
    * Renders the standard service + supplies tables, breakdown, and totals block.
    * Used by monthly, project, and public reports so all PDFs are consistent.
@@ -313,6 +353,15 @@ export class PDFExporter {
     const sortedTasks = [...tasks].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const servicesTasks = sortedTasks.filter(t => t.type !== 'insumos');
     const suppliesTasks = sortedTasks.filter(t => t.type === 'insumos');
+
+    // ── At-a-glance summary, up front ───────────────────────────────────
+    // The full totals block at the end of the report answers "how much do
+    // I owe" too, but on a multi-page report that's buried on the last
+    // page. Clients want that number without hunting for it.
+    const upfrontHours    = servicesTasks.reduce((s, t) => s + (t.hours || 0), 0);
+    const upfrontServices = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
+    const upfrontSupplies = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
+    this.addSummaryBox(upfrontHours, upfrontServices, upfrontSupplies);
 
     // ── Services table ────────────────────────────────────────────────
     if (servicesTasks.length > 0) {
