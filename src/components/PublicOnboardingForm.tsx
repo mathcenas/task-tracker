@@ -96,8 +96,8 @@ export function PublicOnboardingForm() {
           </p>
           <button
             onClick={() => setSubmitted(false)}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
-                     dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700
+                     dark:bg-cyan-500 dark:hover:bg-cyan-600 transition-colors"
           >
             Enviar otra solicitud
           </button>
@@ -146,7 +146,7 @@ export function PublicOnboardingForm() {
               onChange={handleChange('managerEmail')}
               placeholder="gerente@empresa.com"
               className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm
-                       focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
+                       focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600
                        dark:bg-gray-700 dark:text-white transition-all duration-200"
             />
           </div>
@@ -160,7 +160,7 @@ export function PublicOnboardingForm() {
               value={form.type}
               onChange={handleChange('type')}
               className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm
-                       focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
+                       focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600
                        dark:bg-gray-700 dark:text-white transition-all duration-200"
             >
               <option value="alta">Alta</option>
@@ -180,7 +180,7 @@ export function PublicOnboardingForm() {
               onChange={handleChange('employeeName')}
               placeholder="Nombre y apellido"
               className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm
-                       focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
+                       focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600
                        dark:bg-gray-700 dark:text-white transition-all duration-200"
             />
           </div>
@@ -196,7 +196,7 @@ export function PublicOnboardingForm() {
                     type="checkbox"
                     checked={form.accessTypes.includes(option)}
                     onChange={() => toggleAccessType(option)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                    className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
                 </label>
@@ -214,7 +214,7 @@ export function PublicOnboardingForm() {
               value={form.effectiveDate}
               onChange={handleChange('effectiveDate')}
               className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm
-                       focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
+                       focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600
                        dark:bg-gray-700 dark:text-white transition-all duration-200"
             />
           </div>
@@ -230,7 +230,7 @@ export function PublicOnboardingForm() {
               onChange={handleChange('details')}
               placeholder="Otros sistemas, accesos puntuales o notas para el equipo..."
               className="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm
-                       focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600
+                       focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600
                        dark:bg-gray-700 dark:text-white transition-all duration-200"
             />
           </div>
@@ -241,8 +241,8 @@ export function PublicOnboardingForm() {
             type="submit"
             disabled={submitting || !accepted}
             className="w-full flex items-center justify-center px-4 py-2 rounded-lg shadow-sm text-sm
-                     font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60
-                     dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200"
+                     font-medium text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60
+                     dark:bg-cyan-500 dark:hover:bg-cyan-600 transition-all duration-200"
           >
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {submitting ? 'Enviando...' : 'Enviar Solicitud'}

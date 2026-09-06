@@ -30,7 +30,7 @@ export function OnboardingPrivacyDisclaimer({ accepted, setAccepted }: Disclaime
           required
           checked={accepted}
           onChange={(e) => setAccepted(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-800"
         />
         <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
           Acepto los términos de procesamiento y protección de datos según la Ley N° 18.331 de Uruguay.
