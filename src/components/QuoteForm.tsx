@@ -272,7 +272,7 @@ export function QuoteForm() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading quote...</p>
         </div>
       </div>
@@ -312,7 +312,7 @@ export function QuoteForm() {
               <select
                 value={formData.client_id}
                 onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
                 required
               >
                 <option value="">Select a client</option>
@@ -332,7 +332,7 @@ export function QuoteForm() {
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
                 placeholder="e.g., Website Development Quote"
                 required
               />
@@ -347,7 +347,7 @@ export function QuoteForm() {
               <select
                 value={formData.quote_type}
                 onChange={(e) => setFormData({ ...formData, quote_type: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="standard">Standard (with prices)</option>
                 <option value="bom">BOM (Bill of Materials)</option>
@@ -362,7 +362,7 @@ export function QuoteForm() {
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -375,7 +375,7 @@ export function QuoteForm() {
                 type="date"
                 value={formData.expiry_date}
                 onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -386,7 +386,7 @@ export function QuoteForm() {
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="draft">Draft</option>
                 <option value="sent">Sent</option>
@@ -402,7 +402,7 @@ export function QuoteForm() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Line Items</h3>
               <button
                 onClick={addItem}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Item
@@ -417,7 +417,7 @@ export function QuoteForm() {
                       type="text"
                       value={item.description}
                       onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
                       placeholder="Description"
                     />
                   </div>
@@ -426,7 +426,7 @@ export function QuoteForm() {
                       type="number"
                       value={item.quantity}
                       onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
                       placeholder="Qty"
                       min="0"
                       step="0.01"
@@ -439,7 +439,7 @@ export function QuoteForm() {
                           type="number"
                           value={item.unit_price}
                           onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
                           placeholder="Price"
                           min="0"
                           step="0.01"
@@ -482,7 +482,7 @@ export function QuoteForm() {
                       type="number"
                       value={formData.tax_rate}
                       onChange={(e) => setFormData({ ...formData, tax_rate: Number(e.target.value) })}
-                      className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
                       min="0"
                       max="100"
                       step="0.1"
@@ -500,7 +500,7 @@ export function QuoteForm() {
                 )}
                 <div className="flex justify-between text-lg font-bold border-t border-gray-300 dark:border-gray-600 pt-2">
                   <span className="text-gray-900 dark:text-white">Total:</span>
-                  <span className="text-blue-600">${calculateTotal().toFixed(2)}</span>
+                  <span className="text-cyan-600">${calculateTotal().toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -513,7 +513,7 @@ export function QuoteForm() {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
               rows={3}
               placeholder="Additional notes for the client..."
             />
@@ -526,7 +526,7 @@ export function QuoteForm() {
             <textarea
               value={formData.terms}
               onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
               rows={4}
               placeholder="Payment terms, delivery conditions, etc..."
             />
@@ -552,7 +552,7 @@ export function QuoteForm() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
               <Save className="w-4 h-4" />
               {saving ? 'Saving...' : 'Save Quote'}

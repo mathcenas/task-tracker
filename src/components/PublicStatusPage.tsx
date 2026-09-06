@@ -71,7 +71,7 @@ export function PublicStatusPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading status...</p>
         </div>
       </div>
@@ -191,7 +191,7 @@ export function PublicStatusPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
+              <div className="flex items-center justify-center w-10 h-10 bg-[#0B192C] rounded-lg">
                 <Activity className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -230,7 +230,7 @@ export function PublicStatusPage() {
         <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Server className="w-5 h-5 text-blue-500" />
+              <Server className="w-5 h-5 text-cyan-500" />
               Services ({data.monitors.length})
             </h3>
           </div>
@@ -277,7 +277,7 @@ export function PublicStatusPage() {
                           {monitor.tags.map((tag, idx) => (
                             <span
                               key={idx}
-                              className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded"
+                              className="text-xs px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded"
                             >
                               {tag}
                             </span>

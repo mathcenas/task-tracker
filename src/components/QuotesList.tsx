@@ -52,7 +52,7 @@ export function QuotesList() {
   const getStatusBadge = (status: string) => {
     const styles = {
       draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-      sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      sent: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
       accepted: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
       rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
       expired: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
@@ -69,7 +69,7 @@ export function QuotesList() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading quotes...</p>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function QuotesList() {
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <FileText className="w-8 h-8 text-blue-600" />
+              <FileText className="w-8 h-8 text-cyan-600" />
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                   Quotes
@@ -94,7 +94,7 @@ export function QuotesList() {
             </div>
             <Link
               to="/quotes/new"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-medium"
             >
               <Plus className="w-4 h-4" />
               New Quote
@@ -114,7 +114,7 @@ export function QuotesList() {
               </p>
               <Link
                 to="/quotes/new"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Create Quote
@@ -169,8 +169,8 @@ export function QuotesList() {
                       <td className="py-3 px-4 text-sm">
                         <span className={`px-2 py-1 text-xs font-medium rounded ${
                           quote.quote_type === 'bom'
-                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                            ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300'
+                            : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
                         }`}>
                           {quote.quote_type === 'bom' ? 'BOM' : 'Standard'}
                         </span>
@@ -188,14 +188,14 @@ export function QuotesList() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => navigate(`/quotes/${quote.id}`)}
-                            className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
                             title="View"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => navigate(`/quotes/${quote.id}/edit`)}
-                            className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />

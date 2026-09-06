@@ -157,7 +157,7 @@ export function QuoteView() {
   const getStatusBadge = (status: string) => {
     const styles = {
       draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-      sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      sent: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
       accepted: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
       rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
       expired: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
@@ -174,7 +174,7 @@ export function QuoteView() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading quote...</p>
         </div>
       </div>
@@ -187,7 +187,7 @@ export function QuoteView() {
         <div className="text-center">
           <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Quote not found</p>
-          <Link to="/quotes" className="text-blue-600 hover:underline mt-4 inline-block">
+          <Link to="/quotes" className="text-cyan-600 hover:underline mt-4 inline-block">
             Back to Quotes
           </Link>
         </div>
@@ -203,13 +203,13 @@ export function QuoteView() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/quotes')}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
                 title="Back to Quotes"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-blue-600" />
+                <FileText className="w-8 h-8 text-cyan-600" />
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                     Quote {quote.quote_number}
@@ -239,7 +239,7 @@ export function QuoteView() {
               </button>
               <button
                 onClick={() => navigate(`/quotes/${quote.id}/edit`)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
               >
                 <Edit className="w-4 h-4" />
                 Edit
