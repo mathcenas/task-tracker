@@ -607,10 +607,9 @@ export function RecurringTasksPage() {
                           <div className="flex items-center space-x-2 mt-1">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                               task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                              task.type === 'problem' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                              task.type === 'change' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                              task.type === 'request' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              task.type === 'problem' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                              task.type === 'change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                              'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
                             }`}>
                               {task.type}
                             </span>

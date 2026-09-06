@@ -291,10 +291,10 @@ export function EditTask() {
               {(['incident', 'problem', 'change', 'request', 'insumos'] as const).map((t) => {
                 const typeConfig: Record<typeof t, { label: string; peer: string; text: string }> = {
                   incident: { label: 'Incident', peer: 'peer-checked:border-red-500 peer-checked:bg-red-50 dark:peer-checked:bg-red-900/20 dark:peer-checked:border-red-500', text: 'text-red-500' },
-                  problem: { label: 'Problem', peer: 'peer-checked:border-orange-500 peer-checked:bg-orange-50 dark:peer-checked:bg-orange-900/20 dark:peer-checked:border-orange-500', text: 'text-orange-500' },
-                  change: { label: 'Change', peer: 'peer-checked:border-teal-500 peer-checked:bg-teal-50 dark:peer-checked:bg-teal-900/20 dark:peer-checked:border-teal-500', text: 'text-teal-600' },
-                  request: { label: 'Request', peer: 'peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 dark:peer-checked:border-blue-500', text: 'text-blue-500' },
-                  insumos: { label: 'Supplies', peer: 'peer-checked:border-purple-500 peer-checked:bg-purple-50 dark:peer-checked:bg-purple-900/20 dark:peer-checked:border-purple-500', text: 'text-purple-500' }
+                  problem: { label: 'Problem', peer: 'peer-checked:border-amber-500 peer-checked:bg-amber-50 dark:peer-checked:bg-amber-900/20 dark:peer-checked:border-amber-500', text: 'text-amber-500' },
+                  change: { label: 'Change', peer: 'peer-checked:border-violet-500 peer-checked:bg-violet-50 dark:peer-checked:bg-violet-900/20 dark:peer-checked:border-violet-500', text: 'text-violet-600' },
+                  request: { label: 'Request', peer: 'peer-checked:border-cyan-500 peer-checked:bg-cyan-50 dark:peer-checked:bg-cyan-900/20 dark:peer-checked:border-cyan-500', text: 'text-cyan-500' },
+                  insumos: { label: 'Supplies', peer: 'peer-checked:border-cyan-500 peer-checked:bg-cyan-50 dark:peer-checked:bg-cyan-900/20 dark:peer-checked:border-cyan-500', text: 'text-cyan-500' }
                 };
                 const config = typeConfig[t];
                 return (

@@ -376,9 +376,9 @@ export function TaskForm() {
                     checked={formData.type === 'problem'}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
-                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-orange-900/20 dark:peer-checked:border-orange-500">
+                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-amber-900/20 dark:peer-checked:border-amber-500">
                     <div className="text-center">
-                      <div className="text-orange-500 font-medium">Problem</div>
+                      <div className="text-amber-500 font-medium">Problem</div>
                       <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">Root cause</div>
                     </div>
                   </div>
@@ -392,9 +392,9 @@ export function TaskForm() {
                     checked={formData.type === 'change'}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
-                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-teal-500 peer-checked:bg-teal-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-teal-900/20 dark:peer-checked:border-teal-500">
+                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-violet-500 peer-checked:bg-violet-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-violet-900/20 dark:peer-checked:border-violet-500">
                     <div className="text-center">
-                      <div className="text-teal-500 font-medium">Change</div>
+                      <div className="text-violet-500 font-medium">Change</div>
                       <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">Planned change</div>
                     </div>
                   </div>
@@ -408,9 +408,9 @@ export function TaskForm() {
                     checked={formData.type === 'request'}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
-                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-blue-900/20 dark:peer-checked:border-blue-500">
+                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-cyan-900/20 dark:peer-checked:border-cyan-500">
                     <div className="text-center">
-                      <div className="text-blue-500 font-medium">Request</div>
+                      <div className="text-cyan-500 font-medium">Request</div>
                       <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">Regular work</div>
                     </div>
                   </div>
@@ -424,9 +424,9 @@ export function TaskForm() {
                     checked={formData.type === 'insumos'}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
-                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-purple-900/20 dark:peer-checked:border-purple-500">
+                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-cyan-900/20 dark:peer-checked:border-cyan-500">
                     <div className="text-center">
-                      <div className="text-purple-500 font-medium">Supplies</div>
+                      <div className="text-cyan-500 font-medium">Supplies</div>
                       <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">Materials</div>
                     </div>
                   </div>

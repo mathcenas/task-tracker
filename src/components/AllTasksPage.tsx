@@ -136,13 +136,13 @@ export function AllTasksPage() {
       case 'incident':
         return <AlertTriangle className="w-5 h-5 text-red-500" />;
       case 'problem':
-        return <AlertOctagon className="w-5 h-5 text-orange-500" />;
+        return <AlertOctagon className="w-5 h-5 text-amber-500" />;
       case 'change':
-        return <GitBranch className="w-5 h-5 text-teal-500" />;
+        return <GitBranch className="w-5 h-5 text-violet-500" />;
       case 'insumos':
-        return <Package className="w-5 h-5 text-purple-500" />;
+        return <Package className="w-5 h-5 text-cyan-500" />;
       default:
-        return <FileText className="w-5 h-5 text-blue-500" />;
+        return <FileText className="w-5 h-5 text-cyan-500" />;
     }
   };
 
@@ -580,10 +580,9 @@ export function AllTasksPage() {
                               <div className="flex items-center gap-2">
                                 <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
                                   task.type === 'incident' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                  task.type === 'problem' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                  task.type === 'change' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
-                                  task.type === 'insumos' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                  task.type === 'problem' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                  task.type === 'change' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' :
+                                  'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
                                 }`}>{task.type}</span>
                                 <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
                                   task.finished ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
@@ -666,10 +665,9 @@ export function AllTasksPage() {
                         <div className="flex items-center space-x-3">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                            task.type === 'problem' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                            task.type === 'change' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                            task.type === 'insumos' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                            'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                            task.type === 'problem' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                            task.type === 'change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                            'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
                           }`}>
                             {task.type}
                           </span>
@@ -784,7 +782,7 @@ export function AllTasksPage() {
                 <Link
                   to="/add-task"
                   state={{ from: '/tasks' }}
-                  className="inline-flex items-center mt-4 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  className="inline-flex items-center mt-4 px-4 py-2 text-sm font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add a task
