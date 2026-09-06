@@ -311,7 +311,7 @@ export function TaskForm() {
           </div>
           
           {showQuickActions && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => quickFillTask('incident', 'Server down - urgent fix needed', 'high')}
@@ -332,6 +332,13 @@ export function TaskForm() {
                 className="p-2 text-left text-xs bg-green-50 hover:bg-green-100 rounded border border-green-200 dark:bg-green-900/20 dark:border-green-800 dark:hover:bg-green-900/30"
               >
                 🔧 Maintenance
+              </button>
+              <button
+                type="button"
+                onClick={() => quickFillTask('change', 'Puesta en Operativa Diaria: Automatización de flujo / Agente IA (De Experimento a Herramienta Oficial)', 'medium')}
+                className="p-2 text-left text-xs bg-violet-50 hover:bg-violet-100 rounded border border-violet-200 dark:bg-violet-900/20 dark:border-violet-800 dark:hover:bg-violet-900/30"
+              >
+                🤖 Automatización / Agente IA
               </button>
             </div>
           )}
