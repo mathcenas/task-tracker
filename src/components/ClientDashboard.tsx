@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
 import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck, ListChecks, Folders, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PDFExporter } from '../utils/pdfExport';
+import { PDFExporter, BRAND_DARK, BRAND_TEAL, TASK_TYPE_COLORS } from '../utils/pdfExport';
 import { apiService } from '../services/api';
 import { ClientYearlyRates } from './ClientYearlyRates';
 import { getHourlyRateForYear } from '../utils/clientRates';
@@ -360,6 +360,15 @@ export function ClientDashboard() {
               3: { cellWidth: 'auto' },
               4: { cellWidth: 18, halign: 'center' },
               5: { cellWidth: 25, halign: 'right' }
+            },
+            didParseCell: (data: any) => {
+              if (data.section === 'body' && data.column.index === 2) {
+                const color = TASK_TYPE_COLORS[data.cell.raw as string];
+                if (color) {
+                  data.cell.styles.textColor = color;
+                  data.cell.styles.fontStyle = 'bold';
+                }
+              }
             }
           }
         );
@@ -379,7 +388,7 @@ export function ClientDashboard() {
           {
             theme: 'grid',
             headStyles: {
-              fillColor: [120, 53, 190]
+              fillColor: BRAND_TEAL
             },
             columnStyles: {
               0: { cellWidth: 22 },
@@ -437,7 +446,7 @@ export function ClientDashboard() {
           {
             theme: 'grid',
             headStyles: {
-              fillColor: [100, 100, 100]
+              fillColor: BRAND_DARK
             },
             columnStyles: {
               0: { cellWidth: 'auto', fontStyle: 'bold' },
@@ -445,6 +454,12 @@ export function ClientDashboard() {
               2: { cellWidth: 25, halign: 'center' },
               3: { cellWidth: 30, halign: 'right' },
               4: { cellWidth: 30, halign: 'center' }
+            },
+            didParseCell: (data: any) => {
+              if (data.section === 'body' && data.column.index === 0) {
+                const color = TASK_TYPE_COLORS[data.cell.raw as string];
+                if (color) data.cell.styles.textColor = color;
+              }
             }
           }
         );

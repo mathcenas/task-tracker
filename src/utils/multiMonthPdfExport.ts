@@ -1,4 +1,4 @@
-import { PDFExporter } from './pdfExport';
+import { PDFExporter, BRAND_DARK, BRAND_TEAL, TEAL_WASH, TEAL_INK, WHITE, TASK_TYPE_COLORS } from './pdfExport';
 import { format, parseISO } from 'date-fns';
 import type { Task, Client, Project } from '../types';
 import { getHourlyRateForYear } from './clientRates';
@@ -84,8 +84,8 @@ export async function exportMultiMonthPDF(
     {
       theme: 'grid',
       headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: 255,
+        fillColor: BRAND_DARK,
+        textColor: WHITE,
         fontStyle: 'bold'
       },
       columnStyles: {
@@ -119,6 +119,12 @@ export async function exportMultiMonthPDF(
         0: { cellWidth: 50, fontStyle: 'bold' },
         1: { cellWidth: 35, halign: 'center' },
         2: { cellWidth: 35, halign: 'center' }
+      },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 0) {
+          const color = TASK_TYPE_COLORS[data.cell.raw as string];
+          if (color) data.cell.styles.textColor = color;
+        }
       }
     }
   );
@@ -177,7 +183,7 @@ export async function exportMultiMonthPDF(
     {
       theme: 'grid',
       headStyles: {
-        fillColor: [37, 99, 235]
+        fillColor: BRAND_DARK
       },
       columnStyles: {
         0: { cellWidth: 42, fontStyle: 'bold' },
@@ -265,11 +271,20 @@ export async function exportMultiMonthPDF(
         {
           theme: 'striped',
           headStyles: {
-            fillColor: [100, 100, 100],
+            fillColor: BRAND_DARK,
             fontSize: 9
           },
           bodyStyles: {
             fontSize: 8
+          },
+          didParseCell: (data: any) => {
+            if (data.section === 'body' && data.column.index === 1) {
+              const color = TASK_TYPE_COLORS[data.cell.raw as string];
+              if (color) {
+                data.cell.styles.textColor = color;
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
           },
           columnStyles: {
             0: { cellWidth: 18 },
@@ -321,15 +336,15 @@ export async function exportMultiMonthPDF(
 
         const suppliesSubTotal = clientSupplyTasks.reduce((s, t) => s + (t.cost || 0), 0);
         const suppliesTotalRow = [
-          { content: 'Supplies Total', colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } },
-          { content: `$${suppliesSubTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [209, 250, 229], textColor: [6, 78, 59] } }
+          { content: 'Supplies Total', colSpan: 7, styles: { fontStyle: 'bold', halign: 'right', fillColor: TEAL_WASH, textColor: TEAL_INK } },
+          { content: `$${suppliesSubTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: TEAL_WASH, textColor: TEAL_INK } }
         ];
         pdf.addTable(
           ['Date', 'Description', 'Vendor', 'Approved By', 'Ref', 'Type', 'Status', 'Cost'],
           [...supplyRows, suppliesTotalRow],
           {
             theme: 'striped',
-            headStyles: { fillColor: [20, 120, 100], fontSize: 8 },
+            headStyles: { fillColor: BRAND_TEAL, fontSize: 8 },
             bodyStyles: { fontSize: 7.5 },
             columnStyles: {
               0: { cellWidth: 14 },

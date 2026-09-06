@@ -122,7 +122,7 @@ export function PublicMonthlyReport() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading report...</p>
         </div>
       </div>
@@ -136,7 +136,7 @@ export function PublicMonthlyReport() {
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-8 dark:bg-gray-800">
             <div className="text-center mb-8">
-              <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mx-auto mb-6">
+              <div className="flex items-center justify-center w-16 h-16 bg-[#0B192C] rounded-lg mx-auto mb-6">
                 <Clock className="w-8 h-8 text-white" />
               </div>
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">TaskTracker Pro</h1>
@@ -161,7 +161,7 @@ export function PublicMonthlyReport() {
                   href="https://github.com/yourusername/tasktracker-pro"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-cyan-500 hover:bg-cyan-600 transition-colors"
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Learn About TaskTracker Pro by Cenas-Support
@@ -369,11 +369,15 @@ export function PublicMonthlyReport() {
   const getTaskIcon = (type: string) => {
     switch (type) {
       case 'incident':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+        return <AlertTriangle className="w-5 h-5 text-red-600" />;
+      case 'problem':
+        return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+      case 'change':
+        return <FileText className="w-5 h-5 text-violet-500" />;
       case 'insumos':
-        return <Package className="w-5 h-5 text-purple-500" />;
+        return <Package className="w-5 h-5 text-cyan-500" />;
       default:
-        return <FileText className="w-5 h-5 text-blue-500" />;
+        return <FileText className="w-5 h-5 text-cyan-500" />;
     }
   };
 
@@ -392,7 +396,7 @@ export function PublicMonthlyReport() {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (
-                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
+                <div className="flex items-center justify-center w-10 h-10 bg-[#0B192C] rounded-lg">
                   <Clock className="w-5 h-5 text-white" />
                 </div>
               )}
@@ -417,7 +421,7 @@ export function PublicMonthlyReport() {
                 <>
                   <button
                     onClick={exportPDF}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-cyan-500 hover:bg-cyan-600 transition-colors"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export PDF
@@ -446,7 +450,7 @@ export function PublicMonthlyReport() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 space-y-4 lg:space-y-0">
             <div>
               <div className="flex items-center space-x-2 mb-2">
-                <Calendar className="w-5 h-5 text-blue-500" />
+                <Calendar className="w-5 h-5 text-cyan-500" />
                 <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
                   {client.name}
                 </h2>
@@ -483,7 +487,7 @@ export function PublicMonthlyReport() {
               {!isWithinInterval(new Date(), { start: monthStart, end: monthEnd }) && (
                 <button
                   onClick={goToCurrentMonth}
-                  className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  className="px-3 py-1.5 text-sm font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors"
                 >
                   Current
                 </button>
@@ -495,13 +499,13 @@ export function PublicMonthlyReport() {
             <>
               {/* Statistics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-blue-50 p-6 rounded-lg dark:bg-blue-900/20">
+                <div className="bg-cyan-50 p-6 rounded-lg dark:bg-cyan-900/20">
                   <div className="flex items-center">
-                    <Clock className="w-8 h-8 text-blue-500 mr-3" />
+                    <Clock className="w-8 h-8 text-cyan-500 mr-3" />
                     <div>
-                      <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Service Hours</p>
-                      <p className="text-2xl font-semibold text-blue-900 dark:text-blue-300">{clientStats.totalHours.toFixed(1)}</p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                      <p className="text-sm text-cyan-600 font-medium dark:text-cyan-400">Service Hours</p>
+                      <p className="text-2xl font-semibold text-cyan-900 dark:text-cyan-300">{clientStats.totalHours.toFixed(1)}</p>
+                      <p className="text-xs text-cyan-600 dark:text-cyan-400">
                         {monthlyTasks.filter(t => t.type !== 'insumos').length} service tasks
                       </p>
                     </div>
@@ -519,13 +523,13 @@ export function PublicMonthlyReport() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-purple-50 p-6 rounded-lg dark:bg-purple-900/20">
+                <div className="bg-cyan-50 p-6 rounded-lg dark:bg-cyan-900/20">
                   <div className="flex items-center">
-                    <Package className="w-8 h-8 text-purple-500 mr-3" />
+                    <Package className="w-8 h-8 text-cyan-500 mr-3" />
                     <div>
-                      <p className="text-sm text-purple-600 font-medium dark:text-purple-400">Supplies Cost</p>
-                      <p className="text-2xl font-semibold text-purple-900 dark:text-purple-300">${clientStats.suppliesCost.toFixed(0)}</p>
-                      <p className="text-xs text-purple-600 dark:text-purple-400">
+                      <p className="text-sm text-cyan-600 font-medium dark:text-cyan-400">Supplies Cost</p>
+                      <p className="text-2xl font-semibold text-cyan-900 dark:text-cyan-300">${clientStats.suppliesCost.toFixed(0)}</p>
+                      <p className="text-xs text-cyan-600 dark:text-cyan-400">
                         {clientStats.suppliesCount} supply items
                       </p>
                     </div>
@@ -577,34 +581,34 @@ export function PublicMonthlyReport() {
 
                     {/* Requests */}
                     {clientStats.requestCount > 0 && (
-                    <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">
+                    <div className="bg-cyan-50 p-4 rounded-lg dark:bg-cyan-900/20 border-2 border-cyan-200 dark:border-cyan-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
-                          <FileText className="w-5 h-5 text-blue-500 mr-2" />
+                          <FileText className="w-5 h-5 text-cyan-500 mr-2" />
                           <div>
-                            <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Requests</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-500">Planned Work</p>
+                            <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-400">Requests</p>
+                            <p className="text-xs text-cyan-600 dark:text-cyan-500">Planned Work</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-semibold text-blue-900 dark:text-blue-300">{clientStats.requestCount}</p>
-                          <p className="text-xs text-blue-600 dark:text-blue-400">tasks</p>
+                          <p className="text-xl font-semibold text-cyan-900 dark:text-cyan-300">{clientStats.requestCount}</p>
+                          <p className="text-xs text-cyan-600 dark:text-cyan-400">tasks</p>
                         </div>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-sm">
-                          <span className="text-blue-700 dark:text-blue-400">Hours:</span>
-                          <span className="font-semibold text-blue-900 dark:text-blue-300">{clientStats.requestHours.toFixed(1)}h</span>
+                          <span className="text-cyan-700 dark:text-cyan-400">Hours:</span>
+                          <span className="font-semibold text-cyan-900 dark:text-cyan-300">{clientStats.requestHours.toFixed(1)}h</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-blue-700 dark:text-blue-400">Cost:</span>
-                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                          <span className="text-cyan-700 dark:text-cyan-400">Cost:</span>
+                          <span className="font-semibold text-cyan-900 dark:text-cyan-300">
                             ${(clientStats.requestHours * currentHourlyRate).toFixed(0)}
                           </span>
                         </div>
-                        <div className="flex justify-between text-sm pt-2 border-t border-blue-200 dark:border-blue-700">
-                          <span className="text-blue-700 dark:text-blue-400">% of Services:</span>
-                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                        <div className="flex justify-between text-sm pt-2 border-t border-cyan-200 dark:border-cyan-700">
+                          <span className="text-cyan-700 dark:text-cyan-400">% of Services:</span>
+                          <span className="font-semibold text-cyan-900 dark:text-cyan-300">
                             {clientStats.totalHours > 0 ? ((clientStats.requestHours / clientStats.totalHours) * 100).toFixed(0) : 0}%
                           </span>
                         </div>
@@ -614,34 +618,34 @@ export function PublicMonthlyReport() {
 
                     {/* Problems */}
                     {clientStats.problemCount > 0 && (
-                    <div className="bg-orange-50 p-4 rounded-lg dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-800">
+                    <div className="bg-amber-50 p-4 rounded-lg dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
-                          <AlertTriangle className="w-5 h-5 text-orange-500 mr-2" />
+                          <AlertTriangle className="w-5 h-5 text-amber-500 mr-2" />
                           <div>
-                            <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">Problems</p>
-                            <p className="text-xs text-orange-600 dark:text-orange-500">Root Cause Work</p>
+                            <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Problems</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-500">Root Cause Work</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-semibold text-orange-900 dark:text-orange-300">{clientStats.problemCount}</p>
-                          <p className="text-xs text-orange-600 dark:text-orange-400">tasks</p>
+                          <p className="text-xl font-semibold text-amber-900 dark:text-amber-300">{clientStats.problemCount}</p>
+                          <p className="text-xs text-amber-600 dark:text-amber-400">tasks</p>
                         </div>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-sm">
-                          <span className="text-orange-700 dark:text-orange-400">Hours:</span>
-                          <span className="font-semibold text-orange-900 dark:text-orange-300">{clientStats.problemHours.toFixed(1)}h</span>
+                          <span className="text-amber-700 dark:text-amber-400">Hours:</span>
+                          <span className="font-semibold text-amber-900 dark:text-amber-300">{clientStats.problemHours.toFixed(1)}h</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-orange-700 dark:text-orange-400">Cost:</span>
-                          <span className="font-semibold text-orange-900 dark:text-orange-300">
+                          <span className="text-amber-700 dark:text-amber-400">Cost:</span>
+                          <span className="font-semibold text-amber-900 dark:text-amber-300">
                             ${(clientStats.problemHours * currentHourlyRate).toFixed(0)}
                           </span>
                         </div>
-                        <div className="flex justify-between text-sm pt-2 border-t border-orange-200 dark:border-orange-700">
-                          <span className="text-orange-700 dark:text-orange-400">% of Services:</span>
-                          <span className="font-semibold text-orange-900 dark:text-orange-300">
+                        <div className="flex justify-between text-sm pt-2 border-t border-amber-200 dark:border-amber-700">
+                          <span className="text-amber-700 dark:text-amber-400">% of Services:</span>
+                          <span className="font-semibold text-amber-900 dark:text-amber-300">
                             {clientStats.totalHours > 0 ? ((clientStats.problemHours / clientStats.totalHours) * 100).toFixed(0) : 0}%
                           </span>
                         </div>
@@ -651,34 +655,34 @@ export function PublicMonthlyReport() {
 
                     {/* Changes */}
                     {clientStats.changeCount > 0 && (
-                    <div className="bg-purple-50 p-4 rounded-lg dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-800">
+                    <div className="bg-violet-50 p-4 rounded-lg dark:bg-violet-900/20 border-2 border-violet-200 dark:border-violet-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
-                          <FileText className="w-5 h-5 text-purple-500 mr-2" />
+                          <FileText className="w-5 h-5 text-violet-500 mr-2" />
                           <div>
-                            <p className="text-sm font-semibold text-purple-700 dark:text-purple-400">Changes</p>
-                            <p className="text-xs text-purple-600 dark:text-purple-500">Change Requests</p>
+                            <p className="text-sm font-semibold text-violet-700 dark:text-violet-400">Changes</p>
+                            <p className="text-xs text-violet-600 dark:text-violet-500">Change Requests</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-semibold text-purple-900 dark:text-purple-300">{clientStats.changeCount}</p>
-                          <p className="text-xs text-purple-600 dark:text-purple-400">tasks</p>
+                          <p className="text-xl font-semibold text-violet-900 dark:text-violet-300">{clientStats.changeCount}</p>
+                          <p className="text-xs text-violet-600 dark:text-violet-400">tasks</p>
                         </div>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-sm">
-                          <span className="text-purple-700 dark:text-purple-400">Hours:</span>
-                          <span className="font-semibold text-purple-900 dark:text-purple-300">{clientStats.changeHours.toFixed(1)}h</span>
+                          <span className="text-violet-700 dark:text-violet-400">Hours:</span>
+                          <span className="font-semibold text-violet-900 dark:text-violet-300">{clientStats.changeHours.toFixed(1)}h</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-purple-700 dark:text-purple-400">Cost:</span>
-                          <span className="font-semibold text-purple-900 dark:text-purple-300">
+                          <span className="text-violet-700 dark:text-violet-400">Cost:</span>
+                          <span className="font-semibold text-violet-900 dark:text-violet-300">
                             ${(clientStats.changeHours * currentHourlyRate).toFixed(0)}
                           </span>
                         </div>
-                        <div className="flex justify-between text-sm pt-2 border-t border-purple-200 dark:border-purple-700">
-                          <span className="text-purple-700 dark:text-purple-400">% of Services:</span>
-                          <span className="font-semibold text-purple-900 dark:text-purple-300">
+                        <div className="flex justify-between text-sm pt-2 border-t border-violet-200 dark:border-violet-700">
+                          <span className="text-violet-700 dark:text-violet-400">% of Services:</span>
+                          <span className="font-semibold text-violet-900 dark:text-violet-300">
                             {clientStats.totalHours > 0 ? ((clientStats.changeHours / clientStats.totalHours) * 100).toFixed(0) : 0}%
                           </span>
                         </div>
@@ -694,12 +698,12 @@ export function PublicMonthlyReport() {
                 <div className="bg-gray-50 rounded-lg p-6 mb-8 dark:bg-gray-700">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                      <BarChart3 className="w-5 h-5 text-blue-500 mr-2" />
+                      <BarChart3 className="w-5 h-5 text-cyan-500 mr-2" />
                       6-Month Performance Trend
                     </h4>
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                        <div className="w-3 h-3 bg-cyan-500 rounded"></div>
                         <span className="text-gray-600 dark:text-gray-400">Requests</span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -741,8 +745,8 @@ export function PublicMonthlyReport() {
                                     <div
                                       className={`w-full transition-all duration-300 shadow-sm ${
                                         isCurrentMonth
-                                          ? 'bg-blue-500 group-hover:bg-blue-600 ring-2 ring-blue-600'
-                                          : 'bg-blue-500 dark:bg-blue-500 group-hover:bg-blue-600'
+                                          ? 'bg-cyan-500 group-hover:bg-cyan-600 ring-2 ring-cyan-600'
+                                          : 'bg-cyan-500 dark:bg-cyan-500 group-hover:bg-cyan-600'
                                       } ${data.incidentHours === 0 ? 'rounded-t' : ''}`}
                                       style={{ height: `${requestHeight}%` }}
                                     />
@@ -763,15 +767,15 @@ export function PublicMonthlyReport() {
                           </div>
                           <p className={`text-xs font-medium ${
                             isCurrentMonth
-                              ? 'text-blue-600 dark:text-blue-400'
-                              : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                              ? 'text-cyan-600 dark:text-cyan-400'
+                              : 'text-gray-600 dark:text-gray-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400'
                           }`}>
                             {data.month}
                           </p>
                           <p className={`text-xs font-medium transition-colors ${
                             isCurrentMonth
-                              ? 'text-blue-900 dark:text-blue-300'
-                              : 'text-gray-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-300'
+                              ? 'text-cyan-900 dark:text-cyan-300'
+                              : 'text-gray-900 dark:text-white group-hover:text-cyan-900 dark:group-hover:text-cyan-300'
                           }`}>
                             {data.hours.toFixed(1)}h
                           </p>
@@ -806,8 +810,8 @@ export function PublicMonthlyReport() {
                 </h3>
 
                 {client.taskSelectionEnabled && (
-                  <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                    <p className="text-sm text-blue-800 dark:text-blue-300">
+                  <div className="mb-6 p-4 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
+                    <p className="text-sm text-cyan-800 dark:text-cyan-300">
                       Marcá las tareas que vas a pagar vos. Las que dejes sin marcar se facturan a otra cuenta.
                     </p>
                   </div>
@@ -828,7 +832,7 @@ export function PublicMonthlyReport() {
                                   type="checkbox"
                                   checked={selectedTaskIds.has(task.id)}
                                   onChange={() => toggleTaskSelected(task.id)}
-                                  className="mt-1 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                                  className="mt-1 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-cyan-600 focus:ring-cyan-500 flex-shrink-0"
                                 />
                               )}
                               {getTaskIcon(task.type)}
@@ -844,10 +848,10 @@ export function PublicMonthlyReport() {
                                 <div className="flex items-center space-x-2 mt-2">
                                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                     task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                    task.type === 'problem' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                                    task.type === 'change' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                                    task.type === 'insumos' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                    task.type === 'problem' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                                    task.type === 'change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                                    task.type === 'insumos' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
+                                    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
                                   }`}>
                                     {task.type === 'incident' ? 'Incident' :
                                      task.type === 'problem' ? 'Problem' :
@@ -874,7 +878,7 @@ export function PublicMonthlyReport() {
                             <div className="text-right ml-4">
                               {task.type === 'insumos' ? (
                                 <div>
-                                  <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                  <p className="text-lg font-bold text-cyan-600 dark:text-cyan-400">
                                     ${task.cost?.toFixed(2)}
                                   </p>
                                   <p className="text-xs text-gray-500 dark:text-gray-400">Supply cost</p>
@@ -901,7 +905,7 @@ export function PublicMonthlyReport() {
                     <button
                       onClick={submitSelections}
                       disabled={submittingSelections}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       {submittingSelections ? 'Guardando...' : 'Enviar mi selección'}
                     </button>
@@ -939,7 +943,7 @@ export function PublicMonthlyReport() {
                 </button>
                 <button
                   onClick={goToCurrentMonth}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 transition-colors"
                 >
                   <Calendar className="w-4 h-4 mr-1" />
                   Current Month
@@ -955,8 +959,8 @@ export function PublicMonthlyReport() {
               
               {/* Show if there are any completed tasks in other months */}
               {clientTasks.filter(t => t.finished).length > 0 && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
-                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                <div className="mt-6 p-4 bg-cyan-50 rounded-lg dark:bg-cyan-900/20">
+                  <p className="text-sm text-cyan-800 dark:text-cyan-300">
                     📊 You have completed tasks in other months. Use the navigation above to view them.
                   </p>
                 </div>
