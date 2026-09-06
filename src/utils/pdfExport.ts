@@ -2,6 +2,36 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
 
+// Cenas IT Solutions brand palette. Structure (headers, titles, dividers)
+// uses Brand Dark; totals/KPIs/highlights use the Teal accent - keeping
+// those two roles visually distinct is what makes a scanned report read
+// as "here's the structure" vs "here's the number that matters".
+export const BRAND_DARK: [number, number, number] = [11, 25, 44];        // #0B192C
+export const BRAND_TEAL: [number, number, number] = [6, 182, 212];       // #06B6D4
+export const NEUTRAL_BG: [number, number, number] = [248, 250, 252];     // #F8FAFC
+export const NEUTRAL_ROW: [number, number, number] = [241, 245, 249];    // slate-100, table zebra striping
+export const NEUTRAL_BORDER: [number, number, number] = [226, 232, 240]; // #E2E8F0
+export const NEUTRAL_TEXT: [number, number, number] = [51, 65, 85];      // #334155
+export const NEUTRAL_TEXT_MUTED: [number, number, number] = [100, 116, 139]; // slate-500
+export const WHITE: [number, number, number] = [255, 255, 255];
+export const TEAL_WASH: [number, number, number] = [236, 254, 255];      // cyan-50, summary box fill
+export const TEAL_INK: [number, number, number] = [14, 116, 144];        // cyan-800, text on teal wash
+export const TEAL_DEEP: [number, number, number] = [8, 145, 178];        // cyan-700, emphasis on teal wash
+
+// Task-type accents, shared with the client portal so a task reads the
+// same color whether you're looking at the PDF or the web.
+export const TASK_INCIDENT: [number, number, number] = [220, 38, 38];  // red-600 - stops the operation, must stand out
+export const TASK_REQUEST: [number, number, number] = BRAND_TEAL;      // day-to-day work - the brand accent
+export const TASK_PROBLEM: [number, number, number] = [245, 158, 11];  // amber-500 - recurring, needs investigation
+export const TASK_CHANGE: [number, number, number] = [139, 92, 246];   // violet-500 - structured improvement/project
+
+export const TASK_TYPE_COLORS: Record<string, [number, number, number]> = {
+  Incident: TASK_INCIDENT, Incidents: TASK_INCIDENT,
+  Request: TASK_REQUEST, Requests: TASK_REQUEST,
+  Problem: TASK_PROBLEM, Problems: TASK_PROBLEM,
+  Change: TASK_CHANGE, Changes: TASK_CHANGE
+};
+
 interface CompanySettings {
   company_name: string;
   logo_url: string | null;
@@ -110,13 +140,13 @@ export class PDFExporter {
 
     this.doc.setFontSize(11);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setTextColor(30, 30, 30);
+    this.doc.setTextColor(...NEUTRAL_TEXT);
     this.doc.text(this.companySettings.company_name, rightMargin, companyY, { align: 'right' });
     companyY += 5;
 
     this.doc.setFontSize(8);
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setTextColor(100, 100, 100);
+    this.doc.setTextColor(...NEUTRAL_TEXT_MUTED);
 
     if (this.companySettings.address) {
       const addressLines = this.doc.splitTextToSize(this.companySettings.address, 75);
@@ -131,14 +161,14 @@ export class PDFExporter {
 
     this.currentY = Math.max(this.currentY + 28, companyY + 3);
 
-    this.doc.setDrawColor(37, 99, 235);
+    this.doc.setDrawColor(...BRAND_DARK);
     this.doc.setLineWidth(0.5);
     this.doc.line(15, this.currentY, 195, this.currentY);
     this.currentY += 8;
 
     this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setTextColor(37, 99, 235);
+    this.doc.setTextColor(...BRAND_DARK);
     this.doc.text(title, 15, this.currentY);
     this.currentY += 10;
 
@@ -157,26 +187,26 @@ export class PDFExporter {
 
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setTextColor(50, 50, 50);
+    this.doc.setTextColor(...NEUTRAL_TEXT);
     this.doc.text(title, 15, this.currentY);
     this.currentY += 6;
 
-    this.doc.setFillColor(248, 250, 252);
+    this.doc.setFillColor(...NEUTRAL_BG);
     this.doc.roundedRect(15, this.currentY - 3, 180, rows * 5.5 + 4, 2, 2, 'F');
     this.currentY += 2;
 
     this.doc.setFontSize(9);
-    this.doc.setTextColor(70, 70, 70);
+    this.doc.setTextColor(...NEUTRAL_TEXT_MUTED);
 
     Object.entries(content).forEach(([key, value]) => {
       this.doc.setFont('helvetica', 'normal');
       this.doc.text(`${key}:`, 20, this.currentY);
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setTextColor(30, 30, 30);
+      this.doc.setTextColor(...NEUTRAL_TEXT);
       // Truncate long values so they don't overflow the box
       const safeValue = this.doc.splitTextToSize(value, 120)[0];
       this.doc.text(safeValue, 65, this.currentY);
-      this.doc.setTextColor(70, 70, 70);
+      this.doc.setTextColor(...NEUTRAL_TEXT_MUTED);
       this.currentY += 5.5;
     });
 
@@ -191,7 +221,7 @@ export class PDFExporter {
     if (this.currentY + 8 + reserveHeight > 272) { this.doc.addPage(); this.currentY = 20; }
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setTextColor(50, 50, 50);
+    this.doc.setTextColor(...NEUTRAL_TEXT);
     this.doc.text(title, 15, this.currentY);
     this.currentY += 8;
   }
@@ -208,13 +238,13 @@ export class PDFExporter {
       margin: { left: 14, right: 14 },
       tableWidth: availableWidth,
       headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: 255,
+        fillColor: BRAND_DARK,
+        textColor: WHITE,
         fontStyle: 'bold',
         fontSize: 10
       },
-      bodyStyles: { fontSize: 9, textColor: 50 },
-      alternateRowStyles: { fillColor: [245, 247, 250] },
+      bodyStyles: { fontSize: 9, textColor: NEUTRAL_TEXT },
+      alternateRowStyles: { fillColor: NEUTRAL_ROW },
       styles: { overflow: 'linebreak', cellPadding: { top: 3, bottom: 3, left: 3, right: 3 }, minCellWidth: 8 },
       ...options
     });
@@ -233,27 +263,27 @@ export class PDFExporter {
       if (this.currentY > 275) { this.doc.addPage(); this.currentY = 20; }
 
       if (item.bold) {
-        this.doc.setDrawColor(37, 99, 235);
+        this.doc.setDrawColor(...BRAND_TEAL);
         this.doc.setLineWidth(0.3);
         this.doc.line(startX, this.currentY - 2, 195, this.currentY - 2);
         this.currentY += 3;
 
-        this.doc.setFillColor(37, 99, 235);
+        this.doc.setFillColor(...BRAND_TEAL);
         this.doc.roundedRect(startX, this.currentY - 6, 70, 10, 1, 1, 'F');
 
         this.doc.setFontSize(11);
         this.doc.setFont('helvetica', 'bold');
-        this.doc.setTextColor(255, 255, 255);
+        this.doc.setTextColor(...WHITE);
         this.doc.text(item.label, startX + 3, this.currentY);
         this.doc.text(item.value, 192, this.currentY, { align: 'right' });
         this.currentY += 8;
       } else {
         this.doc.setFontSize(9);
         this.doc.setFont('helvetica', 'normal');
-        this.doc.setTextColor(70, 70, 70);
+        this.doc.setTextColor(...NEUTRAL_TEXT_MUTED);
         this.doc.text(item.label, startX, this.currentY);
         this.doc.setFont('helvetica', 'bold');
-        this.doc.setTextColor(30, 30, 30);
+        this.doc.setTextColor(...NEUTRAL_TEXT);
         this.doc.text(item.value, 195, this.currentY, { align: 'right' });
         this.currentY += 5.5;
       }
@@ -272,17 +302,17 @@ export class PDFExporter {
 
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setTextColor(50, 50, 50);
+    this.doc.setTextColor(...NEUTRAL_TEXT);
     this.doc.text(title, 15, this.currentY);
     this.currentY += 5;
 
     this.doc.setFontSize(9);
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setTextColor(70, 70, 70);
+    this.doc.setTextColor(...NEUTRAL_TEXT_MUTED);
     const lines = this.doc.splitTextToSize(content, 175);
 
-    this.doc.setFillColor(252, 252, 253);
-    this.doc.setDrawColor(230, 230, 230);
+    this.doc.setFillColor(...NEUTRAL_BG);
+    this.doc.setDrawColor(...NEUTRAL_BORDER);
     this.doc.setLineWidth(0.1);
     this.doc.roundedRect(15, this.currentY - 3, 180, lines.length * 4 + 4, 1, 1, 'FD');
     this.currentY += 1;
@@ -294,6 +324,46 @@ export class PDFExporter {
     });
 
     this.currentY += 3;
+  }
+
+  // A prominent "how much do I owe" box, meant to sit right after Report
+  // Details on page 1 - the full totals block at the end of the report
+  // answers the same question but is easy to miss on a multi-page PDF.
+  addSummaryBox(hours: number, servicesTotal: number, suppliesTotal: number) {
+    const total = servicesTotal + suppliesTotal;
+    const boxHeight = 30;
+
+    if (this.currentY + boxHeight > 272) { this.doc.addPage(); this.currentY = 20; }
+
+    const startY = this.currentY;
+    this.doc.setFillColor(...TEAL_WASH);
+    this.doc.setDrawColor(...BRAND_TEAL);
+    this.doc.setLineWidth(0.4);
+    this.doc.roundedRect(15, startY, 180, boxHeight, 2, 2, 'FD');
+
+    this.doc.setFontSize(9);
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setTextColor(...TEAL_INK);
+    this.doc.text('TOTAL AMOUNT DUE', 22, startY + 9);
+
+    this.doc.setFontSize(20);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setTextColor(...TEAL_DEEP);
+    this.doc.text(`$${total.toFixed(2)}`, 22, startY + 22);
+
+    this.doc.setFontSize(9);
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setTextColor(...NEUTRAL_TEXT_MUTED);
+    let breakdownY = startY + 9;
+    this.doc.text(`Hours: ${hours.toFixed(1)}h`, 193, breakdownY, { align: 'right' });
+    breakdownY += 6;
+    this.doc.text(`Services: $${servicesTotal.toFixed(2)}`, 193, breakdownY, { align: 'right' });
+    if (suppliesTotal > 0) {
+      breakdownY += 6;
+      this.doc.text(`Supplies: $${suppliesTotal.toFixed(2)}`, 193, breakdownY, { align: 'right' });
+    }
+
+    this.currentY = startY + boxHeight + 8;
   }
 
   /**
@@ -313,6 +383,15 @@ export class PDFExporter {
     const sortedTasks = [...tasks].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const servicesTasks = sortedTasks.filter(t => t.type !== 'insumos');
     const suppliesTasks = sortedTasks.filter(t => t.type === 'insumos');
+
+    // ── At-a-glance summary, up front ───────────────────────────────────
+    // The full totals block at the end of the report answers "how much do
+    // I owe" too, but on a multi-page report that's buried on the last
+    // page. Clients want that number without hunting for it.
+    const upfrontHours    = servicesTasks.reduce((s, t) => s + (t.hours || 0), 0);
+    const upfrontServices = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
+    const upfrontSupplies = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
+    this.addSummaryBox(upfrontHours, upfrontServices, upfrontSupplies);
 
     // ── Services table ────────────────────────────────────────────────
     if (servicesTasks.length > 0) {
@@ -334,9 +413,9 @@ export class PDFExporter {
 
       // Total row appended as a styled body row (more reliable than foot across jspdf-autotable versions)
       const servicesTotalRow = [
-        { content: 'Total', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [235, 240, 255] as [number,number,number], textColor: [30, 30, 30] as [number,number,number] } },
-        { content: totalHoursStr, styles: { fontStyle: 'bold', halign: 'center' as const, fillColor: [235, 240, 255] as [number,number,number], textColor: [30, 30, 30] as [number,number,number] } },
-        { content: `$${servicesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [235, 240, 255] as [number,number,number], textColor: [30, 30, 30] as [number,number,number] } }
+        { content: 'Total', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: NEUTRAL_ROW, textColor: NEUTRAL_TEXT } },
+        { content: totalHoursStr, styles: { fontStyle: 'bold', halign: 'center' as const, fillColor: NEUTRAL_ROW, textColor: NEUTRAL_TEXT } },
+        { content: `$${servicesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: NEUTRAL_ROW, textColor: NEUTRAL_TEXT } }
       ];
 
       this.addTable(
@@ -350,6 +429,16 @@ export class PDFExporter {
             3: { cellWidth: 'auto' },
             4: { cellWidth: 18, halign: 'center' },
             5: { cellWidth: 26, halign: 'right' }
+          },
+          // Color the Type column by task type - same accents as the client portal
+          didParseCell: (data: any) => {
+            if (data.section === 'body' && data.column.index === 2) {
+              const color = TASK_TYPE_COLORS[data.cell.raw as string];
+              if (color) {
+                data.cell.styles.textColor = color;
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
           }
         }
       );
@@ -369,15 +458,15 @@ export class PDFExporter {
       const suppliesTotal = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
 
       const suppliesTotalRow = [
-        { content: 'Supplies Total', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [209, 250, 229] as [number,number,number], textColor: [6, 78, 59] as [number,number,number] } },
-        { content: `$${suppliesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: [209, 250, 229] as [number,number,number], textColor: [6, 78, 59] as [number,number,number] } }
+        { content: 'Supplies Total', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: TEAL_WASH, textColor: TEAL_INK } },
+        { content: `$${suppliesTotal.toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' as const, fillColor: TEAL_WASH, textColor: TEAL_INK } }
       ];
 
       this.addTable(
         ['Date', 'Project', 'Description', 'Cost'],
         [...suppliesRows, suppliesTotalRow],
         {
-          headStyles: { fillColor: [15, 118, 110] },
+          headStyles: { fillColor: BRAND_TEAL },
           columnStyles: {
             0: { cellWidth: 24 },
             1: { cellWidth: 32 },
@@ -424,13 +513,19 @@ export class PDFExporter {
         breakdownRows,
         {
           theme: 'grid',
-          headStyles: { fillColor: [75, 85, 99] },
+          headStyles: { fillColor: BRAND_DARK },
           columnStyles: {
             0: { cellWidth: 'auto', fontStyle: 'bold' },
             1: { cellWidth: 22, halign: 'center' },
             2: { cellWidth: 25, halign: 'center' },
             3: { cellWidth: 30, halign: 'right' },
             4: { cellWidth: 30, halign: 'center' }
+          },
+          didParseCell: (data: any) => {
+            if (data.section === 'body' && data.column.index === 0) {
+              const color = TASK_TYPE_COLORS[data.cell.raw as string];
+              if (color) data.cell.styles.textColor = color;
+            }
           }
         }
       );
@@ -460,7 +555,7 @@ export class PDFExporter {
     for (let i = 1; i <= pageCount; i++) {
       this.doc.setPage(i);
       this.doc.setFontSize(8);
-      this.doc.setTextColor(150, 150, 150);
+      this.doc.setTextColor(...NEUTRAL_TEXT_MUTED);
       this.doc.text(
         `${prefix}Generated by ${this.companySettings.company_name} — Page ${i} of ${pageCount}`,
         105, 290, { align: 'center' }
