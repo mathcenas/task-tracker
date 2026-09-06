@@ -968,14 +968,14 @@ const sendTaskCloseSummaryEmail = async (task, client, project, notes) => {
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
       ${emailHeader()}
-      <h2 style="color: #111827;">${escapeHtml(typeLabel)} resuelto</h2>
+      <h2 style="color: #0B192C;">${escapeHtml(typeLabel)} resuelto</h2>
       <p>Hola,</p>
       <p>Te confirmamos que el siguiente ${escapeHtml(typeLabel.toLowerCase())}${project ? ` de <strong>${escapeHtml(project.name)}</strong>` : ''} fue resuelto:</p>
       <p style="background: #f9fafb; border-radius: 8px; padding: 12px; font-size: 13px; white-space: pre-wrap;">${escapeHtml(task.description)}</p>
       ${task.reported_by ? `<p style="font-size: 13px; color: #6b7280;">Reportado por: ${escapeHtml(task.reported_by)}</p>` : ''}
 
       ${notes.length > 0 ? `
-        <h3 style="color: #111827; margin-top: 24px;">Detalle de lo realizado</h3>
+        <h3 style="color: #0B192C; margin-top: 24px;">Detalle de lo realizado</h3>
         <ul style="padding-left: 20px;">
           ${notes.map((n) => `<li style="margin-bottom: 6px; font-size: 13px;">${escapeHtml(n.note)}</li>`).join('')}
         </ul>
@@ -2612,7 +2612,10 @@ const publicAppUrl = (process.env.PUBLIC_APP_URL || 'https://clientes.cenas-supp
 const onboardingFormUrl = `${publicAppUrl}/onboarding`;
 const logoUrl = `${publicAppUrl}/logo%20-%20Copy.png`;
 
+// Brand Dark accent bar up top + logo underneath - keeps the header on-brand
+// without requiring a light/reversed logo variant for a dark background.
 const emailHeader = () => `
+  <div style="height: 6px; background-color: #0B192C; border-radius: 3px; margin-bottom: 24px;"></div>
   <div style="text-align: center; margin-bottom: 24px;">
     <img src="${logoUrl}" alt="TaskTracker Pro" style="height: 40px; width: auto;" />
   </div>
@@ -2622,7 +2625,7 @@ const emailFooter = () => `
   <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
     <p style="color: #6b7280; font-size: 12px; margin: 0 0 6px;">
       ¿Necesitás gestionar otra alta o baja? Podés hacerlo acá:
-      <a href="${onboardingFormUrl}" style="color: #2563eb;">${onboardingFormUrl}</a>
+      <a href="${onboardingFormUrl}" style="color: #06B6D4;">${onboardingFormUrl}</a>
     </p>
     <p style="color: #6b7280; font-size: 12px; margin: 0;">Correo generado por TaskTracker Pro, by Cenas Support.</p>
   </div>
@@ -2651,7 +2654,7 @@ const sendOnboardingReceivedEmail = async (request) => {
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
       ${emailHeader()}
-      <h2 style="color: #111827;">Recibimos tu solicitud</h2>
+      <h2 style="color: #0B192C;">Recibimos tu solicitud</h2>
       <p>Hola,</p>
       <p>Confirmamos que recibimos tu solicitud de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
         <strong>${escapeHtml(request.employeeName)}</strong>. Va a ser procesada a la brevedad y te vamos a
@@ -2696,13 +2699,13 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
       ${emailHeader()}
-      <h2 style="color: #111827;">Proceso de ${escapeHtml(typeLabel)} finalizado</h2>
+      <h2 style="color: #0B192C;">Proceso de ${escapeHtml(typeLabel)} finalizado</h2>
       <p>Hola,</p>
       <p>Te confirmamos que el proceso de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
         <strong>${escapeHtml(request.employee_name)}</strong> ha finalizado correctamente.</p>
 
       ${originalDetailsRows.length > 0 ? `
-        <h3 style="color: #111827; margin-top: 24px;">Detalles de la solicitud</h3>
+        <h3 style="color: #0B192C; margin-top: 24px;">Detalles de la solicitud</h3>
         <table style="width: 100%; border-collapse: collapse;">
           ${originalDetailsRows.map(([label, value]) => `
             <tr>
@@ -2714,11 +2717,11 @@ const sendOnboardingConfirmationEmail = async (request, extraServices, ccEmails 
       ` : ''}
 
       ${request.details ? `
-        <h3 style="color: #111827; margin-top: 24px;">Notas originales</h3>
+        <h3 style="color: #0B192C; margin-top: 24px;">Notas originales</h3>
         <p style="background: #f9fafb; border-radius: 8px; padding: 12px; font-size: 13px; white-space: pre-wrap;">${escapeHtml(request.details)}</p>
       ` : ''}
 
-      <h3 style="color: #111827; margin-top: 24px;">Accesos y servicios configurados</h3>
+      <h3 style="color: #0B192C; margin-top: 24px;">Accesos y servicios configurados</h3>
       ${extraServices.length > 0 ? `
         <ul style="padding-left: 20px;">
           ${extraServices.map((service) => `<li style="margin-bottom: 4px;">${escapeHtml(service)}</li>`).join('')}
@@ -2929,7 +2932,7 @@ const sendOnboardingUpdateEmail = async (request, headline, bodyHtml, extraCc = 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
       ${emailHeader()}
-      <h2 style="color: #111827;">Actualización de tu ${escapeHtml(typeLabel.toLowerCase())}</h2>
+      <h2 style="color: #0B192C;">Actualización de tu ${escapeHtml(typeLabel.toLowerCase())}</h2>
       <p>Hola,</p>
       <p>Te compartimos una actualización sobre el proceso de <strong>${escapeHtml(typeLabel.toLowerCase())}</strong> de
         <strong>${escapeHtml(request.employee_name)}</strong>:</p>
@@ -3139,7 +3142,7 @@ const checkStaleOnboardingRequests = () => {
       const html = `
         <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
           ${emailHeader()}
-          <h2 style="color: #111827;">Solicitudes pendientes hace más de ${ONBOARDING_STALE_DAYS} día(s)</h2>
+          <h2 style="color: #0B192C;">Solicitudes pendientes hace más de ${ONBOARDING_STALE_DAYS} día(s)</h2>
           <p>Estas solicitudes de alta/baja todavía no fueron procesadas en el panel:</p>
           <ul style="padding-left: 20px;">
             ${rows.map((r) => `
