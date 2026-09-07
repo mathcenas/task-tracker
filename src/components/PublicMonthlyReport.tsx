@@ -396,9 +396,12 @@ export function PublicMonthlyReport() {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (
-                <div className="flex items-center justify-center w-10 h-10 bg-[#0B192C] rounded-lg">
-                  <Clock className="w-5 h-5 text-white" />
-                </div>
+                <img
+                  src="https://landing.cenas.uy/assets/brand/logo-badge.png"
+                  alt="Cenas IT Solutions"
+                  className="h-10 w-10 rounded-lg object-contain"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
               )}
               <div>
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">

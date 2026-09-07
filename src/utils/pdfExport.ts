@@ -33,6 +33,11 @@ export const TASK_TYPE_COLORS: Record<string, [number, number, number]> = {
   Change: TASK_CHANGE, Changes: TASK_CHANGE
 };
 
+// Falls back to the Cenas mark when a client hasn't uploaded their own
+// logo in Company Settings. The report page background is white, so this
+// is the dark-text variant meant for light backgrounds.
+export const DEFAULT_LOGO_URL = 'https://landing.cenas.uy/assets/brand/logo-light.png';
+
 interface CompanySettings {
   company_name: string;
   logo_url: string | null;
@@ -96,18 +101,18 @@ export class PDFExporter {
   }
 
   private async loadLogo(): Promise<{ data: string; format: string } | null> {
-    if (!this.companySettings.logo_url) return null;
+    const logoUrl = this.companySettings.logo_url || DEFAULT_LOGO_URL;
     try {
       // If already a data URL, use it directly
-      if (this.companySettings.logo_url.startsWith('data:')) {
-        const match = this.companySettings.logo_url.match(/^data:image\/(\w+);base64,/);
+      if (logoUrl.startsWith('data:')) {
+        const match = logoUrl.match(/^data:image\/(\w+);base64,/);
         const format = match ? match[1].toUpperCase() : 'PNG';
-        return { data: this.companySettings.logo_url, format: format === 'JPEG' ? 'JPEG' : format === 'JPG' ? 'JPEG' : 'PNG' };
+        return { data: logoUrl, format: format === 'JPEG' ? 'JPEG' : format === 'JPG' ? 'JPEG' : 'PNG' };
       }
       // Make relative URLs absolute
-      const url = this.companySettings.logo_url.startsWith('http')
-        ? this.companySettings.logo_url
-        : `${window.location.origin}${this.companySettings.logo_url.startsWith('/') ? '' : '/'}${this.companySettings.logo_url}`;
+      const url = logoUrl.startsWith('http')
+        ? logoUrl
+        : `${window.location.origin}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`;
       const response = await fetch(url);
       if (!response.ok) return null;
       const blob = await response.blob();
@@ -126,14 +131,12 @@ export class PDFExporter {
   async addHeader(title: string) {
     this.currentY = 15;
 
-    if (this.companySettings.logo_url) {
-      const logo = await this.loadLogo();
-      if (logo) {
-        try {
-          // Logo: up to 50mm wide, 20mm tall, preserving space
-          this.doc.addImage(logo.data, logo.format, 15, this.currentY, 50, 20);
-        } catch { /* ignore logo if it still fails */ }
-      }
+    const logo = await this.loadLogo();
+    if (logo) {
+      try {
+        // Logo: up to 50mm wide, 20mm tall, preserving space
+        this.doc.addImage(logo.data, logo.format, 15, this.currentY, 50, 20);
+      } catch { /* ignore logo if it still fails */ }
     }
 
     let companyY = this.currentY;
