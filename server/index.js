@@ -2235,6 +2235,59 @@ app.get('/api/company-settings', authenticateToken, (req, res) => {
   });
 });
 
+// The company logo is often an external URL (the Cenas brand asset host,
+// or a client's own site). A plain <img> loads that fine cross-origin,
+// but embedding it in a PDF requires fetch()-ing the actual bytes, which
+// the browser blocks unless the remote host opts in with CORS headers -
+// most static asset hosts don't. Proxying it through our own origin
+// sidesteps that. Restricted to a fixed host allowlist since this is an
+// unauthenticated route (SSRF: don't let it fetch arbitrary URLs).
+const LOGO_PROXY_ALLOWED_HOSTS = ['landing.cenas.uy'];
+const DEFAULT_LOGO_URL = 'https://landing.cenas.uy/assets/brand/logo-light.png';
+
+app.get('/api/logo-proxy', (req, res) => {
+  db.get('SELECT logo_url FROM company_settings WHERE id = 1', async (err, settings) => {
+    if (err) {
+      console.error('Error fetching company settings for logo proxy:', err);
+      return res.status(500).end();
+    }
+
+    const logoUrl = settings?.logo_url || DEFAULT_LOGO_URL;
+    if (!logoUrl || logoUrl.startsWith('data:')) {
+      // Nothing to proxy - the caller already has the bytes inline.
+      return res.status(204).end();
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(logoUrl);
+    } catch {
+      return res.status(400).end();
+    }
+    if (parsed.protocol !== 'https:' || !LOGO_PROXY_ALLOWED_HOSTS.includes(parsed.hostname)) {
+      return res.status(400).end();
+    }
+
+    try {
+      const upstream = await fetch(parsed.toString(), { signal: AbortSignal.timeout(8000) });
+      if (!upstream.ok) return res.status(502).end();
+
+      const contentType = upstream.headers.get('content-type') || '';
+      if (!contentType.startsWith('image/')) return res.status(502).end();
+
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      if (buffer.length > 5 * 1024 * 1024) return res.status(502).end();
+
+      res.set('Content-Type', contentType);
+      res.set('Cache-Control', 'public, max-age=3600');
+      res.send(buffer);
+    } catch (fetchErr) {
+      console.error('Logo proxy fetch failed:', fetchErr);
+      res.status(502).end();
+    }
+  });
+});
+
 app.get('/api/public/company-settings', (req, res) => {
   db.get('SELECT * FROM company_settings WHERE id = 1', (err, settings) => {
     if (err) {
