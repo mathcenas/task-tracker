@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
-import { Activity, CheckCircle, XCircle, AlertTriangle, Clock, Globe, Server, Wifi, Database, Cloud } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Clock, Globe, Server, Wifi, Database, Cloud } from 'lucide-react';
 
 interface Monitor {
   id: number;
@@ -191,9 +191,12 @@ export function PublicStatusPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-[#0B192C] rounded-lg">
-                <Activity className="w-5 h-5 text-white" />
-              </div>
+              <img
+                src="https://landing.cenas.uy/assets/brand/logo-badge.png"
+                alt="Cenas IT Solutions"
+                className="h-10 w-10 rounded-lg object-contain"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
               <div>
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{data.organizationName}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">System Status</p>
