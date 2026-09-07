@@ -109,10 +109,23 @@ export class PDFExporter {
         const format = match ? match[1].toUpperCase() : 'PNG';
         return { data: logoUrl, format: format === 'JPEG' ? 'JPEG' : format === 'JPG' ? 'JPEG' : 'PNG' };
       }
-      // Make relative URLs absolute
-      const url = logoUrl.startsWith('http')
-        ? logoUrl
-        : `${window.location.origin}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`;
+      // A plain <img> loads a cross-origin logo fine, but embedding it in
+      // the PDF means fetch()-ing the actual bytes, which the browser
+      // blocks unless the remote host sends CORS headers - most static
+      // asset hosts (including the Cenas brand host) don't. Route it
+      // through our own logo proxy instead, which sidesteps that.
+      let url = logoUrl;
+      if (logoUrl.startsWith('http')) {
+        try {
+          if (new URL(logoUrl).hostname === 'landing.cenas.uy') {
+            const apiBase = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+            url = `${apiBase}/api/logo-proxy`;
+          }
+        } catch { /* malformed URL - fall through to a direct fetch */ }
+      } else {
+        // Make relative URLs absolute
+        url = `${window.location.origin}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`;
+      }
       const response = await fetch(url);
       if (!response.ok) return null;
       const blob = await response.blob();
