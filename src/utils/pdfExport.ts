@@ -147,8 +147,16 @@ export class PDFExporter {
     const logo = await this.loadLogo();
     if (logo) {
       try {
-        // Logo: up to 50mm wide, 20mm tall, preserving space
-        this.doc.addImage(logo.data, logo.format, 15, this.currentY, 50, 20);
+        // Fit within a 50x20mm box without distorting the logo's own
+        // aspect ratio - most logos aren't 2.5:1, so a fixed w/h here
+        // stretches them.
+        const { width: nativeWidth, height: nativeHeight } = this.doc.getImageProperties(logo.data);
+        const maxWidth = 50;
+        const maxHeight = 20;
+        const scale = Math.min(maxWidth / nativeWidth, maxHeight / nativeHeight);
+        const width = nativeWidth * scale;
+        const height = nativeHeight * scale;
+        this.doc.addImage(logo.data, logo.format, 15, this.currentY, width, height);
       } catch { /* ignore logo if it still fails */ }
     }
 
