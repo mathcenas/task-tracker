@@ -406,6 +406,10 @@ export function PublicMonthlyReport() {
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Client Report</p>
               </div>
+              <div className="hidden md:flex items-center gap-2 bg-[#0B192C] border border-slate-700/80 px-3 py-1 rounded-full text-xs ml-2">
+                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span className="text-slate-300">Gestión de Servicios bajo norma <strong className="text-white">ISO/IEC 20000</strong></span>
+              </div>
             </div>
             <div className="flex items-center space-x-3">
               <a
@@ -967,6 +971,12 @@ export function PublicMonthlyReport() {
               )}
             </div>
           )}
+
+          <div className="mt-8 text-center">
+            <p className="text-xs text-gray-400 dark:text-gray-500 max-w-lg mx-auto">
+              Gobernanza TI y Monitoreo Proactivo operados por Cenas IT Solutions. Procesos alineados a estándar ISO/IEC 20000 para continuidad operativa y seguridad.
+            </p>
+          </div>
         </div>
       </div>
     </div>
