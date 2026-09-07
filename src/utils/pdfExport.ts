@@ -548,6 +548,11 @@ export class PDFExporter {
     totalsItems.push({ label: 'Total Amount:', value: `$${grandTotal.toFixed(2)}`, bold: true });
 
     this.addTotals(totalsItems);
+
+    this.addNotes(
+      'Gobernanza & Operativa',
+      'Las horas y tareas detalladas en este informe fueron ejecutadas bajo procedimientos de control de cambios, gestión de incidencias e integración segura (ISO/IEC 20000), garantizando la estabilidad de su entorno de producción.'
+    );
   }
 
   addFooter() {
@@ -573,11 +578,11 @@ export class PDFExporter {
       this.doc.setFont('helvetica', 'normal');
       this.doc.setFontSize(8);
       this.doc.setTextColor(...NEUTRAL_TEXT_LIGHT);
-      this.doc.text('Cenas IT Solutions — cenas.uy', 14, footerY);
+      this.doc.text('Cenas IT Solutions — www.cenas.uy', 14, footerY);
 
       this.doc.setFont('helvetica', 'bold');
       this.doc.setTextColor(...BRAND_DARK);
-      this.doc.text('Gestión de Servicios bajo norma ISO/IEC 20000', pageWidth / 2, footerY, { align: 'center' });
+      this.doc.text('Servicios gestionados bajo estándar ISO/IEC 20000', pageWidth / 2, footerY, { align: 'center' });
 
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(...NEUTRAL_TEXT_LIGHT);

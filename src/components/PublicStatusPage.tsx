@@ -199,11 +199,17 @@ export function PublicStatusPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">System Status</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Last updated</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatDistanceToNow(new Date(data.lastUpdated), { addSuffix: true })}
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-2 bg-[#0B192C] border border-slate-700/80 px-3 py-1 rounded-full text-xs">
+                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span className="text-slate-300">Gestión de Servicios bajo norma <strong className="text-white">ISO/IEC 20000</strong></span>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Last updated</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {formatDistanceToNow(new Date(data.lastUpdated), { addSuffix: true })}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -310,6 +316,9 @@ export function PublicStatusPage() {
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             Status refreshes automatically every 30 seconds
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 max-w-lg mx-auto">
+            Gobernanza TI y Monitoreo Proactivo operados por Cenas IT Solutions. Procesos alineados a estándar ISO/IEC 20000 para continuidad operativa y seguridad.
           </p>
         </div>
       </div>
