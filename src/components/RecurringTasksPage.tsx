@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Repeat, Plus, Trash2, Calendar, AlertTriangle, Edit2, CheckCircle, XCircle, Save, X } from 'lucide-react';
+import { Repeat, Plus, Trash2, Calendar, AlertTriangle, Edit2, CheckCircle, XCircle, Save, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, addMonths, isBefore } from 'date-fns';
 import { apiService } from '../services/api';
 
@@ -26,7 +26,7 @@ interface RecurringTask {
 }
 
 export function RecurringTasksPage() {
-  const { clients, projects, getClient, getProject } = useApp();
+  const { clients, projects, tasks, getClient, getProject } = useApp();
   const activeClients = clients.filter(c => !c.archived);
   const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +37,7 @@ export function RecurringTasksPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [showPastDateWarning, setShowPastDateWarning] = useState(false);
   const [nextOccurrence, setNextOccurrence] = useState<string>('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [newTask, setNewTask] = useState<Partial<RecurringTask>>({
     name: '',
@@ -597,9 +598,20 @@ export function RecurringTasksPage() {
                   const client = getClient(task.clientId);
                   const project = getProject(task.projectId);
                   const isEditing = editingTask?.id === task.id;
+                  // Ground truth: actual tasks the generator created for this
+                  // definition, not the self-reported lastGenerated/nextDue
+                  // columns (which just reflect the generator's last run and
+                  // say nothing if a period was silently skipped).
+                  const generatedInstances = tasks
+                    .filter(t => t.recurringTaskId === task.id)
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                  const todayStr = format(new Date(), 'yyyy-MM-dd');
+                  const isOverdue = task.isActive && task.nextDue < todayStr;
+                  const isExpanded = expandedId === task.id;
 
                   return (
-                    <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <React.Fragment key={task.id}>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4">
                         <div>
                           <div className="font-medium text-gray-900 dark:text-white">{task.name}</div>
@@ -635,12 +647,19 @@ export function RecurringTasksPage() {
                         {task.estimatedCost && <div className="text-gray-500 dark:text-gray-400">${task.estimatedCost}</div>}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                        {format(new Date(task.nextDue + 'T00:00:00'), 'MMM d, yyyy')}
-                        {task.lastGenerated && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Last: {format(new Date(task.lastGenerated + 'T00:00:00'), 'MMM d')}
-                          </div>
-                        )}
+                        <div className={isOverdue ? 'flex items-center gap-1 text-red-600 dark:text-red-400 font-medium' : ''}>
+                          {isOverdue && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />}
+                          {format(new Date(task.nextDue + 'T00:00:00'), 'MMM d, yyyy')}
+                        </div>
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : task.id)}
+                          className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline mt-0.5 inline-flex items-center gap-0.5"
+                        >
+                          {generatedInstances.length > 0
+                            ? `${generatedInstances.length} generated · last ${format(new Date(generatedInstances[0].date + 'T00:00:00'), 'MMM d')}`
+                            : 'Never generated'}
+                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         {task.isActive ? (
@@ -672,6 +691,38 @@ export function RecurringTasksPage() {
                         </button>
                       </td>
                     </tr>
+                    {isExpanded && (
+                      <tr className="bg-gray-50 dark:bg-gray-900/40">
+                        <td colSpan={6} className="px-6 py-3">
+                          {generatedInstances.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              No task has actually been generated from this recurring definition yet.
+                            </p>
+                          ) : (
+                            <ul className="space-y-1.5">
+                              {generatedInstances.map(t => (
+                                <li key={t.id} className="flex items-center justify-between text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="flex items-center gap-2">
+                                    {format(new Date(t.date + 'T00:00:00'), 'MMM d, yyyy')}
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      t.finished
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                    }`}>
+                                      {t.finished ? 'Completed' : 'Open'}
+                                    </span>
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    {t.hours ? `${t.hours}h` : ''}{t.hours && t.cost ? ' · ' : ''}{t.cost ? `$${t.cost}` : ''}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

@@ -100,6 +100,7 @@ export interface Task {
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   reportedBy?: string; // Who called/reported it in - used for Problem/Change tasks
   publishedAt?: string; // When it was published to the external portal (Problem/Change)
+  recurringTaskId?: string; // Set when this task was auto-generated from a recurring task definition
 }
 
 export interface TaskNote {
