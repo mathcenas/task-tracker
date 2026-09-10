@@ -307,6 +307,7 @@ class ApiService {
       approvalStatus: t.approval_status || t.approvalStatus || 'pending',
       reportedBy: t.reported_by || t.reportedBy,
       publishedAt: t.published_at || t.publishedAt,
+      recurringTaskId: t.recurring_task_id || t.recurringTaskId,
     }));
   }
 
