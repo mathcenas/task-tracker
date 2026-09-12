@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Trash2, Loader2, StickyNote } from 'lucide-react';
+import { Trash2, Loader2, StickyNote, Copy, Check } from 'lucide-react';
 import { api } from '../services/api';
 import { Note } from '../types';
 
@@ -12,6 +12,7 @@ export function NotesPage() {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const draftRef = useRef<HTMLTextAreaElement>(null);
 
   const load = async () => {
@@ -59,6 +60,16 @@ export function NotesPage() {
       setNotes((prev) => prev.map((n) => n.id === id ? { ...n, content } : n));
     } catch (err) {
       console.error('Error updating note:', err);
+    }
+  };
+
+  const handleCopy = async (note: Note) => {
+    try {
+      await navigator.clipboard.writeText(note.content);
+      setCopiedId(note.id);
+      setTimeout(() => setCopiedId((current) => (current === note.id ? null : current)), 1500);
+    } catch (err) {
+      console.error('Error copying note:', err);
     }
   };
 
@@ -145,6 +156,17 @@ export function NotesPage() {
                   {note.content}
                 </p>
               )}
+              <button
+                onClick={() => handleCopy(note)}
+                className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
+                  copiedId === note.id
+                    ? 'text-green-500'
+                    : 'text-gray-300 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
+                }`}
+                title="Copiar"
+              >
+                {copiedId === note.id ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
               <button
                 onClick={() => handleDelete(note.id)}
                 className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
