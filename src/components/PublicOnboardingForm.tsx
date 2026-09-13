@@ -86,7 +86,12 @@ export function PublicOnboardingForm() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
         <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 shadow-xl p-8 text-center">
-          <img src="/logo - Copy.png" alt="TaskTracker Pro" className="h-10 w-auto mx-auto mb-4" />
+          <img
+            src="https://landing.cenas.uy/assets/brand/logo-badge.png"
+            alt="Cenas IT Solutions"
+            className="h-10 w-auto mx-auto mb-4 object-contain"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Solicitud enviada
@@ -109,8 +114,20 @@ export function PublicOnboardingForm() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg rounded-lg bg-white dark:bg-gray-800 shadow-xl p-8">
+        <div className="flex justify-center mb-4">
+          <img
+            src="https://landing.cenas.uy/assets/brand/logo-badge.png"
+            alt="Cenas IT Solutions"
+            className="h-10 w-auto object-contain"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        </div>
+
         <div className="flex justify-center mb-6">
-          <img src="/logo - Copy.png" alt="TaskTracker Pro" className="h-10 w-auto" />
+          <div className="flex items-center gap-2 bg-[#0B192C] border border-slate-700/80 px-3 py-1 rounded-full text-xs">
+            <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span className="text-slate-300">Gestión de Servicios bajo norma <strong className="text-white">ISO/IEC 20000</strong></span>
+          </div>
         </div>
 
         <div className="flex items-center mb-6">
@@ -248,6 +265,10 @@ export function PublicOnboardingForm() {
             {submitting ? 'Enviando...' : 'Enviar Solicitud'}
           </button>
         </form>
+
+        <p className="mt-6 text-xs text-gray-400 dark:text-gray-500 text-center">
+          Gobernanza TI y Monitoreo Proactivo operados por Cenas IT Solutions. Procesos alineados a estándar ISO/IEC 20000 para continuidad operativa y seguridad.
+        </p>
       </div>
     </div>
   );
