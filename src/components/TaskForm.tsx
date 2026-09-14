@@ -424,9 +424,9 @@ export function TaskForm() {
                     checked={formData.type === 'insumos'}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'incident' | 'request' | 'insumos' | 'problem' | 'change' }))}
                   />
-                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-cyan-900/20 dark:peer-checked:border-cyan-500">
+                  <div className="p-3 border-2 rounded-lg cursor-pointer transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:peer-checked:bg-blue-900/20 dark:peer-checked:border-blue-500">
                     <div className="text-center">
-                      <div className="text-cyan-500 font-medium">Supplies</div>
+                      <div className="text-blue-500 font-medium">Supplies</div>
                       <div className="text-xs text-gray-500 mt-1 dark:text-gray-400">Materials</div>
                     </div>
                   </div>

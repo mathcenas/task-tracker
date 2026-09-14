@@ -375,7 +375,7 @@ export function PublicMonthlyReport() {
       case 'change':
         return <FileText className="w-5 h-5 text-violet-500" />;
       case 'insumos':
-        return <Package className="w-5 h-5 text-cyan-500" />;
+        return <Package className="w-5 h-5 text-blue-500" />;
       default:
         return <FileText className="w-5 h-5 text-cyan-500" />;
     }
@@ -530,13 +530,13 @@ export function PublicMonthlyReport() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-cyan-50 p-6 rounded-lg dark:bg-cyan-900/20">
+                <div className="bg-blue-50 p-6 rounded-lg dark:bg-blue-900/20">
                   <div className="flex items-center">
-                    <Package className="w-8 h-8 text-cyan-500 mr-3" />
+                    <Package className="w-8 h-8 text-blue-500 mr-3" />
                     <div>
-                      <p className="text-sm text-cyan-600 font-medium dark:text-cyan-400">Supplies Cost</p>
-                      <p className="text-2xl font-semibold text-cyan-900 dark:text-cyan-300">${clientStats.suppliesCost.toFixed(0)}</p>
-                      <p className="text-xs text-cyan-600 dark:text-cyan-400">
+                      <p className="text-sm text-blue-600 font-medium dark:text-blue-400">Supplies Cost</p>
+                      <p className="text-2xl font-semibold text-blue-900 dark:text-blue-300">${clientStats.suppliesCost.toFixed(0)}</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
                         {clientStats.suppliesCount} supply items
                       </p>
                     </div>
@@ -857,7 +857,7 @@ export function PublicMonthlyReport() {
                                     task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                                     task.type === 'problem' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                                     task.type === 'change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
-                                    task.type === 'insumos' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
+                                    task.type === 'insumos' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                                     'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
                                   }`}>
                                     {task.type === 'incident' ? 'Incident' :

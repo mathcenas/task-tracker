@@ -179,7 +179,7 @@ export function WorkQueue() {
     if (type === 'incident') return <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />;
     if (type === 'problem') return <AlertOctagon className="w-4 h-4 text-amber-500 flex-shrink-0" />;
     if (type === 'change') return <GitBranch className="w-4 h-4 text-violet-500 flex-shrink-0" />;
-    if (type === 'insumos') return <Package className="w-4 h-4 text-cyan-500 flex-shrink-0" />;
+    if (type === 'insumos') return <Package className="w-4 h-4 text-blue-500 flex-shrink-0" />;
     return <FileText className="w-4 h-4 text-cyan-500 flex-shrink-0" />;
   };
 

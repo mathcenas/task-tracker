@@ -18,7 +18,7 @@ const TYPE_LABELS: Record<TaskType, string> = {
 const TYPE_STYLES: Record<TaskType, string> = {
   incident: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
   request: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400',
-  insumos: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400',
+  insumos: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
   problem: 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400',
   change: 'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-400',
 };

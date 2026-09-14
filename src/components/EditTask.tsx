@@ -294,7 +294,7 @@ export function EditTask() {
                   problem: { label: 'Problem', peer: 'peer-checked:border-amber-500 peer-checked:bg-amber-50 dark:peer-checked:bg-amber-900/20 dark:peer-checked:border-amber-500', text: 'text-amber-500' },
                   change: { label: 'Change', peer: 'peer-checked:border-violet-500 peer-checked:bg-violet-50 dark:peer-checked:bg-violet-900/20 dark:peer-checked:border-violet-500', text: 'text-violet-600' },
                   request: { label: 'Request', peer: 'peer-checked:border-cyan-500 peer-checked:bg-cyan-50 dark:peer-checked:bg-cyan-900/20 dark:peer-checked:border-cyan-500', text: 'text-cyan-500' },
-                  insumos: { label: 'Supplies', peer: 'peer-checked:border-cyan-500 peer-checked:bg-cyan-50 dark:peer-checked:bg-cyan-900/20 dark:peer-checked:border-cyan-500', text: 'text-cyan-500' }
+                  insumos: { label: 'Supplies', peer: 'peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 dark:peer-checked:border-blue-500', text: 'text-blue-500' }
                 };
                 const config = typeConfig[t];
                 return (

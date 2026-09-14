@@ -148,7 +148,7 @@ export function AllTasksPage() {
       case 'change':
         return <GitBranch className="w-5 h-5 text-violet-500" />;
       case 'insumos':
-        return <Package className="w-5 h-5 text-cyan-500" />;
+        return <Package className="w-5 h-5 text-blue-500" />;
       default:
         return <FileText className="w-5 h-5 text-cyan-500" />;
     }
@@ -590,6 +590,7 @@ export function AllTasksPage() {
                                   task.type === 'incident' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                                   task.type === 'problem' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
                                   task.type === 'change' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' :
+                                  task.type === 'insumos' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                   'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
                                 }`}>{task.type}</span>
                                 <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
@@ -675,6 +676,7 @@ export function AllTasksPage() {
                             task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                             task.type === 'problem' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                             task.type === 'change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                            task.type === 'insumos' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                             'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
                           }`}>
                             {task.type}
