@@ -100,6 +100,16 @@ export class PDFExporter {
     this.footerContext = text;
   }
 
+  // How far content may extend before a page break, leaving clearance for
+  // the footer block (context line + divider + brand row), which occupies
+  // roughly the bottom 20mm of every page. Content sections used to page
+  // break at their own hardcoded thresholds (265-278) picked before that
+  // footer existed - some of those sat past where the footer text now
+  // starts, so the last row/line on a page could render on top of it.
+  private contentBottomLimit(): number {
+    return this.doc.internal.pageSize.getHeight() - 25;
+  }
+
   private async loadLogo(): Promise<{ data: string; format: string } | null> {
     const logoUrl = this.companySettings.logo_url || DEFAULT_LOGO_URL;
     try {
@@ -205,7 +215,7 @@ export class PDFExporter {
     const blockHeight = rows * 5.5 + 10;
 
     // Page break if section won't fit
-    if (this.currentY + blockHeight > 270) {
+    if (this.currentY + blockHeight > this.contentBottomLimit()) {
       this.doc.addPage();
       this.currentY = 20;
     }
@@ -243,7 +253,7 @@ export class PDFExporter {
   // don't strand the title alone at the bottom of a page with its content
   // pushed to the next one.
   addSectionTitle(title: string, reserveHeight: number = 0) {
-    if (this.currentY + 8 + reserveHeight > 272) { this.doc.addPage(); this.currentY = 20; }
+    if (this.currentY + 8 + reserveHeight > this.contentBottomLimit()) { this.doc.addPage(); this.currentY = 20; }
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(...NEUTRAL_TEXT);
@@ -260,7 +270,7 @@ export class PDFExporter {
       head: [headers],
       body: rows,
       theme: 'striped',
-      margin: { left: 14, right: 14 },
+      margin: { left: 14, right: 14, bottom: 25 },
       tableWidth: availableWidth,
       headStyles: {
         fillColor: BRAND_DARK,
@@ -281,11 +291,11 @@ export class PDFExporter {
     const startX = 125;
     // Estimate total height needed: ~6px per regular item, ~13px per bold item
     const estimatedHeight = items.reduce((h, i) => h + (i.bold ? 13 : 6), 10);
-    if (this.currentY + estimatedHeight > 278) { this.doc.addPage(); this.currentY = 20; }
+    if (this.currentY + estimatedHeight > this.contentBottomLimit()) { this.doc.addPage(); this.currentY = 20; }
     this.currentY += 5;
 
     items.forEach((item) => {
-      if (this.currentY > 275) { this.doc.addPage(); this.currentY = 20; }
+      if (this.currentY > this.contentBottomLimit()) { this.doc.addPage(); this.currentY = 20; }
 
       if (item.bold) {
         this.doc.setDrawColor(...BRAND_TEAL);
@@ -323,7 +333,7 @@ export class PDFExporter {
     if (!content) return;
 
     this.currentY += 8;
-    if (this.currentY > 265) { this.doc.addPage(); this.currentY = 20; }
+    if (this.currentY > this.contentBottomLimit()) { this.doc.addPage(); this.currentY = 20; }
 
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
@@ -343,7 +353,7 @@ export class PDFExporter {
     this.currentY += 1;
 
     lines.forEach((line: string) => {
-      if (this.currentY > 270) { this.doc.addPage(); this.currentY = 20; }
+      if (this.currentY > this.contentBottomLimit()) { this.doc.addPage(); this.currentY = 20; }
       this.doc.text(line, 20, this.currentY);
       this.currentY += 4;
     });
@@ -358,7 +368,7 @@ export class PDFExporter {
     const total = servicesTotal + suppliesTotal;
     const boxHeight = 30;
 
-    if (this.currentY + boxHeight > 272) { this.doc.addPage(); this.currentY = 20; }
+    if (this.currentY + boxHeight > this.contentBottomLimit()) { this.doc.addPage(); this.currentY = 20; }
 
     const startY = this.currentY;
     this.doc.setFillColor(...TEAL_WASH);
