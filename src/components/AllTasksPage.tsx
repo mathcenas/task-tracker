@@ -90,11 +90,16 @@ export function AllTasksPage() {
     })
     .slice(0, 20);
 
-  // Group ALL tasks by normalized description to find duplicates
+  // Group tasks by client + date + normalized description to find likely
+  // accidental duplicates - same as the check addTask already does before
+  // creating a task. Grouping by description alone used to also catch
+  // intentional same-description tasks across different clients (e.g. from
+  // "Duplicate to other clients") or across different dates (recurring
+  // work), which aren't mistakes.
   const duplicateGroups = (() => {
     const grouped = new Map<string, typeof tasks>();
     applySecondaryFilters(tasks).forEach(t => {
-      const key = t.description.trim().toLowerCase();
+      const key = `${t.clientId}::${t.date}::${t.description.trim().toLowerCase()}`;
       const group = grouped.get(key) || [];
       group.push(t);
       grouped.set(key, group);
@@ -462,7 +467,7 @@ export function AllTasksPage() {
 
       {/* Selection bar */}
       {sortedTasks.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3 flex items-center justify-between gap-3">
+        <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 rounded-lg shadow-md px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
               onClick={selectedTasks.size === sortedTasks.length ? deselectAll : selectAll}
@@ -530,7 +535,7 @@ export function AllTasksPage() {
                 </div>
               )}
               {duplicateGroups.map((group, gi) => {
-                const key = group[0].description.trim().toLowerCase();
+                const key = `${group[0].clientId}::${group[0].date}::${group[0].description.trim().toLowerCase()}`;
                 return (
                   <div key={key} className="border-2 border-amber-200 dark:border-amber-800 rounded-xl overflow-hidden">
                     {/* Group header */}
