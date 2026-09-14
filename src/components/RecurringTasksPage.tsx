@@ -621,6 +621,7 @@ export function RecurringTasksPage() {
                               task.type === 'incident' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                               task.type === 'problem' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                               task.type === 'change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                              task.type === 'insumos' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                               'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200'
                             }`}>
                               {task.type}
