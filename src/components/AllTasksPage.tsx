@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
 import { getHourlyRateForYear } from '../utils/clientRates';
-import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown, Copy, AlertOctagon, GitBranch } from 'lucide-react';
+import { AlertTriangle, FileText, Package, CheckCircle, Clock, Calendar, Plus, Pencil, Check, X, Download, Trash2, CheckSquare, Square, ThumbsUp, ThumbsDown, Copy, AlertOctagon, GitBranch, Users } from 'lucide-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { BulkTaskOperations } from './BulkTaskOperations';
+import { DuplicateTaskModal } from './DuplicateTaskModal';
 import { api } from '../services/api';
+import { Task } from '../types';
 
 export function AllTasksPage() {
   const location = useLocation();
@@ -21,6 +23,7 @@ export function AllTasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [duplicatingTask, setDuplicatingTask] = useState<Task | null>(null);
 
   // Read filter state from URL so it survives navigation away and back
   const taskFilter = (searchParams.get('status') || 'all') as 'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started' | 'recently_added' | 'duplicates';
@@ -746,6 +749,13 @@ export function AllTasksPage() {
                         >
                           <Pencil className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </Link>
+                        <button
+                          onClick={() => setDuplicatingTask(task)}
+                          className="p-2 hover:bg-cyan-100 rounded-lg dark:hover:bg-cyan-900/20 transition-colors"
+                          title="Duplicate to other clients"
+                        >
+                          <Users className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                        </button>
                         {!task.finished && (
                           <button
                             onClick={() => handleCompleteClick(task.id)}
@@ -812,6 +822,13 @@ export function AllTasksPage() {
         isOpen={isBulkOpen}
         onClose={() => setIsBulkOpen(false)}
       />
+
+      {duplicatingTask && (
+        <DuplicateTaskModal
+          task={duplicatingTask}
+          onClose={() => setDuplicatingTask(null)}
+        />
+      )}
     </div>
   );
 }
