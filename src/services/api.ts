@@ -308,6 +308,10 @@ class ApiService {
       reportedBy: t.reported_by || t.reportedBy,
       publishedAt: t.published_at || t.publishedAt,
       recurringTaskId: t.recurring_task_id || t.recurringTaskId,
+      clientSelected: Boolean(t.client_selected_at ?? t.clientSelectedAt),
+      clientSelectedAt: t.client_selected_at || t.clientSelectedAt,
+      clientExcluded: Boolean(t.client_excluded_at ?? t.clientExcludedAt),
+      clientExcludedAt: t.client_excluded_at || t.clientExcludedAt,
     }));
   }
 

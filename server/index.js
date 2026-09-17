@@ -119,6 +119,7 @@ const initDB = () => {
       published_at DATETIME,
       recurring_task_id TEXT,
       client_selected_at DATETIME,
+      client_excluded_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -340,6 +341,7 @@ const runMigrations = () => {
     `ALTER TABLE tasks ADD COLUMN published_at DATETIME`,
     `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
     `ALTER TABLE tasks ADD COLUMN client_selected_at DATETIME`,
+    `ALTER TABLE tasks ADD COLUMN client_excluded_at DATETIME`,
   ];
 
   migrations.forEach(sql => {
@@ -1492,7 +1494,8 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
                   receiptRef: t.receipt_ref,
                   approvalStatus: t.approval_status || 'pending',
                   createdAt: t.created_at,
-                  clientSelected: Boolean(t.client_selected_at)
+                  clientSelected: Boolean(t.client_selected_at),
+                  clientExcluded: Boolean(t.client_excluded_at)
                 }));
 
                 const mappedProjects = projects.map(p => ({
@@ -1559,19 +1562,21 @@ app.post('/api/public/client-report/:slug/:year/:month/selections', (req, res) =
 
         const validIds = rows.map((r) => r.id);
         const selectedSet = new Set(selectedTaskIds.filter((id) => validIds.includes(id)));
+        const now = new Date().toISOString();
 
         const updates = validIds.map((id) => new Promise((resolve, reject) => {
           db.run(
-            `UPDATE tasks SET client_selected_at = ? WHERE id = ?`,
-            [selectedSet.has(id) ? new Date().toISOString() : null, id],
+            `UPDATE tasks SET client_selected_at = ?, client_excluded_at = ? WHERE id = ?`,
+            [selectedSet.has(id) ? now : null, selectedSet.has(id) ? null : now, id],
             (updateErr) => updateErr ? reject(updateErr) : resolve()
           );
         }));
 
         Promise.all(updates)
           .then(() => {
-            logActivity('client task selection', 'client', client.id, client.name, { month, year, selectedCount: selectedSet.size }, 'system');
-            res.json({ success: true, selectedCount: selectedSet.size });
+            const excludedCount = validIds.length - selectedSet.size;
+            logActivity('client task selection', 'client', client.id, client.name, { month, year, selectedCount: selectedSet.size, excludedCount, totalCount: validIds.length }, 'system');
+            res.json({ success: true, selectedCount: selectedSet.size, excludedCount });
           })
           .catch((updateErr) => {
             console.error('Error saving client task selections:', updateErr);

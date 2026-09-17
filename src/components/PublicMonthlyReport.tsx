@@ -23,6 +23,7 @@ export function PublicMonthlyReport() {
   const [submittingSelections, setSubmittingSelections] = useState(false);
   const [selectionsSubmitted, setSelectionsSubmitted] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [submittedExcludedCount, setSubmittedExcludedCount] = useState(0);
 
   // Load report data from public API (including 6 months of data for trend)
   useEffect(() => {
@@ -51,9 +52,9 @@ export function PublicMonthlyReport() {
         setClient(data.client);
         setTasks(data.tasks);
         setProjects(data.projects);
-        setSelectedTaskIds(new Set(
-          (data.tasks as Task[]).filter((t) => t.clientSelected).map((t) => t.id)
-        ));
+        // Opt-out: every task starts pre-confirmed. The client only needs to
+        // uncheck the few that belong to a different account/invoice.
+        setSelectedTaskIds(new Set((data.tasks as Task[]).map((t) => t.id)));
         setSelectionsSubmitted(false);
         setSelectionError(null);
 
@@ -301,6 +302,8 @@ export function PublicMonthlyReport() {
         throw new Error('Failed to save selections');
       }
 
+      const result = await response.json();
+      setSubmittedExcludedCount(result.excludedCount ?? 0);
       setSelectionsSubmitted(true);
     } catch (err) {
       console.error('Error submitting task selections:', err);
@@ -819,7 +822,7 @@ export function PublicMonthlyReport() {
                 {client.taskSelectionEnabled && (
                   <div className="mb-6 p-4 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
                     <p className="text-sm text-cyan-800 dark:text-cyan-300">
-                      Marcá las tareas que vas a pagar vos. Las que dejes sin marcar se facturan a otra cuenta.
+                      Todas las tareas de este mes están pre-confirmadas. Si alguna corresponde a otra cuenta, desmarcala — la vamos a reconsiderar antes de facturar.
                     </p>
                   </div>
                 )}
@@ -829,9 +832,17 @@ export function PublicMonthlyReport() {
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                     .map(task => {
                       const project = getProject(task.projectId);
+                      const isDeselected = client.taskSelectionEnabled && !selectedTaskIds.has(task.id);
 
                       return (
-                        <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
+                        <div
+                          key={task.id}
+                          className={`border rounded-lg p-4 transition-colors ${
+                            isDeselected
+                              ? 'bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 opacity-60'
+                              : 'hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700'
+                          }`}
+                        >
                           <div className="flex justify-between items-start">
                             <div className="flex items-start space-x-3 flex-1">
                               {client.taskSelectionEnabled && (
@@ -872,6 +883,11 @@ export function PublicMonthlyReport() {
                                       'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                     }`}>
                                       {task.priority} priority
+                                    </span>
+                                  )}
+                                  {isDeselected && (
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                      ⚠ Para reconsiderar
                                     </span>
                                   )}
                                 </div>
@@ -917,7 +933,14 @@ export function PublicMonthlyReport() {
                       {submittingSelections ? 'Guardando...' : 'Enviar mi selección'}
                     </button>
                     {selectionsSubmitted && (
-                      <span className="text-sm text-green-600 dark:text-green-400">¡Gracias! Tu selección fue guardada.</span>
+                      <span className="text-sm text-green-600 dark:text-green-400">
+                        ¡Gracias! Tu confirmación quedó guardada.
+                        {submittedExcludedCount > 0 && (
+                          submittedExcludedCount === 1
+                            ? ' 1 tarea quedó marcada para reconsiderar.'
+                            : ` ${submittedExcludedCount} tareas quedaron marcadas para reconsiderar.`
+                        )}
+                      </span>
                     )}
                     {selectionError && (
                       <span className="text-sm text-red-600 dark:text-red-400">{selectionError}</span>
