@@ -81,6 +81,9 @@ export interface Task {
   assignedTo?: string;
   isRecurring?: boolean;
   clientSelected?: boolean;
+  clientSelectedAt?: string; // When the client confirmed this task on their portal
+  clientExcluded?: boolean; // Client explicitly flagged this task for another account/invoice
+  clientExcludedAt?: string;
   recurringDay?: number; // Day of the month for recurring tasks
   recurringWeekend?: boolean; // Whether this is a weekend-based recurring task
   recurringWeekendType?: 'first' | 'second' | 'third' | 'fourth' | 'last'; // Which weekend of the month

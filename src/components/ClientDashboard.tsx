@@ -1017,6 +1017,16 @@ export function ClientDashboard() {
                                             Excluded this round
                                           </span>
                                         )}
+                                        {task.clientSelected && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400">
+                                            <CheckCheck className="w-3 h-3" />Confirmado por cliente
+                                          </span>
+                                        )}
+                                        {task.clientExcluded && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                            ⚠ Cliente lo excluyó
+                                          </span>
+                                        )}
                                       </div>
                                       <p className="text-sm text-gray-600 dark:text-gray-300">{task.description}</p>
                                     </div>
@@ -1024,7 +1034,7 @@ export function ClientDashboard() {
                                   <div className="flex items-center space-x-3">
                                     <div className="text-right">
                                       {task.type === 'insumos' ? (
-                                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
                                           ${task.cost?.toFixed(2)}
                                         </p>
                                       ) : (

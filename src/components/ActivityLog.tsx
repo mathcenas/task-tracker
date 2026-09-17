@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, FileText, Users, Folder, CheckCircle, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink, Calendar, DollarSign, Timer } from 'lucide-react';
+import { Clock, FileText, Users, Folder, CheckCircle, CheckCheck, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink, Calendar, DollarSign, Timer } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
@@ -44,6 +44,7 @@ export function ActivityLog() {
   }, []);
 
   const getIcon = (entityType: string, action: string) => {
+    if (action === 'client task selection') return <CheckCheck className="w-4 h-4" />;
     if (action === 'created') return <Plus className="w-4 h-4" />;
     if (action === 'updated') return <Edit className="w-4 h-4" />;
     if (action === 'deleted') return <Trash2 className="w-4 h-4" />;
@@ -59,6 +60,7 @@ export function ActivityLog() {
 
   const getActionColor = (action: string) => {
     switch (action) {
+      case 'client task selection': return 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20';
       case 'created': return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
       case 'updated': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20';
       case 'deleted': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
@@ -101,6 +103,31 @@ export function ActivityLog() {
               {value}
             </span>
           ))}
+        </div>
+      );
+    }
+
+    if (details.selectedCount !== undefined && details.excludedCount !== undefined) {
+      const period = details.month && details.year
+        ? format(new Date(parseInt(details.year), parseInt(details.month) - 1, 1), 'MMMM yyyy')
+        : null;
+      return (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {period && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
+              <Calendar className="w-3 h-3" />
+              <span className="font-medium text-gray-400 dark:text-gray-500">Period:</span>
+              {period}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-50 dark:bg-green-900/20 text-xs text-green-700 dark:text-green-400">
+            {details.selectedCount} confirmed
+          </span>
+          {details.excludedCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-700 dark:text-amber-400">
+              {details.excludedCount} for reconsideration
+            </span>
+          )}
         </div>
       );
     }
