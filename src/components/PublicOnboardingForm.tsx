@@ -87,7 +87,7 @@ export function PublicOnboardingForm() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
         <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 shadow-xl p-8 text-center">
           <img
-            src="https://landing.cenas.uy/assets/brand/logo-badge.png"
+            src="https://landing.cenas.uy/assets/brand/logo-badge-light.png"
             alt="Cenas IT Solutions"
             className="h-10 w-auto mx-auto mb-4 object-contain"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -116,7 +116,7 @@ export function PublicOnboardingForm() {
       <div className="w-full max-w-lg rounded-lg bg-white dark:bg-gray-800 shadow-xl p-8">
         <div className="flex justify-center mb-4">
           <img
-            src="https://landing.cenas.uy/assets/brand/logo-badge.png"
+            src="https://landing.cenas.uy/assets/brand/logo-badge-light.png"
             alt="Cenas IT Solutions"
             className="h-10 w-auto object-contain"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}

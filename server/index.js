@@ -2248,7 +2248,7 @@ app.get('/api/company-settings', authenticateToken, (req, res) => {
 // sidesteps that. Restricted to a fixed host allowlist since this is an
 // unauthenticated route (SSRF: don't let it fetch arbitrary URLs).
 const LOGO_PROXY_ALLOWED_HOSTS = ['landing.cenas.uy'];
-const DEFAULT_LOGO_URL = 'https://landing.cenas.uy/assets/brand/logo-light.png';
+const DEFAULT_LOGO_URL = 'https://landing.cenas.uy/assets/brand/logo-badge-light.png';
 
 app.get('/api/logo-proxy', (req, res) => {
   db.get('SELECT logo_url FROM company_settings WHERE id = 1', async (err, settings) => {
