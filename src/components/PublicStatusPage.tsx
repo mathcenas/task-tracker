@@ -192,7 +192,7 @@ export function PublicStatusPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img
-                src="https://landing.cenas.uy/assets/brand/logo-badge.png"
+                src="https://landing.cenas.uy/assets/brand/logo-badge-light.png"
                 alt="Cenas IT Solutions"
                 className="h-10 w-10 rounded-lg object-contain"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}

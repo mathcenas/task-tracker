@@ -34,9 +34,10 @@ export const TASK_TYPE_COLORS: Record<string, [number, number, number]> = {
 };
 
 // Falls back to the Cenas mark when a client hasn't uploaded their own
-// logo in Company Settings. The report page background is white, so this
-// is the dark-text variant meant for light backgrounds.
-export const DEFAULT_LOGO_URL = 'https://landing.cenas.uy/assets/brand/logo-light.png';
+// logo in Company Settings. Per the brand manual, logo-badge-light.png
+// (wordmark + "IT Solutions" tag, dark text) is the variant meant for
+// PDFs and other white-background documents.
+export const DEFAULT_LOGO_URL = 'https://landing.cenas.uy/assets/brand/logo-badge-light.png';
 
 interface CompanySettings {
   company_name: string;
