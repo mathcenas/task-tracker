@@ -33,6 +33,9 @@ export function PublicOnboardingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Anti-spam: hidden field only bots fill, plus timestamp to reject too-fast submits
+  const [website, setWebsite] = useState('');
+  const [formLoadedAt] = useState(() => Date.now());
 
   const handleChange = (field: 'managerEmail' | 'type' | 'employeeName' | 'effectiveDate' | 'details') =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -69,11 +72,14 @@ export function PublicOnboardingForm() {
         employeeName: form.employeeName,
         effectiveDate: form.effectiveDate || undefined,
         details: form.details || undefined,
-        accessTypes: form.accessTypes
+        accessTypes: form.accessTypes,
+        website,
+        formLoadedAt
       });
       setSubmitted(true);
       setForm(initialState);
       setAccepted(false);
+      setWebsite('');
     } catch (err) {
       console.error('Error submitting onboarding request:', err);
       setError('No pudimos enviar la solicitud. Por favor intentá nuevamente.');
@@ -151,6 +157,20 @@ export function PublicOnboardingForm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Honeypot: hidden from real users, only bots that auto-fill every field land here */}
+          <div className="absolute -left-[9999px] top-0 w-px h-px overflow-hidden" aria-hidden="true">
+            <label htmlFor="website">Website</label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
+
           <div>
             <label htmlFor="managerEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email del Solicitante

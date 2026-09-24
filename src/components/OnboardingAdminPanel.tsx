@@ -14,6 +14,7 @@ export function OnboardingAdminPanel() {
   const [error, setError] = useState<string | null>(null);
   const [activeRequest, setActiveRequest] = useState<OnboardingRequest | null>(null);
   const [resendState, setResendState] = useState<Record<number, 'sending' | 'sent' | 'error'>>({});
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -50,6 +51,22 @@ export function OnboardingAdminPanel() {
     } catch (err) {
       console.error('Error resending onboarding confirmation:', err);
       setResendState((prev) => ({ ...prev, [request.id]: 'error' }));
+    }
+  };
+
+  const handleDelete = async (request: OnboardingRequest) => {
+    if (!window.confirm(`¿Descartar la solicitud de ${request.employeeName}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    setDeletingId(request.id);
+    try {
+      await api.deleteOnboardingRequest(request.id);
+      await loadAll();
+    } catch (err) {
+      console.error('Error deleting onboarding request:', err);
+      setError('No se pudo eliminar la solicitud.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -102,6 +119,8 @@ export function OnboardingAdminPanel() {
                     resendState={resendState[request.id]}
                     onProcess={() => setActiveRequest(request)}
                     onResend={() => handleResend(request)}
+                    onDelete={() => handleDelete(request)}
+                    deleting={deletingId === request.id}
                     onChanged={loadAll}
                   />
                 ))}
@@ -157,10 +176,12 @@ interface RequestCardProps {
   resendState?: 'sending' | 'sent' | 'error';
   onProcess: () => void;
   onResend: () => void;
+  onDelete?: () => void;
+  deleting?: boolean;
   onChanged: () => void;
 }
 
-function RequestCard({ request, clientName, projectName, resendState, onProcess, onResend, onChanged }: RequestCardProps) {
+function RequestCard({ request, clientName, projectName, resendState, onProcess, onResend, onDelete, deleting, onChanged }: RequestCardProps) {
   const isCompleted = request.status === 'completed';
 
   return (
@@ -237,13 +258,33 @@ function RequestCard({ request, clientName, projectName, resendState, onProcess,
               </button>
             </>
           ) : (
-            <button
-              onClick={onProcess}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
-                       dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
-            >
-              Procesar
-            </button>
+            <>
+              {onDelete && (
+                <button
+                  onClick={onDelete}
+                  disabled={deleting}
+                  title="Descartar solicitud"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400
+                           border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20
+                           disabled:opacity-60 transition-colors"
+                >
+                  {deleting ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Descartar
+                </button>
+              )}
+              <button
+                onClick={onProcess}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
+                         disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+              >
+                Procesar
+              </button>
+            </>
           )}
         </div>
       </div>

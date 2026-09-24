@@ -753,6 +753,8 @@ class ApiService {
     effectiveDate?: string;
     details?: string;
     accessTypes?: string[];
+    website?: string;
+    formLoadedAt?: number;
   }) {
     return this.request('/public/onboarding', {
       method: 'POST',
@@ -823,6 +825,12 @@ class ApiService {
   async resendOnboardingConfirmation(id: number) {
     return this.request(`/admin/onboarding/${id}/resend`, {
       method: 'POST',
+    });
+  }
+
+  async deleteOnboardingRequest(id: number) {
+    return this.request(`/admin/onboarding/${id}`, {
+      method: 'DELETE',
     });
   }
 }

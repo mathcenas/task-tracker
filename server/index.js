@@ -2828,8 +2828,19 @@ const onboardingRateLimiter = rateLimit({
   message: { error: 'Demasiadas solicitudes desde esta conexión. Por favor intentá nuevamente en unos minutos.' }
 });
 
+const ONBOARDING_MIN_SUBMIT_MS = 2000;
+
 app.post('/api/public/onboarding', onboardingRateLimiter, (req, res) => {
-  const { managerEmail, type, employeeName, role, effectiveDate, details, accessTypes } = req.body;
+  const { managerEmail, type, employeeName, role, effectiveDate, details, accessTypes, website, formLoadedAt } = req.body;
+
+  // Honeypot + time-trap: bots either fill the hidden "website" field or submit
+  // faster than a human could fill the form. Pretend success without persisting
+  // anything, so scripted spam doesn't learn to adapt.
+  const elapsedMs = Date.now() - Number(formLoadedAt);
+  if (website || !Number.isFinite(elapsedMs) || elapsedMs < ONBOARDING_MIN_SUBMIT_MS) {
+    console.warn('⚠️  Blocked likely spam onboarding submission', { ip: req.ip, honeypot: Boolean(website), elapsedMs });
+    return res.json({ success: true, id: 0 });
+  }
 
   if (!managerEmail || !type || !employeeName) {
     return res.status(400).json({ error: 'managerEmail, type and employeeName are required' });
@@ -2868,6 +2879,35 @@ app.get('/api/admin/onboarding', authenticateToken, (req, res) => {
       res.json(rows);
     }
   );
+});
+
+// Admin: discard a request without processing it (e.g. spam, duplicate, mistaken submission)
+app.delete('/api/admin/onboarding/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT id FROM onboarding_requests WHERE id = ?', [id], (err, request) => {
+    if (err) {
+      console.error('❌ Error fetching onboarding request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!request) {
+      return res.status(404).json({ error: 'Onboarding request not found' });
+    }
+
+    db.run('DELETE FROM onboarding_updates WHERE onboarding_request_id = ?', [id], (updatesErr) => {
+      if (updatesErr) {
+        console.error('❌ Error deleting onboarding updates:', updatesErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      db.run('DELETE FROM onboarding_requests WHERE id = ?', [id], (deleteErr) => {
+        if (deleteErr) {
+          console.error('❌ Error deleting onboarding request:', deleteErr);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ success: true });
+      });
+    });
+  });
 });
 
 // Admin: confirm a request - creates the billable task and emails the manager
