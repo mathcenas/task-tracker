@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import sqlite3 from 'sqlite3';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -21,6 +22,12 @@ const PORT = process.env.PORT || 3000;
 // req.ip reflects the real client IP instead of the proxy's, which the
 // onboarding rate limiter below relies on.
 app.set('trust proxy', 1);
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-insecure-secret-change-me';
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET is not set - using an insecure default. Set JWT_SECRET in production!');
+}
+const JWT_EXPIRES_IN = '24h'; // matches the client-side session lifetime in src/services/api.ts
 
 // Middleware
 app.use(cors({
@@ -375,32 +382,29 @@ const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  console.log('🔐 [Auth] Authenticating request:', {
-    path: req.path,
-    method: req.method,
-    authHeader: authHeader ? 'present' : 'missing',
-    token: token || 'NO TOKEN',
-    expectedToken: 'demo-token'
-  });
-
   if (!token) {
-    console.error('❌ [Auth] No token provided');
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  // Simple token validation (in production, use JWT)
-  if (token === 'demo-token') {
-    console.log('✅ [Auth] Token valid, user authenticated');
-    req.user = { id: 'admin-1', role: 'admin' };
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = { id: decoded.id, username: decoded.username, role: decoded.role };
     next();
-  } else {
-    console.error('❌ [Auth] Invalid token provided:', token);
-    res.status(403).json({ error: 'Invalid token' });
-  }
+  });
 };
 
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de inicio de sesión. Por favor intentá nuevamente en unos minutos.' }
+});
+
 // Auth routes
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginRateLimiter, (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -424,6 +428,12 @@ app.post('/api/auth/login', (req, res) => {
       // Update last login
       db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
 
+      const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
       res.json({
         success: true,
         user: {
@@ -432,7 +442,7 @@ app.post('/api/auth/login', (req, res) => {
           email: user.email,
           role: user.role
         },
-        token: 'demo-token' // In production, generate proper JWT
+        token
       });
     });
   });
