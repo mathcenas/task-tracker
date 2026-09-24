@@ -2881,6 +2881,35 @@ app.get('/api/admin/onboarding', authenticateToken, (req, res) => {
   );
 });
 
+// Admin: discard a request without processing it (e.g. spam, duplicate, mistaken submission)
+app.delete('/api/admin/onboarding/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT id FROM onboarding_requests WHERE id = ?', [id], (err, request) => {
+    if (err) {
+      console.error('❌ Error fetching onboarding request:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!request) {
+      return res.status(404).json({ error: 'Onboarding request not found' });
+    }
+
+    db.run('DELETE FROM onboarding_updates WHERE onboarding_request_id = ?', [id], (updatesErr) => {
+      if (updatesErr) {
+        console.error('❌ Error deleting onboarding updates:', updatesErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      db.run('DELETE FROM onboarding_requests WHERE id = ?', [id], (deleteErr) => {
+        if (deleteErr) {
+          console.error('❌ Error deleting onboarding request:', deleteErr);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ success: true });
+      });
+    });
+  });
+});
+
 // Admin: confirm a request - creates the billable task and emails the manager
 app.post('/api/admin/onboarding/:id/confirm', authenticateToken, (req, res) => {
   const { id } = req.params;

@@ -827,6 +827,12 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  async deleteOnboardingRequest(id: number) {
+    return this.request(`/admin/onboarding/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();
