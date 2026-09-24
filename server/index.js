@@ -2828,8 +2828,19 @@ const onboardingRateLimiter = rateLimit({
   message: { error: 'Demasiadas solicitudes desde esta conexión. Por favor intentá nuevamente en unos minutos.' }
 });
 
+const ONBOARDING_MIN_SUBMIT_MS = 2000;
+
 app.post('/api/public/onboarding', onboardingRateLimiter, (req, res) => {
-  const { managerEmail, type, employeeName, role, effectiveDate, details, accessTypes } = req.body;
+  const { managerEmail, type, employeeName, role, effectiveDate, details, accessTypes, website, formLoadedAt } = req.body;
+
+  // Honeypot + time-trap: bots either fill the hidden "website" field or submit
+  // faster than a human could fill the form. Pretend success without persisting
+  // anything, so scripted spam doesn't learn to adapt.
+  const elapsedMs = Date.now() - Number(formLoadedAt);
+  if (website || !Number.isFinite(elapsedMs) || elapsedMs < ONBOARDING_MIN_SUBMIT_MS) {
+    console.warn('⚠️  Blocked likely spam onboarding submission', { ip: req.ip, honeypot: Boolean(website), elapsedMs });
+    return res.json({ success: true, id: 0 });
+  }
 
   if (!managerEmail || !type || !employeeName) {
     return res.status(400).json({ error: 'managerEmail, type and employeeName are required' });

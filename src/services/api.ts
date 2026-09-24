@@ -753,6 +753,8 @@ class ApiService {
     effectiveDate?: string;
     details?: string;
     accessTypes?: string[];
+    website?: string;
+    formLoadedAt?: number;
   }) {
     return this.request('/public/onboarding', {
       method: 'POST',
