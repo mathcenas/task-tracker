@@ -167,6 +167,81 @@ for i in $(seq 1 30); do curl -s -o /dev/null -w "%{http_code}\n" https://your-d
 Expect a run of `200`/`401` (depending on auth), then `429` once the burst
 is exhausted.
 
+## 5. Monitoring it with GoAccess
+
+Also not applied yet — a note for when the NPM rate limit above is in place.
+GoAccess reads nginx access logs, so it sees traffic **at the edge**, before
+it reaches Node. That makes it the right tool to confirm two things here: (a)
+that the honeypot/time-trap actually cut spam volume to
+`/api/public/onboarding`, and (b) how often the new `429` rate limit is
+firing, to know whether `rate=10r/s` needs to go up (blocking real traffic)
+or down (still letting an obvious flood through).
+
+**Where the logs are:** NPM writes one access log per Proxy Host, typically
+at `/data/logs/proxy-host-<N>_access.log` in its container/volume (the `<N>`
+is that Proxy Host's ID, visible in the NPM UI's URL when editing it).
+
+**Gotcha:** GoAccess needs `--log-format` to match exactly what NPM writes,
+or the report comes out empty or garbled. NPM's default is close to the
+standard combined log format:
+
+```bash
+goaccess /data/logs/proxy-host-<N>_access.log \
+  --log-format=COMBINED \
+  -o /path/to/report.html --real-time-html
+```
+
+If that's empty/garbled, check the actual `log_format` NPM is using (its
+default templates live under `/app/templates` inside the NPM image) and pass
+a matching `--log-format` string instead of `COMBINED`.
+
+**Worth checking once it's parsing correctly:**
+- Requests to `/api/public/onboarding` over time — should drop sharply after
+  the honeypot/time-trap deploy.
+- Status code breakdown — watch `429` show up once the NPM rate limit is
+  live, and how often.
+- Top IPs / user agents hitting `/api/` — tells you whether `rate=10r/s`
+  is tuned right.
+
+Limitation to keep in mind: GoAccess reads flat log files, so if NPM rotates
+or truncates logs aggressively, the historical trend view is only as long as
+those logs are kept around.
+
+## Appendix: NPM hardening checklist (reusable across projects)
+
+For any service proxied through Nginx Proxy Manager, this is the general
+shape of what "good" looks like — most of it isn't TaskTracker-specific:
+
+1. **Real client IP end-to-end** — the app's `trust proxy` setting (or
+   equivalent in another stack) has to match the actual number of proxy hops
+   in front of it. One NPM hop in front of the app = trust proxy `1`. Get
+   this wrong and every IP-based check downstream (rate limiters, audit
+   logs) silently keys on the wrong address.
+2. **App-level rate limiting on sensitive endpoints** — login, and any
+   public unauthenticated input (signup/contact forms), should have their
+   own precise, endpoint-specific limiter inside the app. First line of
+   defense, easiest to test in isolation.
+3. **Edge rate limiting in NPM** — a general `limit_req` zone as a second
+   line of defense, shielding the app process from a high-volume flood
+   before it even arrives. Remember `limit_req_zone` only works from
+   `http_top.conf` (http context) — it silently does nothing from a
+   per-host Advanced tab alone.
+4. **No hardcoded/backdoor tokens** — audit any home-grown auth middleware
+   for a magic-string bypass (the `demo-token` pattern found in this
+   project). Real sessions should be signed, expire, and carry the actual
+   authenticated user's identity — never a single fixed value.
+5. **Correct status codes** — `limit_req_status 429` in nginx, and confirm
+   the app's own rate limiter also returns `429` (not nginx's default
+   `503`), so logs and monitoring can tell "rate limited" apart from
+   "server error."
+6. **Log visibility (GoAccess or similar)** — point it at each Proxy Host's
+   access log with a log-format that actually matches what NPM writes, and
+   use it to confirm hardening changes are having the intended effect
+   rather than assuming they are.
+7. **Secrets checklist** — anything like `JWT_SECRET` documented in
+   `.env.example` with a generation command, never committed with a real
+   value, never left on an insecure default in production.
+
 ## Roadmap / deferred (not urgent)
 
 Evaluated but intentionally not built yet:

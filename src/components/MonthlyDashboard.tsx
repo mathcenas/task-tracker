@@ -9,7 +9,7 @@ import { apiService } from '../services/api';
 import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function MonthlyDashboard() {
-  const { tasks, getClient, getProject } = useApp();
+  const { tasks, clients, getClient, getProject } = useApp();
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
@@ -17,7 +17,8 @@ export function MonthlyDashboard() {
   const [showPdfExport, setShowPdfExport] = useState(false);
   const [pdfMonthCount, setPdfMonthCount] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
-  
+  const [selectedClientId, setSelectedClientId] = useState('');
+
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
 
@@ -26,10 +27,13 @@ export function MonthlyDashboard() {
     setRefreshKey(prev => prev + 1);
   }, [tasks.length, currentDate]);
 
-  // Filter only completed tasks
-  const monthlyTasks = tasks.filter(task => 
-    task.finished && 
-    isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
+  const sortedClients = [...clients].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Filter only completed tasks, optionally scoped to one client
+  const monthlyTasks = tasks.filter(task =>
+    task.finished &&
+    isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd }) &&
+    (!selectedClientId || task.clientId === selectedClientId)
   );
   
   console.log('📅 Monthly Dashboard - filtering for:', {
@@ -139,7 +143,8 @@ export function MonthlyDashboard() {
 
         const monthTasks = tasks.filter(task =>
           task.finished &&
-          isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd })
+          isWithinInterval(parseISO(task.date), { start: monthStart, end: monthEnd }) &&
+          (!selectedClientId || task.clientId === selectedClientId)
         );
 
         const monthTotalHours = monthTasks
@@ -170,9 +175,10 @@ export function MonthlyDashboard() {
         });
       }
 
+      const clientSuffix = selectedClientId ? `-${getClient(selectedClientId)?.name.replace(/\s+/g, '-').toLowerCase()}` : '';
       const filename = pdfMonthCount === 1
-        ? `monthly-report-${format(currentDate, 'yyyy-MM')}.pdf`
-        : `multi-month-report-${format(subMonths(currentDate, pdfMonthCount - 1), 'yyyy-MM')}-to-${format(currentDate, 'yyyy-MM')}.pdf`;
+        ? `monthly-report-${format(currentDate, 'yyyy-MM')}${clientSuffix}.pdf`
+        : `multi-month-report-${format(subMonths(currentDate, pdfMonthCount - 1), 'yyyy-MM')}-to-${format(currentDate, 'yyyy-MM')}${clientSuffix}.pdf`;
 
       await exportMultiMonthPDF(monthsData, getClient, getProject, companySettings, filename);
       setShowPdfExport(false);
@@ -202,6 +208,18 @@ export function MonthlyDashboard() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Monthly Overview</h2>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Client Filter */}
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
+            >
+              <option value="">All Clients</option>
+              {sortedClients.map((client) => (
+                <option key={client.id} value={client.id}>{client.name}</option>
+              ))}
+            </select>
+
             {/* Quick Jump to Today */}
             <button
               onClick={goToToday}
@@ -233,7 +251,10 @@ export function MonthlyDashboard() {
 
             {/* Export Buttons */}
             <button
-              onClick={() => exportTasksToCSV(monthlyTasks, getClient, getProject, `monthly-tasks-${format(currentDate, 'yyyy-MM')}.csv`)}
+              onClick={() => {
+                const clientSuffix = selectedClientId ? `-${getClient(selectedClientId)?.name.replace(/\s+/g, '-').toLowerCase()}` : '';
+                exportTasksToCSV(monthlyTasks, getClient, getProject, `monthly-tasks-${format(currentDate, 'yyyy-MM')}${clientSuffix}.csv`);
+              }}
               className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
               title="Export to CSV"
             >
