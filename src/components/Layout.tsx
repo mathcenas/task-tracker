@@ -30,6 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [dbStats, setDbStats] = useState<{ total: number; tasks: number; clients: number; projects: number } | null>(null);
+  const [companySettings, setCompanySettings] = useState<{ company_name: string; logo_url: string | null } | null>(null);
   const session = getSession();
   const [currentUser] = useState(session ? {
     username: session.username,
@@ -149,6 +150,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     api.getStats().then(setDbStats).catch(() => {});
   }, [tasks.length, clients.length, projects.length]);
 
+  useEffect(() => {
+    api.getCompanySettings().then(setCompanySettings).catch(() => {});
+  }, []);
+
   // Search functionality
   const searchResults = searchQuery.length > 2 ? {
     tasks: tasks.filter(task => 
@@ -216,10 +221,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
           {isSidebarOpen && (
             <Link to="/" className="flex items-center space-x-2">
-              <img src="/logo - Copy.png" alt="Logo" className="h-8 w-auto" />
+              <img src={companySettings?.logo_url || '/logo - Copy.png'} alt="Logo" className="h-8 w-auto object-contain" />
               <div className="flex flex-col">
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">by Cenas-Support</span>
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">{companySettings?.company_name || 'TaskTracker'}</span>
               </div>
             </Link>
           )}
@@ -474,10 +478,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 md:hidden overflow-y-auto">
             <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
               <Link to="/" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
-                <img src="/logo - Copy.png" alt="Logo" className="h-8 w-auto" />
+                <img src={companySettings?.logo_url || '/logo - Copy.png'} alt="Logo" className="h-8 w-auto object-contain" />
                 <div className="flex flex-col">
-                  <span className="font-semibold text-sm text-gray-900 dark:text-white">TaskTracker</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">by Cenas-Support</span>
+                  <span className="font-semibold text-sm text-gray-900 dark:text-white">{companySettings?.company_name || 'TaskTracker'}</span>
                 </div>
               </Link>
               <button

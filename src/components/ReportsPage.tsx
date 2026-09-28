@@ -20,7 +20,8 @@ export function ReportsPage() {
   const { clients, projects, tasks, getClientTasks, getProject } = useApp();
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  // Empty array = all projects. Non-empty = only these project ids.
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [exportMode, setExportMode] = useState<ExportMode>('monthly');
 
@@ -40,6 +41,23 @@ export function ReportsPage() {
     selectedClientId ? projects.filter(p => p.clientId === selectedClientId) : [],
     [projects, selectedClientId]
   );
+
+  const toggleProjectId = (id: string) => {
+    setSelectedProjectIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+  };
+
+  const projectFilterLabel = useMemo(() => {
+    if (selectedProjectIds.length === 0) return 'All Projects';
+    const names = selectedProjectIds.map(id => getProject(id)?.name).filter(Boolean) as string[];
+    if (names.length <= 3) return names.join(', ');
+    return `${names.length} Projects`;
+  }, [selectedProjectIds, getProject]);
+
+  const projectFilterSlug = useMemo(() => {
+    if (selectedProjectIds.length === 0) return 'all-projects';
+    if (selectedProjectIds.length === 1) return (getProject(selectedProjectIds[0])?.name || 'project').toLowerCase().replace(/\s+/g, '-');
+    return `${selectedProjectIds.length}-projects`;
+  }, [selectedProjectIds, getProject]);
 
   const availableYears = useMemo(() => {
     if (!selectedClientId) return [];
@@ -66,7 +84,7 @@ export function ReportsPage() {
     } else {
       filtered = allTasks.filter(t =>
         t.finished &&
-        (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+        (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId)) &&
         (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
       );
     }
@@ -92,7 +110,7 @@ export function ReportsPage() {
       revenue,
       suppliesCost,
     };
-  }, [selectedClientId, selectedClient, exportMode, selectedMonth, startMonth, endMonth, selectedProjectId, selectedYear, getClientTasks]);
+  }, [selectedClientId, selectedClient, exportMode, selectedMonth, startMonth, endMonth, selectedProjectIds, selectedYear, getClientTasks]);
 
   const handleExport = async () => {
     if (!selectedClient) return;
@@ -159,13 +177,13 @@ export function ReportsPage() {
         // project mode
         let exportTasks = allTasks.filter(t =>
           t.finished &&
-          (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+          (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId)) &&
           (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
         );
         if (exportTasks.length === 0) { alert('No completed tasks found.'); return; }
 
         const sortedTasks = [...exportTasks].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Project';
+        const projectName = projectFilterLabel;
         const periodLabel = selectedYear === 'all'
           ? `${format(new Date(sortedTasks[0].date), 'MMM d, yyyy')} – ${format(new Date(sortedTasks[sortedTasks.length - 1].date), 'MMM d, yyyy')}`
           : `${selectedYear}`;
@@ -188,7 +206,7 @@ export function ReportsPage() {
         pdf.setFooterContext(`${selectedClient.name} — ${periodLabel}`);
         await pdf.addHeader('Project Report');
         pdf.addSection('Report Details', {
-          'Report Number': `RPT-PROJECT-${selectedClient.id.slice(-6)}${selectedProjectId !== 'all' ? '-' + selectedProjectId.slice(-4) : ''}${selectedYear !== 'all' ? '-' + selectedYear : ''}`,
+          'Report Number': `RPT-PROJECT-${selectedClient.id.slice(-6)}${selectedProjectIds.length === 1 ? '-' + selectedProjectIds[0].slice(-4) : ''}${selectedYear !== 'all' ? '-' + selectedYear : ''}`,
           'Client': selectedClient.name,
           'Project': projectName,
           'Year': selectedYear === 'all' ? 'All Years' : selectedYear,
@@ -199,9 +217,8 @@ export function ReportsPage() {
         });
         pdf.addClientReportSections(exportTasks, getProject, hourlyRate);
         pdf.addThankYouNote();
-        const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
         const yearSlug = selectedYear === 'all' ? 'all-years' : selectedYear;
-        pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-${yearSlug}.pdf`);
+        pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectFilterSlug}-${yearSlug}.pdf`);
       }
     } catch (err: any) {
       alert(`Failed to generate report: ${err.message || err}`);
@@ -242,11 +259,10 @@ export function ReportsPage() {
     } else {
       exportTasks = allTasks.filter(t =>
         t.finished &&
-        (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+        (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId)) &&
         (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
       );
-      const projectName = selectedProjectId === 'all' ? 'All Projects' : getProject(selectedProjectId)?.name || 'Project';
-      period = `${projectName}${selectedYear !== 'all' ? ` · ${selectedYear}` : ' · All Years'}`;
+      period = `${projectFilterLabel}${selectedYear !== 'all' ? ` · ${selectedYear}` : ' · All Years'}`;
       if (selectedYear === 'all') {
         const uniqueYears = [...new Set(exportTasks.map(t => parseISO(t.date).getFullYear()))].sort();
         const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(selectedClient, year) }));
@@ -257,8 +273,7 @@ export function ReportsPage() {
       } else {
         hourlyRate = getHourlyRateForYear(selectedClient, parseInt(selectedYear));
       }
-      const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
-      filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-${selectedYear === 'all' ? 'all-years' : selectedYear}.md`;
+      filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectFilterSlug}-${selectedYear === 'all' ? 'all-years' : selectedYear}.md`;
     }
 
     if (exportTasks.length === 0) { alert('No completed tasks found for this selection.'); return; }
@@ -299,11 +314,11 @@ export function ReportsPage() {
     } else {
       return allTasks.filter(t =>
         t.finished &&
-        (selectedProjectId === 'all' || t.projectId === selectedProjectId) &&
+        (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId)) &&
         (selectedYear === 'all' || new Date(t.date).getFullYear() === parseInt(selectedYear))
       );
     }
-  }, [selectedClientId, exportMode, selectedMonth, startMonth, endMonth, selectedProjectId, selectedYear, getClientTasks]);
+  }, [selectedClientId, exportMode, selectedMonth, startMonth, endMonth, selectedProjectIds, selectedYear, getClientTasks]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -329,7 +344,7 @@ export function ReportsPage() {
                 return (
                   <button
                     key={c.id}
-                    onClick={() => { setSelectedClientId(c.id); setSelectedProjectId('all'); setSelectedYear('all'); }}
+                    onClick={() => { setSelectedClientId(c.id); setSelectedProjectIds([]); setSelectedYear('all'); }}
                     className={`flex items-center justify-between p-3 rounded-lg border-2 text-left transition-all ${
                       selectedClientId === c.id
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -445,20 +460,49 @@ export function ReportsPage() {
 
               {exportMode === 'project' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project</label>
-                      <select
-                        value={selectedProjectId}
-                        onChange={e => setSelectedProjectId(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="all">All Projects</option>
-                        {clientProjects.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Projects</label>
+                      {selectedProjectIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProjectIds([])}
+                          className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          Clear (use all)
+                        </button>
+                      )}
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                      {clientProjects.map(p => {
+                        const selected = selectedProjectIds.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => toggleProjectId(p.id)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                              selected
+                                ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                                : 'border-gray-300 bg-white text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {selected && <CheckCircle2 className="w-3 h-3" />}
+                            {p.name}
+                          </button>
+                        );
+                      })}
+                      {clientProjects.length === 0 && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">No projects for this client.</p>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      {selectedProjectIds.length === 0
+                        ? 'Nothing selected — exporting all projects.'
+                        : `${projectFilterLabel} selected.`}
+                    </p>
+                  </div>
+                  <div className="max-w-xs">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Year</label>
                       <select
