@@ -9,7 +9,7 @@ import { ClientYearlyRates } from './ClientYearlyRates';
 import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function ClientDashboard() {
-  const { clients, getClientTasks, getProject, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, updateTask } = useApp();
+  const { clients, getClientTasks, getProject, getProjectTasks, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, updateTask, addProject, updateProject, deleteProject } = useApp();
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMultiMonthModal, setShowMultiMonthModal] = useState(false);
@@ -24,6 +24,11 @@ export function ClientDashboard() {
   const [editClientData, setEditClientData] = useState({ name: '', email: '', hourlyRate: 0 });
   const [showYearlyRatesModal, setShowYearlyRatesModal] = useState(false);
   const [yearlyRatesClient, setYearlyRatesClient] = useState<any>(null);
+  const [showManageProjectsModal, setShowManageProjectsModal] = useState(false);
+  const [manageProjectsClient, setManageProjectsClient] = useState<any>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectEditData, setProjectEditData] = useState({ name: '', status: 'active' as 'active' | 'completed' | 'on-hold', description: '' });
+  const [newProjectName, setNewProjectName] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   // Which projects to leave out of this month's billing round, per client -
   // e.g. a client has 3 projects but only 2 are ready to invoice this time.
@@ -135,6 +140,58 @@ export function ClientDashboard() {
   const openYearlyRates = (client: any) => {
     setYearlyRatesClient(client);
     setShowYearlyRatesModal(true);
+  };
+
+  const openManageProjects = (client: any) => {
+    setManageProjectsClient(client);
+    setEditingProjectId(null);
+    setNewProjectName('');
+    setShowManageProjectsModal(true);
+  };
+
+  const startEditProject = (project: any) => {
+    setEditingProjectId(project.id);
+    setProjectEditData({ name: project.name, status: project.status, description: project.description || '' });
+  };
+
+  const handleSaveProject = async (project: any) => {
+    try {
+      await updateProject({
+        ...project,
+        name: projectEditData.name,
+        status: projectEditData.status,
+        description: projectEditData.description
+      });
+      setEditingProjectId(null);
+    } catch (error) {
+      console.error('Failed to update project:', error);
+      alert('Failed to update project');
+    }
+  };
+
+  const handleDeleteProject = async (project: any) => {
+    const taskCount = getProjectTasks(project.id).length;
+    const warning = taskCount > 0
+      ? `Delete project "${project.name}"? This will also delete its ${taskCount} task${taskCount !== 1 ? 's' : ''}. This cannot be undone.`
+      : `Delete project "${project.name}"? This cannot be undone.`;
+    if (!window.confirm(warning)) return;
+    try {
+      await deleteProject(project.id);
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      alert('Failed to delete project');
+    }
+  };
+
+  const handleAddProject = async () => {
+    if (!newProjectName.trim() || !manageProjectsClient) return;
+    try {
+      await addProject({ clientId: manageProjectsClient.id, name: newProjectName.trim(), status: 'active' });
+      setNewProjectName('');
+    } catch (error) {
+      console.error('Failed to add project:', error);
+      alert('Failed to add project');
+    }
   };
 
   const getRelativeDate = (date: string) => {
@@ -854,6 +911,17 @@ export function ClientDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          openManageProjects(client);
+                        }}
+                        className="inline-flex items-center px-3 py-2 border border-teal-300 rounded-lg shadow-sm text-sm font-medium text-teal-700 bg-white hover:bg-teal-50 dark:border-teal-700 dark:bg-gray-800 dark:text-teal-400 dark:hover:bg-teal-900/20"
+                        title="Add, rename or remove this client's projects"
+                      >
+                        <Folders className="w-4 h-4 mr-2" />
+                        Projects
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           openEditClient(client);
                         }}
                         className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -1274,6 +1342,134 @@ export function ClientDashboard() {
                 className="flex-1 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showManageProjectsModal && manageProjectsClient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                Projects
+              </h3>
+              <button
+                onClick={() => setShowManageProjectsModal(false)}
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {manageProjectsClient.name}
+            </p>
+
+            <div className="space-y-2 mb-4">
+              {projects.filter(p => p.clientId === manageProjectsClient.id).map(project => (
+                <div key={project.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  {editingProjectId === project.id ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={projectEditData.name}
+                        onChange={(e) => setProjectEditData({ ...projectEditData, name: e.target.value })}
+                        placeholder="Project name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                      <select
+                        value={projectEditData.status}
+                        onChange={(e) => setProjectEditData({ ...projectEditData, status: e.target.value as 'active' | 'completed' | 'on-hold' })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      >
+                        <option value="active">Active</option>
+                        <option value="on-hold">On hold</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                      <textarea
+                        value={projectEditData.description}
+                        onChange={(e) => setProjectEditData({ ...projectEditData, description: e.target.value })}
+                        placeholder="Description (optional)"
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingProjectId(null)}
+                          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleSaveProject(project)}
+                          disabled={!projectEditData.name.trim()}
+                          className="flex-1 px-3 py-1.5 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">{project.name}</p>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
+                            project.status === 'active' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            project.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          }`}>
+                            {project.status}
+                          </span>
+                        </div>
+                        {project.description && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{project.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => startEditProject(project)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                          title="Edit project"
+                        >
+                          <Pencil className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProject(project)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Delete project"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {projects.filter(p => p.clientId === manageProjectsClient.id).length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  No projects yet for this client.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-3 border-t dark:border-gray-700">
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddProject(); }}
+                placeholder="New project name"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+              <button
+                onClick={handleAddProject}
+                disabled={!newProjectName.trim()}
+                className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add
               </button>
             </div>
           </div>
