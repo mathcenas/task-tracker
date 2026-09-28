@@ -210,6 +210,22 @@ const runMigrations = async () => {
       sql: `ALTER TABLE tasks ADD COLUMN client_excluded_at DATETIME`
     },
     {
+      name: 'Add approved_by to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN approved_by TEXT`
+    },
+    {
+      name: 'Add vendor to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN vendor TEXT`
+    },
+    {
+      name: 'Add receipt_ref to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN receipt_ref TEXT`
+    },
+    {
+      name: 'Add approval_status to tasks',
+      sql: `ALTER TABLE tasks ADD COLUMN approval_status TEXT DEFAULT 'pending'`
+    },
+    {
       name: 'Create notes table',
       sql: `CREATE TABLE IF NOT EXISTS notes (
         id TEXT PRIMARY KEY,

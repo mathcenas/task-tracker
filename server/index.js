@@ -349,6 +349,10 @@ const runMigrations = () => {
     `ALTER TABLE tasks ADD COLUMN recurring_task_id TEXT`,
     `ALTER TABLE tasks ADD COLUMN client_selected_at DATETIME`,
     `ALTER TABLE tasks ADD COLUMN client_excluded_at DATETIME`,
+    `ALTER TABLE tasks ADD COLUMN approved_by TEXT`,
+    `ALTER TABLE tasks ADD COLUMN vendor TEXT`,
+    `ALTER TABLE tasks ADD COLUMN receipt_ref TEXT`,
+    `ALTER TABLE tasks ADD COLUMN approval_status TEXT DEFAULT 'pending'`,
   ];
 
   migrations.forEach(sql => {
@@ -719,18 +723,44 @@ app.put('/api/projects/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { clientId, name, description, startDate, status } = req.body;
 
-  db.run(
-    `UPDATE projects SET client_id = ?, name = ?, description = ?, start_date = ?, status = ?
-     WHERE id = ?`,
-    [clientId, name, description, startDate, status, id],
-    function(err) {
-      if (err) {
-        console.error('Error updating project:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json({ success: true });
+  db.get('SELECT client_id FROM projects WHERE id = ?', [id], (err, project) => {
+    if (err) {
+      console.error('Error fetching project:', err);
+      return res.status(500).json({ error: 'Database error' });
     }
-  );
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const clientChanged = project.client_id !== clientId;
+
+    db.run(
+      `UPDATE projects SET client_id = ?, name = ?, description = ?, start_date = ?, status = ?
+       WHERE id = ?`,
+      [clientId, name, description, startDate, status, id],
+      function(err) {
+        if (err) {
+          console.error('Error updating project:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!clientChanged) {
+          return res.json({ success: true });
+        }
+
+        // Moving a project to a different client also moves its existing
+        // tasks, so billing/reports for both clients stay consistent with
+        // who actually owns the project now.
+        db.run('UPDATE tasks SET client_id = ? WHERE project_id = ?', [clientId, id], (err) => {
+          if (err) {
+            console.error('Error moving project tasks to new client:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          res.json({ success: true, tasksMoved: true });
+        });
+      }
+    );
+  });
 });
 
 app.delete('/api/projects/:id', authenticateToken, (req, res) => {
