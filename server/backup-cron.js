@@ -16,6 +16,19 @@ if (!fs.existsSync(backupDir)) {
   fs.mkdirSync(backupDir, { recursive: true });
 }
 
+const statusPath = path.join(backupDir, 'last-status.json');
+
+// Written after every run (success or failure) so the admin panel can show
+// whether the automatic backup is actually working, instead of that only
+// being visible as console output inside the container.
+const writeStatus = (status) => {
+  try {
+    fs.writeFileSync(statusPath, JSON.stringify(status, null, 2));
+  } catch (err) {
+    console.error('❌ Error writing backup status file:', err);
+  }
+};
+
 const cleanOldBackups = () => {
   const files = fs.readdirSync(backupDir);
   const backupFiles = files
@@ -44,6 +57,7 @@ async function main() {
   const db = new (verbose().Database)(dbPath, (err) => {
     if (err) {
       console.error('❌ Error opening database:', err);
+      writeStatus({ success: false, timestamp: new Date().toISOString(), error: err.message });
       process.exit(1);
     }
   });
@@ -58,11 +72,23 @@ async function main() {
     const backup = await buildFullBackup(db, 'cron');
     fs.writeFileSync(backupPath, JSON.stringify(backup, null, 2));
     console.log('✅ Backup created successfully:', { file: backupFileName, path: backupPath, ...backup.metadata.counts, totalRecords: backup.metadata.totalRecords });
+    writeStatus({
+      success: true,
+      timestamp: new Date().toISOString(),
+      file: backupFileName,
+      totalRecords: backup.metadata.totalRecords,
+      counts: backup.metadata.counts,
+    });
     cleanOldBackups();
     db.close();
     process.exit(0);
   } catch (err) {
     console.error('❌ Error creating backup:', err);
+    writeStatus({
+      success: false,
+      timestamp: new Date().toISOString(),
+      error: err.message,
+    });
     db.close();
     process.exit(1);
   }

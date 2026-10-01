@@ -31,6 +31,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [isImporting, setIsImporting] = useState(false);
   const [dbStats, setDbStats] = useState<{ total: number; tasks: number; clients: number; projects: number } | null>(null);
   const [companySettings, setCompanySettings] = useState<{ company_name: string; logo_url: string | null } | null>(null);
+  const [backupStatus, setBackupStatus] = useState<{
+    success: boolean;
+    timestamp: string;
+    totalRecords?: number;
+    error?: string;
+  } | null>(null);
   const session = getSession();
   const [currentUser] = useState(session ? {
     username: session.username,
@@ -153,6 +159,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     api.getCompanySettings().then(setCompanySettings).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api.getBackupStatus().then((res: { status: typeof backupStatus }) => setBackupStatus(res.status)).catch(() => {});
   }, []);
 
   // Search functionality
@@ -321,6 +331,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
               className="hidden"
             />
           </label>
+
+          {isSidebarOpen && backupStatus && (
+            <div
+              className={`px-3 py-1.5 rounded-md text-[11px] leading-tight ${
+                backupStatus.success
+                  ? 'text-gray-500 dark:text-gray-400'
+                  : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
+              }`}
+              title={backupStatus.error || undefined}
+            >
+              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${backupStatus.success ? 'bg-green-500' : 'bg-red-500'}`} />
+              {backupStatus.success ? 'Auto backup' : 'Auto backup failed'}: {new Date(backupStatus.timestamp).toLocaleString()}
+            </div>
+          )}
         </div>
 
         {/* New Task Button */}
