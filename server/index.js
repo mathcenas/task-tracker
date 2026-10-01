@@ -1706,6 +1706,24 @@ function calculateUptime(monitor) {
   return monitor.active === 1 ? 99.9 : 95.0;
 }
 
+// Status of the last automatic (cron) backup, so the admin panel can show
+// whether the daily backup is actually running instead of that only being
+// visible in container logs.
+app.get('/api/backup/status', authenticateToken, (req, res) => {
+  const backupDir = process.env.NODE_ENV === 'production' ? '/app/data/backups' : path.join(__dirname, 'backups');
+  const statusPath = path.join(backupDir, 'last-status.json');
+  try {
+    if (!fs.existsSync(statusPath)) {
+      return res.json({ status: null });
+    }
+    const status = JSON.parse(fs.readFileSync(statusPath, 'utf-8'));
+    res.json({ status });
+  } catch (err) {
+    console.error('Error reading backup status:', err);
+    res.status(500).json({ error: 'Failed to read backup status', details: err.message });
+  }
+});
+
 // Backup - Export all data
 app.get('/api/backup', authenticateToken, async (req, res) => {
   console.log('📦 Exporting database backup...');

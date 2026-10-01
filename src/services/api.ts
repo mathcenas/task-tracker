@@ -591,6 +591,10 @@ class ApiService {
     return this.request('/backup');
   }
 
+  async getBackupStatus() {
+    return this.request('/backup/status');
+  }
+
   async importBackup(backupData: any) {
     console.log('📥 [ApiService] Importing database backup...');
     return this.request('/restore', {
