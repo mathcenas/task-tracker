@@ -274,8 +274,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateProject = async (project: Project) => {
     try {
+      const previous = projects.find(p => p.id === project.id);
+      const clientChanged = !!previous && previous.clientId !== project.clientId;
       await apiService.updateProject(project.id, project);
       setProjects(prev => prev.map(p => p.id === project.id ? project : p));
+      if (clientChanged) {
+        // The server also moves this project's tasks to the new client -
+        // reload so local task state (clientId) matches.
+        await reloadTasks();
+      }
       console.log('✅ Project updated successfully:', project.id);
     } catch (error) {
       console.error('❌ Error updating project:', error);

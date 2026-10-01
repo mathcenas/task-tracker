@@ -27,7 +27,7 @@ export function ClientDashboard() {
   const [showManageProjectsModal, setShowManageProjectsModal] = useState(false);
   const [manageProjectsClient, setManageProjectsClient] = useState<any>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [projectEditData, setProjectEditData] = useState({ name: '', status: 'active' as 'active' | 'completed' | 'on-hold', description: '' });
+  const [projectEditData, setProjectEditData] = useState({ name: '', status: 'active' as 'active' | 'completed' | 'on-hold', description: '', clientId: '' });
   const [newProjectName, setNewProjectName] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   // Which projects to leave out of this month's billing round, per client -
@@ -151,16 +151,26 @@ export function ClientDashboard() {
 
   const startEditProject = (project: any) => {
     setEditingProjectId(project.id);
-    setProjectEditData({ name: project.name, status: project.status, description: project.description || '' });
+    setProjectEditData({ name: project.name, status: project.status, description: project.description || '', clientId: project.clientId });
   };
 
   const handleSaveProject = async (project: any) => {
+    const movingClient = projectEditData.clientId !== project.clientId;
+    if (movingClient) {
+      const newClient = clients.find(c => c.id === projectEditData.clientId);
+      const taskCount = getProjectTasks(project.id).length;
+      const warning = taskCount > 0
+        ? `Move "${project.name}" to ${newClient?.name}? This also moves its ${taskCount} task${taskCount !== 1 ? 's' : ''} (including any already billed) to ${newClient?.name}.`
+        : `Move "${project.name}" to ${newClient?.name}?`;
+      if (!window.confirm(warning)) return;
+    }
     try {
       await updateProject({
         ...project,
         name: projectEditData.name,
         status: projectEditData.status,
-        description: projectEditData.description
+        description: projectEditData.description,
+        clientId: projectEditData.clientId
       });
       setEditingProjectId(null);
     } catch (error) {
@@ -1387,6 +1397,23 @@ export function ClientDashboard() {
                         <option value="on-hold">On hold</option>
                         <option value="completed">Completed</option>
                       </select>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Client</label>
+                        <select
+                          value={projectEditData.clientId}
+                          onChange={(e) => setProjectEditData({ ...projectEditData, clientId: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        >
+                          {clients.filter(c => !c.archived || c.id === project.clientId).map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        {projectEditData.clientId !== project.clientId && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            This will move the project (and its tasks) to a different client.
+                          </p>
+                        )}
+                      </div>
                       <textarea
                         value={projectEditData.description}
                         onChange={(e) => setProjectEditData({ ...projectEditData, description: e.target.value })}
