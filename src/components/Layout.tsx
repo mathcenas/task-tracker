@@ -37,6 +37,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
     role: session.role
   } : null);
 
+  const formatTableName = (table: string) =>
+    table.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+  const formatCounts = (counts: Record<string, number>) =>
+    Object.entries(counts)
+      .filter(([, n]) => n > 0)
+      .map(([table, n]) => `${formatTableName(table)}: ${n}`)
+      .join('\n');
+
   const handleExportBackup = async () => {
     setIsExporting(true);
     try {
@@ -54,12 +63,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       const meta = backup.metadata;
       alert(`✅ Backup Downloaded!\n\n` +
-        `📊 Total Records: ${meta.totalRecords}\n` +
-        `👥 Clients: ${meta.totalClients}\n` +
-        `📁 Projects: ${meta.totalProjects}\n` +
-        `✓ Tasks: ${meta.totalTasks}\n` +
-        `🔄 Recurring: ${meta.totalRecurringTasks}\n` +
-        `📋 Templates: ${meta.totalTaskTemplates}\n\n` +
+        `📊 Total Records: ${meta.totalRecords}\n\n` +
+        `${formatCounts(meta.counts)}\n\n` +
         `📅 ${new Date(backup.exportDate).toLocaleString()}\n` +
         `Version: ${backup.version}`);
     } catch (err) {
@@ -87,29 +92,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
       const clients = backup.clients || backup.data?.clients || [];
       const projects = backup.projects || backup.data?.projects || [];
       const tasks = backup.tasks || backup.data?.tasks || [];
-      const recurringTasks = backup.recurringTasks || backup.data?.recurringTasks || [];
-      const taskTemplates = backup.taskTemplates || backup.data?.taskTemplates || [];
+      const recurringTasks = backup.recurringTasks || backup.data?.recurringTasks || backup.data?.recurring_tasks || [];
+      const taskTemplates = backup.taskTemplates || backup.data?.taskTemplates || backup.data?.task_templates || [];
 
       if (clients.length === 0 && projects.length === 0 && tasks.length === 0) {
         throw new Error('Invalid backup file format or empty backup');
       }
 
-      const meta = backup.metadata || {
-        totalClients: clients.length,
-        totalProjects: projects.length,
-        totalTasks: tasks.length,
-        totalRecurringTasks: recurringTasks.length,
-        totalTaskTemplates: taskTemplates.length,
-        totalRecords: clients.length + projects.length + tasks.length + recurringTasks.length + taskTemplates.length
+      const counts = backup.metadata?.counts || {
+        clients: clients.length,
+        projects: projects.length,
+        tasks: tasks.length,
+        recurring_tasks: recurringTasks.length,
+        task_templates: taskTemplates.length
       };
+      const totalRecords = backup.metadata?.totalRecords ?? Object.values(counts).reduce((a: number, b) => a + (b as number), 0);
 
       const confirmMsg = `Import backup with:\n\n` +
-        `📊 Total Records: ${meta.totalRecords}\n` +
-        `👥 Clients: ${meta.totalClients}\n` +
-        `📁 Projects: ${meta.totalProjects}\n` +
-        `✓ Tasks: ${meta.totalTasks}\n` +
-        `🔄 Recurring: ${meta.totalRecurringTasks}\n` +
-        `📋 Templates: ${meta.totalTaskTemplates}\n\n` +
+        `📊 Total Records: ${totalRecords}\n\n` +
+        `${formatCounts(counts)}\n\n` +
         `📅 ${new Date(backup.exportDate).toLocaleString()}\n` +
         `Version: ${backup.version}\n\n` +
         `Continue?`;
