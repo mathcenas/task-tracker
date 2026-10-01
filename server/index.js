@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import rateLimit from 'express-rate-limit';
 import UptimeKumaService from './uptime-kuma-service.js';
+import { buildFullBackup, restoreFullBackup } from './backup-tables.js';
 
 const { verbose } = sqlite3;
 const __filename = fileURLToPath(import.meta.url);
@@ -1706,79 +1707,20 @@ function calculateUptime(monitor) {
 }
 
 // Backup - Export all data
-app.get('/api/backup', authenticateToken, (req, res) => {
+app.get('/api/backup', authenticateToken, async (req, res) => {
   console.log('📦 Exporting database backup...');
-
-  const backup = {
-    exportDate: new Date().toISOString(),
-    version: '2.0',
-    exportedBy: req.user?.username || 'unknown',
-    metadata: {},
-    data: {}
-  };
-
-  // Export clients
-  db.all('SELECT * FROM clients', (err, clients) => {
-    if (err) {
-      console.error('Error exporting clients:', err);
-      return res.status(500).json({ error: 'Failed to export clients' });
-    }
-    backup.data.clients = clients;
-
-    // Export projects
-    db.all('SELECT * FROM projects', (err, projects) => {
-      if (err) {
-        console.error('Error exporting projects:', err);
-        return res.status(500).json({ error: 'Failed to export projects' });
-      }
-      backup.data.projects = projects;
-
-      // Export tasks
-      db.all('SELECT * FROM tasks', (err, tasks) => {
-        if (err) {
-          console.error('Error exporting tasks:', err);
-          return res.status(500).json({ error: 'Failed to export tasks' });
-        }
-        backup.data.tasks = tasks;
-
-        // Export recurring tasks
-        db.all('SELECT * FROM recurring_tasks', (err, recurringTasks) => {
-          if (err) {
-            console.error('Error exporting recurring_tasks:', err);
-            return res.status(500).json({ error: 'Failed to export recurring tasks' });
-          }
-          backup.data.recurringTasks = recurringTasks || [];
-
-          // Export task templates
-          db.all('SELECT * FROM task_templates', (err, taskTemplates) => {
-            if (err) {
-              console.error('Error exporting task_templates:', err);
-              return res.status(500).json({ error: 'Failed to export task templates' });
-            }
-            backup.data.taskTemplates = taskTemplates || [];
-
-            // Add metadata with counts
-            backup.metadata = {
-              totalClients: clients.length,
-              totalProjects: projects.length,
-              totalTasks: tasks.length,
-              totalRecurringTasks: recurringTasks?.length || 0,
-              totalTaskTemplates: taskTemplates?.length || 0,
-              totalRecords: clients.length + projects.length + tasks.length + (recurringTasks?.length || 0) + (taskTemplates?.length || 0)
-            };
-
-            console.log('✅ Backup created:', backup.metadata);
-
-            res.json(backup);
-          });
-        });
-      });
-    });
-  });
+  try {
+    const backup = await buildFullBackup(db, req.user?.username);
+    console.log('✅ Backup created:', backup.metadata);
+    res.json(backup);
+  } catch (err) {
+    console.error('Error exporting backup:', err);
+    res.status(500).json({ error: 'Failed to export backup', details: err.message });
+  }
 });
 
 // Restore - Import data
-app.post('/api/restore', authenticateToken, (req, res) => {
+app.post('/api/restore', authenticateToken, async (req, res) => {
   // Support both formats: { data: {...} } and the full backup object
   const data = req.body.data || req.body;
 
@@ -1787,208 +1729,14 @@ app.post('/api/restore', authenticateToken, (req, res) => {
   }
 
   console.log('📥 Restoring database from backup...');
-  console.log('Data to restore:', {
-    clients: data.clients.length,
-    projects: data.projects.length,
-    tasks: data.tasks.length,
-    recurringTasks: data.recurringTasks?.length || 0,
-    taskTemplates: data.taskTemplates?.length || 0
-  });
-
-  // Start transaction
-  db.serialize(() => {
-    // Clear existing data
-    db.run('DELETE FROM tasks', (err) => {
-      if (err) {
-        console.error('Error clearing tasks:', err);
-        return res.status(500).json({ error: 'Failed to clear tasks' });
-      }
-
-      db.run('DELETE FROM projects', (err) => {
-        if (err) {
-          console.error('Error clearing projects:', err);
-          return res.status(500).json({ error: 'Failed to clear projects' });
-        }
-
-        db.run('DELETE FROM clients', (err) => {
-          if (err) {
-            console.error('Error clearing clients:', err);
-            return res.status(500).json({ error: 'Failed to clear clients' });
-          }
-
-          // Insert clients
-          const clientStmt = db.prepare(`INSERT INTO clients
-            (id, name, slug, hourly_rate, contact_person, email, phone, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-          data.clients.forEach(client => {
-            try {
-              clientStmt.run([
-                client.id,
-                client.name,
-                client.slug,
-                client.hourly_rate || 0,
-                client.contact_person || null,
-                client.email || null,
-                client.phone || null,
-                client.created_at
-              ]);
-            } catch (err) {
-              console.error(`Error importing client "${client.name}":`, err);
-            }
-          });
-          clientStmt.finalize();
-
-          // Insert projects
-          const projectStmt = db.prepare(`INSERT INTO projects
-            (id, client_id, name, description, start_date, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`);
-          data.projects.forEach(project => {
-            try {
-              projectStmt.run([
-                project.id,
-                project.client_id,
-                project.name,
-                project.description || null,
-                project.start_date || null,
-                project.status || 'active',
-                project.created_at
-              ]);
-            } catch (err) {
-              console.error(`Error importing project "${project.name}":`, err);
-            }
-          });
-          projectStmt.finalize();
-
-          // Insert tasks
-          const taskStmt = db.prepare(`INSERT INTO tasks
-            (id, client_id, project_id, description, hours, cost, date, type,
-             status, priority, finished, notes, completed_at, assigned_to,
-             is_recurring, recurring_day, recurring_weekend, recurring_weekend_type,
-             recurring_weekend_day, recurring_end_date, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-          data.tasks.forEach(task => {
-            try {
-              // Backward compatibility: convert old status values to new workflow statuses
-              let taskStatus = task.status || 'in_progress';
-              if (taskStatus === 'pending') taskStatus = 'not_started';
-              if (taskStatus === 'in-progress') taskStatus = 'in_progress';
-              if (taskStatus === 'cancelled') taskStatus = 'completed';
-
-              taskStmt.run([
-                task.id,
-                task.client_id || '',
-                task.project_id || '',
-                task.description,
-                task.hours || null,
-                task.cost || null,
-                task.date,
-                task.type || 'request',
-                taskStatus,
-                task.priority || 'medium',
-                task.finished ? 1 : 0,
-                task.notes || null,
-                task.completed_at || null,
-                task.assigned_to || null,
-                task.is_recurring ? 1 : 0,
-                task.recurring_day || null,
-                task.recurring_weekend ? 1 : 0,
-                task.recurring_weekend_type || null,
-                task.recurring_weekend_day || null,
-                task.recurring_end_date || null,
-                task.created_at
-              ]);
-            } catch (err) {
-              console.error(`Error importing task "${task.description}":`, err);
-            }
-          });
-          taskStmt.finalize(() => {
-            // Insert recurring tasks (if present in backup)
-            if (data.recurringTasks && data.recurringTasks.length > 0) {
-              const recurringStmt = db.prepare(`INSERT INTO recurring_tasks
-                (id, name, description, type, priority, client_id, project_id, day_of_month,
-                 estimated_hours, estimated_cost, is_active, last_generated, next_due,
-                 recurring_weekend, recurring_weekend_type, recurring_weekend_day, recurring_end_date, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-
-              data.recurringTasks.forEach(rt => {
-                if (!rt.client_id || !rt.project_id) {
-                  console.warn(`Skipping recurring task "${rt.name}" - missing client_id or project_id`);
-                  return;
-                }
-
-                try {
-                  recurringStmt.run([
-                    rt.id,
-                    rt.name,
-                    rt.description,
-                    rt.type || 'request',
-                    rt.priority || 'medium',
-                    rt.client_id,
-                    rt.project_id,
-                    rt.day_of_month,
-                    rt.estimated_hours || null,
-                    rt.estimated_cost || null,
-                    rt.is_active !== undefined ? rt.is_active : 1,
-                    rt.last_generated || null,
-                    rt.next_due,
-                    rt.recurring_weekend ? 1 : 0,
-                    rt.recurring_weekend_type || null,
-                    rt.recurring_weekend_day || null,
-                    rt.recurring_end_date || null,
-                    rt.created_at || new Date().toISOString()
-                  ]);
-                } catch (err) {
-                  console.error(`Error importing recurring task "${rt.name}":`, err);
-                }
-              });
-              recurringStmt.finalize();
-            }
-
-            // Insert task templates (if present in backup)
-            if (data.taskTemplates && data.taskTemplates.length > 0) {
-              const templateStmt = db.prepare(`INSERT INTO task_templates
-                (id, name, description, type, priority, client_id, project_id,
-                 estimated_hours, estimated_cost, tags, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-
-              data.taskTemplates.forEach(tt => {
-                try {
-                  templateStmt.run([
-                    tt.id,
-                    tt.name,
-                    tt.description,
-                    tt.type || 'request',
-                    tt.priority || 'medium',
-                    tt.client_id || null,
-                    tt.project_id || null,
-                    tt.estimated_hours || null,
-                    tt.estimated_cost || null,
-                    tt.tags || null,
-                    tt.created_at || new Date().toISOString()
-                  ]);
-                } catch (err) {
-                  console.error(`Error importing task template "${tt.name}":`, err);
-                }
-              });
-              templateStmt.finalize();
-            }
-
-            console.log('✅ Database restored successfully');
-            res.json({
-              success: true,
-              restored: {
-                clients: data.clients.length,
-                projects: data.projects.length,
-                tasks: data.tasks.length,
-                recurringTasks: data.recurringTasks?.length || 0,
-                taskTemplates: data.taskTemplates?.length || 0
-              }
-            });
-          });
-        });
-      });
-    });
-  });
+  try {
+    const restored = await restoreFullBackup(db, data);
+    console.log('✅ Database restored successfully:', restored);
+    res.json({ success: true, restored });
+  } catch (err) {
+    console.error('Error restoring backup:', err);
+    res.status(500).json({ error: 'Failed to restore backup', details: err.message });
+  }
 });
 
 // Stats summary (used by sidebar info box)
