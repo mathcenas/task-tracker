@@ -140,8 +140,9 @@ export async function exportMultiMonthPDF(
   }> = {};
 
   allTasks.forEach(task => {
-    const client = getClient(task.clientId);
-    if (!client) return;
+    // Same fallback as the detailed breakdown below - an unresolved client
+    // shouldn't make its tasks disappear from the summary either.
+    const client = getClient(task.clientId) || { id: task.clientId, name: 'Unknown Client', slug: task.clientId, hourlyRate: 0 };
 
     if (!clientStats[task.clientId]) {
       clientStats[task.clientId] = {
@@ -235,8 +236,10 @@ export async function exportMultiMonthPDF(
 
     // Tasks by client
     Object.entries(monthClientGroups).forEach(([clientId, clientTasks]) => {
-      const client = getClient(clientId);
-      if (!client) return;
+      // A task whose client can't be resolved (e.g. stale/orphaned clientId)
+      // still gets billed work in it - show it under a fallback label
+      // instead of silently dropping it from the report.
+      const client = getClient(clientId) || { id: clientId, name: 'Unknown Client', slug: clientId, hourlyRate: 0 };
 
       pdf.addSectionTitle(`${client.name} - ${clientTasks.length} task(s)`, 30);
 
