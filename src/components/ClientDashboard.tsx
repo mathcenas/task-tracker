@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
 import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck, ListChecks, Folders, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { PDFExporter, BRAND_DARK, BRAND_TEAL, TASK_TYPE_COLORS } from '../utils/pdfExport';
 import { apiService } from '../services/api';
 import { ClientYearlyRates } from './ClientYearlyRates';
@@ -10,8 +10,13 @@ import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function ClientDashboard() {
   const { clients, getClientTasks, getProject, getProjectTasks, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, updateTask, addProject, updateProject, deleteProject } = useApp();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const monthParam = searchParams.get('month');
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(() =>
+    monthParam ? new Date(monthParam + '-01') : new Date()
+  );
   const [showMultiMonthModal, setShowMultiMonthModal] = useState(false);
   const [multiMonthClient, setMultiMonthClient] = useState<any>(null);
   const [startMonth, setStartMonth] = useState(new Date());
@@ -35,6 +40,13 @@ export function ClientDashboard() {
   // Excluded tasks are simply skipped by Export PDF / Mark Billed; nothing
   // about them changes, so they keep showing as unbilled everywhere else.
   const [excludedProjectsByClient, setExcludedProjectsByClient] = useState<Record<string, Set<string>>>({});
+
+  // Keep the URL in sync with the selected month so navigating away to edit
+  // a task and back (or using the browser's back button) returns to the
+  // same month instead of resetting to today.
+  useEffect(() => {
+    setSearchParams({ month: format(selectedMonth, 'yyyy-MM') }, { replace: true });
+  }, [selectedMonth, setSearchParams]);
 
   const toggleProjectExclusion = (clientId: string, projectId: string) => {
     setExcludedProjectsByClient(prev => {
@@ -1128,7 +1140,7 @@ export function ClientDashboard() {
                                     </div>
                                     <Link
                                       to={`/edit-task/${task.id}`}
-                                      state={{ from: '/clients' }}
+                                      state={{ from: `${location.pathname}${location.search}` }}
                                       onClick={(e) => e.stopPropagation()}
                                       className="p-2 hover:bg-gray-200 rounded-lg dark:hover:bg-gray-700 transition-colors opacity-0 group-hover:opacity-100"
                                       title="Edit task"

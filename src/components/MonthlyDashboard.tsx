@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { startOfMonth, endOfMonth, format, isWithinInterval, isToday, isTomorrow, isYesterday, parseISO, subMonths } from 'date-fns';
 import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Package, TrendingUp, Clock, DollarSign, CheckCircle, Plus, Download, Calendar, CreditCard as Edit, FileDown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { exportTasksToCSV } from '../utils/csvExport';
 import { exportMultiMonthPDF } from '../utils/multiMonthPdfExport';
 import { apiService } from '../services/api';
@@ -11,7 +11,12 @@ import { getHourlyRateForYear } from '../utils/clientRates';
 export function MonthlyDashboard() {
   const { tasks, clients, getClient, getProject } = useApp();
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const monthParam = searchParams.get('month');
+  const [currentDate, setCurrentDate] = useState(() =>
+    monthParam ? new Date(monthParam + '-01') : new Date()
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPdfExport, setShowPdfExport] = useState(false);
@@ -26,6 +31,13 @@ export function MonthlyDashboard() {
   React.useEffect(() => {
     setRefreshKey(prev => prev + 1);
   }, [tasks.length, currentDate]);
+
+  // Keep the URL in sync with the selected month so navigating away to edit
+  // a task and back (or using the browser's back button) returns to the
+  // same month instead of resetting to today.
+  React.useEffect(() => {
+    setSearchParams({ month: format(currentDate, 'yyyy-MM') }, { replace: true });
+  }, [currentDate, setSearchParams]);
 
   const sortedClients = [...clients].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -488,7 +500,7 @@ export function MonthlyDashboard() {
                       )}
                     </div>
                     <button
-                      onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: '/monthly' } })}
+                      onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: `${location.pathname}${location.search}` } })}
                       className="p-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                       title="Edit task"
                     >

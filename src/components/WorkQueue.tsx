@@ -6,7 +6,7 @@ import {
   Filter, Clock, Flame, CalendarClock, CheckCircle2, MoreHorizontal, X,
   Timer, StopCircle, Play, AlertOctagon, GitBranch, Repeat
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { CompletionModal } from './CompletionModal';
 import { TaskStatusBadge } from './TaskStatusBadge';
 
@@ -23,8 +23,19 @@ type FilterMode = 'active' | 'overdue' | 'today' | 'not_started' | 'all';
 export function WorkQueue() {
   const { tasks, getClient, getProject, updateTask } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [filterMode, setFilterMode] = useState<FilterMode>('active');
+  // Stored in the URL so it survives navigating to EditTask and back
+  const filterMode = (searchParams.get('status') || 'active') as FilterMode;
+  const setFilterMode = (value: FilterMode) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value === 'active') next.delete('status');
+      else next.set('status', value);
+      return next;
+    }, { replace: true });
+  };
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -372,7 +383,7 @@ export function WorkQueue() {
                           <MoreHorizontal className="w-4 h-4 text-gray-400" />
                         </button>
                         <button
-                          onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: '/' } })}
+                          onClick={() => navigate(`/edit-task/${task.id}`, { state: { from: `${location.pathname}${location.search}` } })}
                           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           title="Edit"
                         >

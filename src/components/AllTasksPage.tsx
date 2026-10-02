@@ -122,9 +122,17 @@ export function AllTasksPage() {
   else if (taskFilter === 'duplicates') filteredTasks = duplicateTasks;
   else filteredTasks = allUnfinishedTasks; // 'all'
 
-  // Sort tasks: latest created first (recently_added already sorted)
+  // Sort tasks: latest created first (recently_added already sorted), except
+  // the completed view, which reads better ordered by when a task was
+  // actually finished rather than when it was first created.
   const sortedTasks = taskFilter === 'recently_added'
     ? filteredTasks
+    : taskFilter === 'completed'
+    ? [...filteredTasks].sort((a, b) => {
+        const aDone = a.completedAt ? new Date(a.completedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const bDone = b.completedAt ? new Date(b.completedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        return bDone - aDone;
+      })
     : [...filteredTasks].sort((a, b) => {
         const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;

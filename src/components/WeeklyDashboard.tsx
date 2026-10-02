@@ -9,11 +9,17 @@ import { TaskTemplates } from './TaskTemplates';
 import { CalendarSync } from './CalendarSync';
 import { TaskFilters } from './ui/TaskFilters';
 import { TaskStatusBadge } from './TaskStatusBadge';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { exportTasksToCSV } from '../utils/csvExport';
+
+type WeeklyTaskFilter = 'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started';
+type WeeklyPriorityFilter = 'all' | 'high' | 'medium' | 'low';
+type WeeklyTypeFilter = 'all' | 'incident' | 'request' | 'insumos' | 'problem' | 'change';
 
 export function WeeklyDashboard() {
   const { tasks, projects, getClient, getProject, finishTask, updateTask, getProjectTasks } = useApp();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<'hours' | 'revenue' | 'pending' | null>(null);
@@ -22,9 +28,26 @@ export function WeeklyDashboard() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [taskFilter, setTaskFilter] = useState<'all' | 'overdue' | 'today' | 'upcoming' | 'completed' | 'in_progress' | 'not_started'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'incident' | 'request' | 'insumos' | 'problem' | 'change'>('all');
+
+  // Filters stored in URL so they survive navigating to EditTask and back
+  const taskFilter = (searchParams.get('status') || 'all') as WeeklyTaskFilter;
+  const priorityFilter = (searchParams.get('priority') || 'all') as WeeklyPriorityFilter;
+  const typeFilter = (searchParams.get('type') || 'all') as WeeklyTypeFilter;
+
+  const setFilters = (updates: Record<string, string>) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (!value || value === 'all') next.delete(key);
+        else next.set(key, value);
+      });
+      return next;
+    }, { replace: true });
+  };
+
+  const setTaskFilter = (value: WeeklyTaskFilter) => setFilters({ status: value });
+  const setPriorityFilter = (value: WeeklyPriorityFilter) => setFilters({ priority: value });
+  const setTypeFilter = (value: WeeklyTypeFilter) => setFilters({ type: value });
 
   // Force refresh when tasks change
   React.useEffect(() => {
@@ -491,7 +514,7 @@ export function WeeklyDashboard() {
                           <div className="flex space-x-2">
                             <Link
                               to={`/edit-task/${task.id}`}
-                              state={{ from: '/' }}
+                              state={{ from: `${location.pathname}${location.search}` }}
                               className="p-2 text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Edit Task"
                             >
@@ -685,10 +708,7 @@ export function WeeklyDashboard() {
         typeFilter={typeFilter}
         onPriorityFilterChange={setPriorityFilter}
         onTypeFilterChange={setTypeFilter}
-        onClearFilters={() => {
-          setPriorityFilter('all');
-          setTypeFilter('all');
-        }}
+        onClearFilters={() => setFilters({ priority: 'all', type: 'all' })}
         filteredCount={filteredTasks.length}
       />
 
@@ -856,7 +876,7 @@ export function WeeklyDashboard() {
                     <div className="flex items-center space-x-2">
                       <Link
                         to={`/edit-task/${task.id}`}
-                        state={{ from: '/' }}
+                        state={{ from: `${location.pathname}${location.search}` }}
                         className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"
                         title="Edit task"
                       >
