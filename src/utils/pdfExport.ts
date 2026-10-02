@@ -249,6 +249,18 @@ export class PDFExporter {
     this.currentY += 6;
   }
 
+  // Estimated height (mm) of a table with this many data rows (header +
+  // rows, roughly matching addTable's fontSize/cellPadding). Capped at one
+  // full page's worth: a table longer than that has to span pages no matter
+  // where it starts, so there's nothing to gain by forcing it onto a fresh
+  // page too - only tables that could plausibly fit on a single page are
+  // worth relocating to avoid an awkward near-empty split.
+  tableReserveHeight(rowCount: number): number {
+    const estimated = 10 + rowCount * 8;
+    const fullPage = this.contentBottomLimit() - 20;
+    return Math.min(estimated, fullPage);
+  }
+
   // reserveHeight: extra space (mm) the caller knows is coming right after
   // the title - e.g. a table's header row plus a row or two of data - so we
   // don't strand the title alone at the bottom of a page with its content
@@ -431,7 +443,7 @@ export class PDFExporter {
 
     // ── Services table ────────────────────────────────────────────────
     if (servicesTasks.length > 0) {
-      this.addSectionTitle('Services', 30);
+      this.addSectionTitle('Services', this.tableReserveHeight(servicesTasks.length + 1));
 
       const servicesRows = servicesTasks.map(task => [
         format(new Date(task.date), 'MMM d, yyyy'),
@@ -482,7 +494,7 @@ export class PDFExporter {
 
     // ── Supplies table ────────────────────────────────────────────────
     if (suppliesTasks.length > 0) {
-      this.addSectionTitle('Supplies', 30);
+      this.addSectionTitle('Supplies', this.tableReserveHeight(suppliesTasks.length + 1));
 
       const suppliesRows = suppliesTasks.map(task => [
         format(new Date(task.date), 'MMM d, yyyy'),
@@ -513,6 +525,61 @@ export class PDFExporter {
       );
     }
 
+    // ── Project breakdown ────────────────────────────────────────────────
+    // Only worth showing when the client actually has more than one project
+    // in this period - a single-project client already sees everything in
+    // the Services/Supplies tables above.
+    const allReportTasks = [...servicesTasks, ...suppliesTasks];
+    const reportProjectIds = [...new Set(allReportTasks.map(t => t.projectId).filter(Boolean))];
+    if (reportProjectIds.length > 1) {
+      const projectGroups = reportProjectIds
+        .map(pid => {
+          const projTasks = allReportTasks.filter(t => t.projectId === pid);
+          const projServiceTasks = projTasks.filter(t => t.type !== 'insumos');
+          const projSupplyTasks = projTasks.filter(t => t.type === 'insumos');
+          const hours = projServiceTasks.reduce((s, t) => s + (t.hours || 0), 0);
+          const servicesAmt = projServiceTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
+          const suppliesAmt = projSupplyTasks.reduce((s, t) => s + (t.cost || 0), 0);
+          return {
+            name: getProject(pid)?.name || 'General',
+            taskCount: projTasks.length,
+            hours,
+            servicesAmt,
+            suppliesAmt,
+            total: servicesAmt + suppliesAmt
+          };
+        })
+        .sort((a, b) => b.total - a.total);
+
+      this.addSectionTitle('Project Breakdown', this.tableReserveHeight(projectGroups.length + 1));
+
+      const projectRows = projectGroups.map(p => [
+        p.name,
+        p.taskCount.toString(),
+        `${p.hours.toFixed(1)}h`,
+        `$${p.servicesAmt.toFixed(2)}`,
+        `$${p.suppliesAmt.toFixed(2)}`,
+        `$${p.total.toFixed(2)}`
+      ]);
+
+      this.addTable(
+        ['Project', 'Tasks', 'Hours', 'Services', 'Supplies', 'Total'],
+        projectRows,
+        {
+          theme: 'grid',
+          headStyles: { fillColor: BRAND_TEAL },
+          columnStyles: {
+            0: { cellWidth: 'auto', fontStyle: 'bold' },
+            1: { cellWidth: 18, halign: 'center' },
+            2: { cellWidth: 22, halign: 'center' },
+            3: { cellWidth: 28, halign: 'right' },
+            4: { cellWidth: 28, halign: 'right' },
+            5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
+          }
+        }
+      );
+    }
+
     // ── Service type breakdown ────────────────────────────────────────
     // Every non-supply type gets its own row here - this used to only
     // track incidents/requests, which silently dropped Problem/Change
@@ -527,11 +594,17 @@ export class PDFExporter {
     const breakdownGroups = breakdownTypes
       .map(({ type, label }) => ({ label, tasks: servicesTasks.filter(t => t.type === type) }))
       .filter(g => g.tasks.length > 0);
+    const breakdownSuppliesTotal = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
 
-    if (breakdownGroups.length > 0) {
-      this.addSectionTitle('Service Breakdown', 35);
+    if (breakdownGroups.length > 0 || suppliesTasks.length > 0) {
+      const breakdownRowCount = breakdownGroups.length + (suppliesTasks.length > 0 ? 1 : 0);
+      this.addSectionTitle('Service Breakdown', this.tableReserveHeight(breakdownRowCount));
 
+      // % is of the combined services + supplies total, not just services,
+      // now that supplies get their own row - otherwise the column wouldn't
+      // sum to 100% across the table.
       const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
+      const breakdownGrandTotal = servicesTotal + breakdownSuppliesTotal;
       const breakdownRows: any[][] = breakdownGroups.map(({ label, tasks }) => {
         const h = tasks.reduce((s, t) => s + (t.hours || 0), 0);
         const amt = tasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
@@ -540,12 +613,21 @@ export class PDFExporter {
           tasks.length.toString(),
           `${h.toFixed(1)}h`,
           `$${amt.toFixed(2)}`,
-          servicesTotal > 0 ? `${((amt / servicesTotal) * 100).toFixed(0)}%` : '0%'
+          breakdownGrandTotal > 0 ? `${((amt / breakdownGrandTotal) * 100).toFixed(0)}%` : '0%'
         ];
       });
+      if (suppliesTasks.length > 0) {
+        breakdownRows.push([
+          'Supplies',
+          suppliesTasks.length.toString(),
+          '—',
+          `$${breakdownSuppliesTotal.toFixed(2)}`,
+          breakdownGrandTotal > 0 ? `${((breakdownSuppliesTotal / breakdownGrandTotal) * 100).toFixed(0)}%` : '0%'
+        ]);
+      }
 
       this.addTable(
-        ['Type', 'Tasks', 'Hours', 'Amount', '% of Services'],
+        ['Type', 'Tasks', 'Hours', 'Amount', '% of Total'],
         breakdownRows,
         {
           theme: 'grid',

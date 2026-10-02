@@ -67,8 +67,6 @@ export async function exportMultiMonthPDF(
   });
 
   // Monthly Breakdown Table
-  pdf.addSectionTitle('Monthly Performance Overview', 30);
-
   const monthlyBreakdown = monthsData.map(month => [
     month.month,
     month.tasks.length.toString(),
@@ -77,6 +75,7 @@ export async function exportMultiMonthPDF(
     `$${month.suppliesCost.toFixed(2)}`,
     `$${month.netRevenue.toFixed(2)}`
   ]);
+  pdf.addSectionTitle('Monthly Performance Overview', pdf.tableReserveHeight(monthlyBreakdown.length + 1));
 
   pdf.addTable(
     ['Month', 'Tasks', 'Hours', 'Services', 'Supplies', 'Net Revenue'],
@@ -100,8 +99,6 @@ export async function exportMultiMonthPDF(
   );
 
   // Task Type Distribution
-  pdf.addSectionTitle('Task Type Distribution', 30);
-
   const taskTypeData = [
     ['Incidents', totalIncidents.toString(), `${((totalIncidents / totalTasks) * 100).toFixed(1)}%`],
     ['Requests', totalRequests.toString(), `${((totalRequests / totalTasks) * 100).toFixed(1)}%`],
@@ -109,6 +106,7 @@ export async function exportMultiMonthPDF(
     ...(totalChanges > 0 ? [['Changes', totalChanges.toString(), `${((totalChanges / totalTasks) * 100).toFixed(1)}%`]] : []),
     ['Supplies', totalSupplies.toString(), `${((totalSupplies / totalTasks) * 100).toFixed(1)}%`]
   ];
+  pdf.addSectionTitle('Task Type Distribution', pdf.tableReserveHeight(taskTypeData.length + 1));
 
   pdf.addTable(
     ['Type', 'Count', 'Percentage'],
@@ -165,8 +163,6 @@ export async function exportMultiMonthPDF(
     }
   });
 
-  pdf.addSectionTitle('Client Performance Analysis', 30);
-
   const clientData = Object.entries(clientStats)
     .sort((a, b) => (b[1].revenue - b[1].suppliesCost) - (a[1].revenue - a[1].suppliesCost))
     .map(([_, stats]) => [
@@ -177,6 +173,7 @@ export async function exportMultiMonthPDF(
       `$${stats.suppliesCost.toFixed(2)}`,
       `$${(stats.revenue - stats.suppliesCost).toFixed(2)}`
     ]);
+  pdf.addSectionTitle('Client Performance Analysis', pdf.tableReserveHeight(clientData.length + 1));
 
   pdf.addTable(
     ['Client', 'Tasks', 'Hours', 'Services', 'Supplies', 'Net'],
@@ -241,7 +238,7 @@ export async function exportMultiMonthPDF(
       // instead of silently dropping it from the report.
       const client = getClient(clientId) || { id: clientId, name: 'Unknown Client', slug: clientId, hourlyRate: 0 };
 
-      pdf.addSectionTitle(`${client.name} - ${clientTasks.length} task(s)`, 30);
+      pdf.addSectionTitle(`${client.name} - ${clientTasks.length} task(s)`, pdf.tableReserveHeight(clientTasks.length + 1));
 
       const taskRows = clientTasks.map(task => {
         const project = getProject(task.projectId);
@@ -317,10 +314,62 @@ export async function exportMultiMonthPDF(
         .filter(t => t.type === 'insumos')
         .reduce((sum, t) => sum + (t.cost || 0), 0);
 
+      // Project breakdown within this client/month - only worth showing
+      // when they actually have more than one project this period.
+      const clientProjectIds = [...new Set(clientTasks.map(t => t.projectId).filter(Boolean))];
+      if (clientProjectIds.length > 1) {
+        const clientProjectGroups = clientProjectIds
+          .map(pid => {
+            const pTasks = clientTasks.filter(t => t.projectId === pid);
+            const pServiceTasks = pTasks.filter(t => t.type !== 'insumos');
+            const pSupplyTasks = pTasks.filter(t => t.type === 'insumos');
+            const hours = pServiceTasks.reduce((s, t) => s + (t.hours || 0), 0);
+            const servicesAmt = pServiceTasks.reduce((s, t) => s + (t.hours || 0) * getHourlyRateForYear(client, parseISO(t.date).getFullYear()), 0);
+            const suppliesAmt = pSupplyTasks.reduce((s, t) => s + (t.cost || 0), 0);
+            return {
+              name: getProject(pid)?.name || 'General',
+              taskCount: pTasks.length,
+              hours,
+              servicesAmt,
+              suppliesAmt,
+              total: servicesAmt + suppliesAmt
+            };
+          })
+          .sort((a, b) => b.total - a.total);
+
+        pdf.addSectionTitle(`${client.name} — Project Breakdown`, pdf.tableReserveHeight(clientProjectGroups.length + 1));
+
+        const clientProjectRows = clientProjectGroups.map(p => [
+          p.name,
+          p.taskCount.toString(),
+          `${p.hours.toFixed(1)}h`,
+          `$${p.servicesAmt.toFixed(2)}`,
+          `$${p.suppliesAmt.toFixed(2)}`,
+          `$${p.total.toFixed(2)}`
+        ]);
+
+        pdf.addTable(
+          ['Project', 'Tasks', 'Hours', 'Services', 'Supplies', 'Total'],
+          clientProjectRows,
+          {
+            theme: 'grid',
+            headStyles: { fillColor: BRAND_TEAL },
+            columnStyles: {
+              0: { cellWidth: 'auto', fontStyle: 'bold' },
+              1: { cellWidth: 18, halign: 'center' },
+              2: { cellWidth: 22, halign: 'center' },
+              3: { cellWidth: 28, halign: 'right' },
+              4: { cellWidth: 28, halign: 'right' },
+              5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
+            }
+          }
+        );
+      }
+
       // Supplies detail sub-table if client has any supply tasks
       const clientSupplyTasks = clientTasks.filter(t => t.type === 'insumos');
       if (clientSupplyTasks.length > 0) {
-        pdf.addSectionTitle(`${client.name} — Supplies Detail`, 30);
+        pdf.addSectionTitle(`${client.name} — Supplies Detail`, pdf.tableReserveHeight(clientSupplyTasks.length + 1));
 
         const supplyRows = clientSupplyTasks.map(task => {
           const approvalLabel = task.approvalStatus === 'approved' ? 'Approved' :
