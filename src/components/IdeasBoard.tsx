@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import { Lightbulb, Clock, AlertTriangle, Plus, Save, X, CreditCard as Edit2, Calendar, User, Tag, FileText, Folder, ChevronDown } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 import { apiService } from '../services/api';
@@ -9,12 +9,30 @@ import { exportProjectIdeasPDF } from '../utils/projectIdeasPdfExport';
 export function IdeasBoard() {
   const { tasks, clients, projects, getClient, getProject, updateTask } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'overdue' | 'in_progress'>('all');
-  const [filterClient, setFilterClient] = useState<string>('all');
-  const [filterProject, setFilterProject] = useState<string>('all');
   const [exporting, setExporting] = useState(false);
+
+  // Filters stored in URL so they survive navigating to EditTask and back
+  const filterType = (searchParams.get('status') || 'all') as 'all' | 'overdue' | 'in_progress';
+  const filterClient = searchParams.get('client') || 'all';
+  const filterProject = searchParams.get('project') || 'all';
+
+  const setIdeasFilters = (updates: Record<string, string>) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (!value || value === 'all') next.delete(key);
+        else next.set(key, value);
+      });
+      return next;
+    }, { replace: true });
+  };
+
+  const setFilterType = (v: 'all' | 'overdue' | 'in_progress') => setIdeasFilters({ status: v });
+  const setFilterProject = (v: string) => setIdeasFilters({ project: v });
 
   const filteredProjects = useMemo(() => {
     if (filterClient === 'all') return projects;
@@ -222,10 +240,7 @@ export function IdeasBoard() {
               <User className="w-4 h-4 text-gray-400" />
               <select
                 value={filterClient}
-                onChange={(e) => {
-                  setFilterClient(e.target.value);
-                  setFilterProject('all');
-                }}
+                onChange={(e) => setIdeasFilters({ client: e.target.value, project: 'all' })}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="all">All Clients</option>
@@ -299,7 +314,7 @@ export function IdeasBoard() {
                       </div>
                       <Link
                         to={`/edit-task/${task.id}`}
-                        state={{ from: '/ideas' }}
+                        state={{ from: `${location.pathname}${location.search}` }}
                         className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       >
                         <Edit2 className="w-4 h-4" />

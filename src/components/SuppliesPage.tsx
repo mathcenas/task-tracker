@@ -37,8 +37,20 @@ export function SuppliesPage() {
   const setSelectedYear = (v: string) => setFilters({ year: v });
   const setSelectedApprovalStatus = (v: string) => setFilters({ approval: v });
 
-  // Analytics month — defaults to current month, user can navigate
-  const [analyticsMonth, setAnalyticsMonth] = useState<Date>(startOfMonth(new Date()));
+  // Analytics month — defaults to current month, user can navigate. Stored
+  // in the URL too, for the same reason as the filters above.
+  const analyticsMonthParam = searchParams.get('aMonth');
+  const [analyticsMonth, setAnalyticsMonth] = useState<Date>(() =>
+    analyticsMonthParam ? startOfMonth(new Date(analyticsMonthParam + '-01')) : startOfMonth(new Date())
+  );
+
+  React.useEffect(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('aMonth', format(analyticsMonth, 'yyyy-MM'));
+      return next;
+    }, { replace: true });
+  }, [analyticsMonth, setSearchParams]);
 
   const suppliesTasks = tasks.filter(task => task.type === 'insumos');
 

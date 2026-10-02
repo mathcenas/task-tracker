@@ -234,6 +234,7 @@ function RequestCard({ request, clientName, projectName, resendState, onProcess,
               {request.taskId && (
                 <Link
                   to={`/edit-task/${request.taskId}`}
+                  state={{ from: '/onboarding-admin' }}
                   className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300
                            border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >

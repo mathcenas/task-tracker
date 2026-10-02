@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Task } from '../types';
 import { format, parseISO, isToday, isPast } from 'date-fns';
 import { Calendar, User, AlertCircle, CheckCircle, Clock, Filter, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
 type TaskStatus = 'not_started' | 'in_progress' | 'review' | 'completed';
 
@@ -48,10 +48,27 @@ const columns: Column[] = [
 
 export function KanbanBoard() {
   const { tasks, clients, projects, getClient, getProject, updateTask } = useApp();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-  const [filterClient, setFilterClient] = useState<string>('all');
-  const [filterProject, setFilterProject] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Filters stored in URL so they survive navigating to EditTask and back
+  const filterClient = searchParams.get('client') || 'all';
+  const filterProject = searchParams.get('project') || 'all';
+
+  const setFilters = (updates: Record<string, string>) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (!value || value === 'all') next.delete(key);
+        else next.set(key, value);
+      });
+      return next;
+    }, { replace: true });
+  };
+
+  const setFilterProject = (v: string) => setFilters({ project: v });
 
   const filteredProjects = filterClient !== 'all'
     ? projects.filter(p => p.clientId === filterClient)
@@ -137,7 +154,7 @@ export function KanbanBoard() {
     };
 
     return (
-      <Link to={`/edit-task/${task.id}`} state={{ from: '/kanban' }} onClick={handleCardClick}>
+      <Link to={`/edit-task/${task.id}`} state={{ from: `${location.pathname}${location.search}` }} onClick={handleCardClick}>
         <div
           draggable
           onDragStart={handleCardDragStart}
@@ -224,10 +241,7 @@ export function KanbanBoard() {
               </label>
               <select
                 value={filterClient}
-                onChange={(e) => {
-                  setFilterClient(e.target.value);
-                  setFilterProject('all');
-                }}
+                onChange={(e) => setFilters({ client: e.target.value, project: 'all' })}
                 className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
               >
                 <option value="all">All Clients</option>

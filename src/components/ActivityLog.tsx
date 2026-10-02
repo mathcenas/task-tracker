@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, FileText, Users, Folder, CheckCircle, CheckCheck, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink, Calendar, DollarSign, Timer } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useApp } from '../context/AppContext';
 
@@ -18,10 +18,21 @@ interface ActivityLog {
 
 export function ActivityLog() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { clients, projects } = useApp();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'task' | 'client' | 'project'>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Stored in the URL so it survives navigating to EditTask and back
+  const filter = (searchParams.get('filter') || 'all') as 'all' | 'task' | 'client' | 'project';
+  const setFilter = (value: 'all' | 'task' | 'client' | 'project') => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value === 'all') next.delete('filter');
+      else next.set('filter', value);
+      return next;
+    }, { replace: true });
+  };
 
   const clientName = (id: string) => clients.find(c => c.id === id)?.name ?? id;
   const projectName = (id: string) => projects.find(p => p.id === id)?.name ?? id;
@@ -149,7 +160,7 @@ export function ActivityLog() {
 
   const handleLogClick = (log: ActivityLog) => {
     if (log.entity_type === 'task' && log.action !== 'deleted') {
-      navigate(`/edit-task/${log.entity_id}`, { state: { from: '/activity-log' } });
+      navigate(`/edit-task/${log.entity_id}`, { state: { from: `${location.pathname}${location.search}` } });
     } else if (log.entity_type === 'client') {
       navigate('/clients');
     } else if (log.entity_type === 'project') {
