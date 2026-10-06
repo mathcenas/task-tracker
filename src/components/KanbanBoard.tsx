@@ -4,6 +4,10 @@ import { Task } from '../types';
 import { format, parseISO, isToday, isPast } from 'date-fns';
 import { Calendar, User, AlertCircle, CheckCircle, Clock, Filter, X } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors,
+  useDraggable, useDroppable, closestCenter, type DragStartEvent, type DragEndEvent
+} from '@dnd-kit/core';
 
 type TaskStatus = 'not_started' | 'in_progress' | 'review' | 'completed';
 
@@ -50,8 +54,18 @@ export function KanbanBoard() {
   const { tasks, clients, projects, getClient, getProject, updateTask } = useApp();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // distance/delay thresholds keep a plain tap-to-open-task working - a
+  // drag only "activates" once the pointer has actually moved, so a click
+  // with no movement still reaches the card's Link normally. Touch gets a
+  // short delay too, so starting to scroll the page doesn't get mistaken
+  // for picking up a card.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
 
   // Filters stored in URL so they survive navigating to EditTask and back
   const filterClient = searchParams.get('client') || 'all';
@@ -87,23 +101,22 @@ export function KanbanBoard() {
     return filteredTasks.filter(task => task.status === status);
   };
 
-  const handleDragStart = (task: Task) => {
-    setDraggedTask(task);
+  const activeTask = activeTaskId ? filteredTasks.find(t => t.id === activeTaskId) ?? null : null;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(String(event.active.id));
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTaskId(null);
+    if (!over) return;
 
-  const handleDrop = async (status: TaskStatus) => {
-    if (!draggedTask) return;
-
-    if (draggedTask.status !== status) {
-      const updatedTask = { ...draggedTask, status };
-      await updateTask(updatedTask);
+    const newStatus = over.id as TaskStatus;
+    const task = filteredTasks.find(t => t.id === active.id);
+    if (task && task.status !== newStatus) {
+      await updateTask({ ...task, status: newStatus });
     }
-
-    setDraggedTask(null);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -136,70 +149,104 @@ export function KanbanBoard() {
     }
   };
 
-  const TaskCard = ({ task }: { task: Task }) => {
+  // Pure visual - shared between the card sitting in a column and the
+  // floating copy the DragOverlay renders under the pointer while dragging.
+  const TaskCardContent = ({ task }: { task: Task }) => {
     const client = getClient(task.clientId);
     const project = getProject(task.projectId);
     const taskDate = parseISO(task.date + 'T00:00:00');
     const isOverdue = isPast(taskDate) && !isToday(taskDate);
 
-    const handleCardDragStart = (e: React.DragEvent) => {
-      e.stopPropagation();
-      handleDragStart(task);
-    };
+    return (
+      <div className={`p-3 rounded-md border-l-4 ${getPriorityColor(task.priority)} hover:border-gray-300 dark:hover:border-gray-600`}>
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1">
+            <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-2">
+              {task.description}
+            </h4>
+            <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+              <span className="font-medium">{client?.name}</span>
+              <span>•</span>
+              <span>{project?.name}</span>
+            </div>
+          </div>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(task.type)}`}>
+            {task.type}
+          </span>
+        </div>
 
-    const handleCardClick = (e: React.MouseEvent) => {
-      if (draggedTask) {
-        e.preventDefault();
-      }
-    };
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center space-x-2">
+            <Calendar className="w-3 h-3 text-gray-400" />
+            <span className={`text-xs ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
+              {format(taskDate, 'MMM d, yyyy')}
+              {isOverdue && ' (Overdue)'}
+            </span>
+          </div>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+            task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+          }`}>
+            {task.priority}
+          </span>
+        </div>
+
+        {task.hours && (
+          <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+            Estimated: {task.hours}h
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const TaskCard = ({ task }: { task: Task }) => {
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
 
     return (
-      <Link to={`/edit-task/${task.id}`} state={{ from: `${location.pathname}${location.search}` }} onClick={handleCardClick}>
-        <div
-          draggable
-          onDragStart={handleCardDragStart}
-          className={`p-3 rounded-md border-l-4 ${getPriorityColor(task.priority)} cursor-move hover:border-gray-300 dark:hover:border-gray-600`}
-        >
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1">
-              <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-2">
-                {task.description}
-              </h4>
-              <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
-                <span className="font-medium">{client?.name}</span>
-                <span>•</span>
-                <span>{project?.name}</span>
-              </div>
-            </div>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(task.type)}`}>
-              {task.type}
-            </span>
-          </div>
+      <div ref={setNodeRef} {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing touch-none" style={{ opacity: isDragging ? 0.4 : 1 }}>
+        <Link to={`/edit-task/${task.id}`} state={{ from: `${location.pathname}${location.search}` }}>
+          <TaskCardContent task={task} />
+        </Link>
+      </div>
+    );
+  };
 
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-3 h-3 text-gray-400" />
-              <span className={`text-xs ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
-                {format(taskDate, 'MMM d, yyyy')}
-                {isOverdue && ' (Overdue)'}
-              </span>
-            </div>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-              task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-              task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-              'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-            }`}>
-              {task.priority}
-            </span>
-          </div>
+  const KanbanColumn = ({ column, columnTasks }: { column: Column; columnTasks: Task[] }) => {
+    const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
-          {task.hours && (
-            <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-              Estimated: {task.hours}h
-            </div>
+    return (
+      <div
+        ref={setNodeRef}
+        className={`bg-gray-50 dark:bg-gray-800/50 border rounded-md p-3 transition-colors ${
+          isOver ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-400/30' : 'border-gray-200 dark:border-gray-700'
+        }`}
+      >
+        <div className={`flex items-center space-x-2 mb-3 pb-2 border-b ${column.color}`}>
+          <div className={column.color}>
+            {column.icon}
+          </div>
+          <h3 className={`font-medium text-sm ${column.color}`}>
+            {column.title}
+          </h3>
+          <span className={`ml-auto px-1.5 py-0.5 ${column.bgColor} ${column.color} rounded text-xs`}>
+            {columnTasks.length}
+          </span>
+        </div>
+
+        <div className="space-y-2 min-h-[200px]">
+          {columnTasks.length === 0 ? (
+            <p className="text-center text-gray-400 dark:text-gray-500 text-sm py-8">
+              No tasks
+            </p>
+          ) : (
+            columnTasks.map(task => (
+              <TaskCard key={task.id} task={task} />
+            ))
           )}
         </div>
-      </Link>
+      </div>
     );
   };
 
@@ -271,43 +318,21 @@ export function KanbanBoard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {columns.map((column) => {
-          const columnTasks = getTasksByStatus(column.id);
-          return (
-            <div
-              key={column.id}
-              className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md p-3"
-              onDragOver={handleDragOver}
-              onDrop={() => handleDrop(column.id)}
-            >
-              <div className={`flex items-center space-x-2 mb-3 pb-2 border-b ${column.color}`}>
-                <div className={column.color}>
-                  {column.icon}
-                </div>
-                <h3 className={`font-medium text-sm ${column.color}`}>
-                  {column.title}
-                </h3>
-                <span className={`ml-auto px-1.5 py-0.5 ${column.bgColor} ${column.color} rounded text-xs`}>
-                  {columnTasks.length}
-                </span>
-              </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {columns.map((column) => (
+            <KanbanColumn key={column.id} column={column} columnTasks={getTasksByStatus(column.id)} />
+          ))}
+        </div>
 
-              <div className="space-y-2 min-h-[200px]">
-                {columnTasks.length === 0 ? (
-                  <p className="text-center text-gray-400 dark:text-gray-500 text-sm py-8">
-                    No tasks
-                  </p>
-                ) : (
-                  columnTasks.map(task => (
-                    <TaskCard key={task.id} task={task} />
-                  ))
-                )}
-              </div>
+        <DragOverlay>
+          {activeTask ? (
+            <div className="shadow-xl rounded-md rotate-2 cursor-grabbing">
+              <TaskCardContent task={activeTask} />
             </div>
-          );
-        })}
-      </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

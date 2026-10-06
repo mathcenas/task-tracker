@@ -80,7 +80,11 @@ export function ReportsPage() {
     } else if (exportMode === 'multimonth') {
       const s = startOfMonth(startMonth);
       const e = endOfMonth(endMonth);
-      filtered = allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
+      filtered = allTasks.filter(t =>
+        t.finished &&
+        isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }) &&
+        (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId))
+      );
     } else {
       filtered = allTasks.filter(t =>
         t.finished &&
@@ -149,7 +153,9 @@ export function ReportsPage() {
         const e = endOfMonth(endMonth);
         if (s > e) { alert('Start month must be before or equal to end month.'); return; }
         const exportTasks = allTasks.filter(t =>
-          t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e })
+          t.finished &&
+          isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }) &&
+          (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId))
         );
         if (exportTasks.length === 0) { alert('No completed tasks in the selected range.'); return; }
 
@@ -165,13 +171,15 @@ export function ReportsPage() {
         pdf.addSection('Report Details', {
           'Report Number': `RPT-${format(s, 'yyyyMM')}-${format(e, 'yyyyMM')}-${selectedClient.id.slice(-6)}`,
           'Client': selectedClient.name,
+          ...(selectedProjectIds.length > 0 ? { 'Project': projectFilterLabel } : {}),
           'Period': `${format(s, 'MMM yyyy')} – ${format(e, 'MMM yyyy')}`,
           'Generated': format(new Date(), 'MMM dd, yyyy'),
           'Service Rate(s)': ratesDisplay
         });
         pdf.addClientReportSections(exportTasks, getProject, (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear()));
         pdf.addThankYouNote();
-        pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}.pdf`);
+        const multiMonthProjectSuffix = selectedProjectIds.length > 0 ? `-${projectFilterSlug}` : '';
+        pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}${multiMonthProjectSuffix}.pdf`);
 
       } else {
         // project mode
@@ -247,15 +255,20 @@ export function ReportsPage() {
     } else if (exportMode === 'multimonth') {
       const s = startOfMonth(startMonth);
       const e = endOfMonth(endMonth);
-      exportTasks = allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
-      period = `${format(s, 'MMM yyyy')} – ${format(e, 'MMM yyyy')}`;
+      exportTasks = allTasks.filter(t =>
+        t.finished &&
+        isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }) &&
+        (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId))
+      );
+      period = `${format(s, 'MMM yyyy')} – ${format(e, 'MMM yyyy')}${selectedProjectIds.length > 0 ? ` · ${projectFilterLabel}` : ''}`;
       const uniqueYears = [...new Set(exportTasks.map(t => parseISO(t.date).getFullYear()))].sort();
       const yearlyRatesUsed = uniqueYears.map(year => ({ year, rate: getHourlyRateForYear(selectedClient, year) }));
       rateLabel = yearlyRatesUsed.length > 1
         ? yearlyRatesUsed.map(yr => `${yr.year}: $${yr.rate.toFixed(2)}/hour`).join(', ')
         : `$${yearlyRatesUsed[0]?.rate.toFixed(2)}/hour`;
       hourlyRate = (t) => getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear());
-      filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}.md`;
+      const multiMonthMdProjectSuffix = selectedProjectIds.length > 0 ? `-${projectFilterSlug}` : '';
+      filename = `${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}${multiMonthMdProjectSuffix}.md`;
     } else {
       exportTasks = allTasks.filter(t =>
         t.finished &&
@@ -310,7 +323,11 @@ export function ReportsPage() {
     } else if (exportMode === 'multimonth') {
       const s = startOfMonth(startMonth);
       const e = endOfMonth(endMonth);
-      return allTasks.filter(t => t.finished && isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }));
+      return allTasks.filter(t =>
+        t.finished &&
+        isWithinInterval(parseISO(t.date + 'T00:00:00'), { start: s, end: e }) &&
+        (selectedProjectIds.length === 0 || selectedProjectIds.includes(t.projectId))
+      );
     } else {
       return allTasks.filter(t =>
         t.finished &&
@@ -454,6 +471,49 @@ export function ReportsPage() {
                   </div>
                   <div className="sm:col-span-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 text-sm text-blue-800 dark:text-blue-300">
                     {format(startMonth, 'MMM yyyy')} – {format(endMonth, 'MMM yyyy')}
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Projects</label>
+                      {selectedProjectIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProjectIds([])}
+                          className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          Clear (use all)
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {clientProjects.map(p => {
+                        const selected = selectedProjectIds.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => toggleProjectId(p.id)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                              selected
+                                ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                                : 'border-gray-300 bg-white text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {selected && <CheckCircle2 className="w-3 h-3" />}
+                            {p.name}
+                          </button>
+                        );
+                      })}
+                      {clientProjects.length === 0 && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">No projects for this client.</p>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      {selectedProjectIds.length === 0
+                        ? 'Nothing selected — exporting all projects.'
+                        : `${projectFilterLabel} selected.`}
+                    </p>
                   </div>
                 </div>
               )}
