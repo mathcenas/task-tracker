@@ -8,7 +8,7 @@ import { api } from '../services/api';
 import { BulkTaskOperations } from './BulkTaskOperations';
 
 export function SuppliesPage() {
-  const { tasks, clients, getClient, getProject, refreshTasks } = useApp();
+  const { tasks, clients, getClient, getProject, reloadTasks } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -166,7 +166,7 @@ export function SuppliesPage() {
     const approvalStatus = task.approvalStatus === newStatus ? 'pending' : newStatus;
     try {
       await api.updateTask(taskId, { ...task, approvalStatus });
-      await refreshTasks();
+      await reloadTasks();
     } catch (error) {
       console.error('Error updating approval status:', error);
     }
@@ -178,13 +178,16 @@ export function SuppliesPage() {
     if (invoiceNum === null) return;
     try {
       for (const taskId of Array.from(selectedItems)) {
+        const task = suppliesTasks.find(t => t.id === taskId);
+        if (!task) continue;
         await api.updateTask(taskId, {
+          ...task,
           billed: true,
           billedAt: new Date().toISOString(),
           invoiceNumber: invoiceNum || undefined
         });
       }
-      await refreshTasks();
+      await reloadTasks();
       setSelectedItems(new Set());
     } catch (error) {
       console.error('Error marking as billed:', error);
