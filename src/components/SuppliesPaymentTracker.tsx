@@ -6,7 +6,7 @@ import { format, parseISO, differenceInDays } from 'date-fns';
 import { api } from '../services/api';
 
 export function SuppliesPaymentTracker() {
-  const { tasks, clients, getClient, getProject, refreshTasks } = useApp();
+  const { tasks, clients, getClient, getProject, reloadTasks } = useApp();
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unbilled' | 'pending' | 'paid'>('all');
   const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
@@ -63,13 +63,16 @@ export function SuppliesPaymentTracker() {
   }, [suppliesTasks]);
 
   const handleMarkAsBilled = async (taskId: string, invoice: string) => {
+    const task = suppliesTasks.find(t => t.id === taskId);
+    if (!task) return;
     try {
       await api.updateTask(taskId, {
+        ...task,
         billed: true,
         billedAt: new Date().toISOString(),
         invoiceNumber: invoice || undefined
       });
-      await refreshTasks();
+      await reloadTasks();
       setEditingInvoice(null);
       setInvoiceNumber('');
     } catch (error) {
@@ -79,12 +82,15 @@ export function SuppliesPaymentTracker() {
   };
 
   const handleMarkAsPaid = async (taskId: string) => {
+    const task = suppliesTasks.find(t => t.id === taskId);
+    if (!task) return;
     try {
       await api.updateTask(taskId, {
+        ...task,
         paid: true,
         paidAt: new Date().toISOString()
       });
-      await refreshTasks();
+      await reloadTasks();
     } catch (error) {
       console.error('Error marking as paid:', error);
       alert('Failed to mark as paid');
@@ -92,13 +98,16 @@ export function SuppliesPaymentTracker() {
   };
 
   const handleUnmarkBilled = async (taskId: string) => {
+    const task = suppliesTasks.find(t => t.id === taskId);
+    if (!task) return;
     try {
       await api.updateTask(taskId, {
+        ...task,
         billed: false,
         billedAt: undefined,
         invoiceNumber: undefined
       });
-      await refreshTasks();
+      await reloadTasks();
     } catch (error) {
       console.error('Error unmarking billed:', error);
       alert('Failed to unmark');
@@ -106,12 +115,15 @@ export function SuppliesPaymentTracker() {
   };
 
   const handleUnmarkPaid = async (taskId: string) => {
+    const task = suppliesTasks.find(t => t.id === taskId);
+    if (!task) return;
     try {
       await api.updateTask(taskId, {
+        ...task,
         paid: false,
         paidAt: undefined
       });
-      await refreshTasks();
+      await reloadTasks();
     } catch (error) {
       console.error('Error unmarking paid:', error);
       alert('Failed to unmark');
