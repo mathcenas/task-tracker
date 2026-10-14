@@ -151,6 +151,8 @@ const initDB = () => {
       recurring_weekend_type TEXT,
       recurring_weekend_day TEXT,
       recurring_end_date DATE,
+      frequency TEXT NOT NULL DEFAULT 'monthly',
+      month_of_year INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -354,6 +356,15 @@ const runMigrations = () => {
     `ALTER TABLE tasks ADD COLUMN vendor TEXT`,
     `ALTER TABLE tasks ADD COLUMN receipt_ref TEXT`,
     `ALTER TABLE tasks ADD COLUMN approval_status TEXT DEFAULT 'pending'`,
+    // These four were only ever in the CREATE TABLE, never migrated in - any
+    // database older than that addition is missing them, and recurring-task
+    // create/update unconditionally references all four.
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend BOOLEAN DEFAULT 0`,
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend_type TEXT`,
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend_day TEXT`,
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_end_date DATE`,
+    `ALTER TABLE recurring_tasks ADD COLUMN frequency TEXT NOT NULL DEFAULT 'monthly'`,
+    `ALTER TABLE recurring_tasks ADD COLUMN month_of_year INTEGER`,
   ];
 
   migrations.forEach(sql => {
@@ -1273,18 +1284,19 @@ app.post('/api/recurring-tasks', authenticateToken, (req, res) => {
   const {
     id, name, description, type, priority, clientId, projectId,
     dayOfMonth, estimatedHours, estimatedCost, isActive, nextDue, recurringStartDate,
-    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
+    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate,
+    frequency, monthOfYear
   } = req.body;
 
   db.run(
     `INSERT INTO recurring_tasks
     (id, name, description, type, priority, client_id, project_id, day_of_month,
      estimated_hours, estimated_cost, is_active, next_due, recurring_start_date, recurring_weekend,
-     recurring_weekend_type, recurring_weekend_day, recurring_end_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     recurring_weekend_type, recurring_weekend_day, recurring_end_date, frequency, month_of_year)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, name, description, type, priority, clientId, projectId, dayOfMonth,
      estimatedHours, estimatedCost, isActive ? 1 : 0, nextDue, recurringStartDate, recurringWeekend ? 1 : 0,
-     recurringWeekendType, recurringWeekendDay, recurringEndDate],
+     recurringWeekendType, recurringWeekendDay, recurringEndDate, frequency || 'monthly', monthOfYear],
     function(err) {
       if (err) {
         console.error('Error creating recurring task:', err);
@@ -1300,7 +1312,8 @@ app.put('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
   const {
     name, description, type, priority, clientId, projectId, dayOfMonth,
     estimatedHours, estimatedCost, isActive, lastGenerated, nextDue, recurringStartDate,
-    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
+    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate,
+    frequency, monthOfYear
   } = req.body;
 
   db.run(
@@ -1308,11 +1321,13 @@ app.put('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
     name = ?, description = ?, type = ?, priority = ?, client_id = ?,
     project_id = ?, day_of_month = ?, estimated_hours = ?, estimated_cost = ?,
     is_active = ?, last_generated = ?, next_due = ?, recurring_start_date = ?, recurring_weekend = ?,
-    recurring_weekend_type = ?, recurring_weekend_day = ?, recurring_end_date = ?
+    recurring_weekend_type = ?, recurring_weekend_day = ?, recurring_end_date = ?,
+    frequency = ?, month_of_year = ?
     WHERE id = ?`,
     [name, description, type, priority, clientId, projectId, dayOfMonth,
      estimatedHours, estimatedCost, isActive ? 1 : 0, lastGenerated, nextDue, recurringStartDate,
-     recurringWeekend ? 1 : 0, recurringWeekendType, recurringWeekendDay, recurringEndDate, id],
+     recurringWeekend ? 1 : 0, recurringWeekendType, recurringWeekendDay, recurringEndDate,
+     frequency || 'monthly', monthOfYear, id],
     function(err) {
       if (err) {
         console.error('Error updating recurring task:', err);
@@ -3132,6 +3147,15 @@ const formatDateOnly = (d) => d.toISOString().split('T')[0];
 
 const computeNextDue = (recurringTask, fromDateStr) => {
   const currentDate = new Date(fromDateStr);
+
+  if (recurringTask.frequency === 'yearly') {
+    const nextYear = currentDate.getFullYear() + 1;
+    const targetMonth = (recurringTask.month_of_year || 1) - 1; // 0-indexed
+    const daysInTargetMonth = new Date(nextYear, targetMonth + 1, 0).getDate();
+    const targetDay = Math.min(recurringTask.day_of_month || 1, daysInTargetMonth);
+    return formatDateOnly(new Date(nextYear, targetMonth, targetDay));
+  }
+
   const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
 
   if (recurringTask.recurring_weekend) {

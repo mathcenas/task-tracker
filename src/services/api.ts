@@ -462,6 +462,8 @@ class ApiService {
       recurringWeekendType: t.recurring_weekend_type,
       recurringWeekendDay: t.recurring_weekend_day,
       recurringEndDate: t.recurring_end_date,
+      frequency: t.frequency || 'monthly',
+      monthOfYear: t.month_of_year,
       createdAt: t.created_at
     }));
   }
@@ -484,7 +486,9 @@ class ApiService {
       recurringWeekend: task.recurringWeekend,
       recurringWeekendType: task.recurringWeekendType,
       recurringWeekendDay: task.recurringWeekendDay,
-      recurringEndDate: task.recurringEndDate
+      recurringEndDate: task.recurringEndDate,
+      frequency: task.frequency,
+      monthOfYear: task.monthOfYear
     };
     return this.request('/recurring-tasks', {
       method: 'POST',
@@ -510,7 +514,9 @@ class ApiService {
       recurringWeekend: task.recurringWeekend,
       recurringWeekendType: task.recurringWeekendType,
       recurringWeekendDay: task.recurringWeekendDay,
-      recurringEndDate: task.recurringEndDate
+      recurringEndDate: task.recurringEndDate,
+      frequency: task.frequency,
+      monthOfYear: task.monthOfYear
     };
     return this.request(`/recurring-tasks/${id}`, {
       method: 'PUT',
