@@ -1894,6 +1894,83 @@ app.post('/api/uptime-kuma/disconnect', authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
+// Inbound webhook - lets Uptime Kuma report a monitor status change over
+// plain HTTP and have it create/close an incident task here, without
+// needing a live socket.io connection to this server (useful when Kuma
+// can't reach this server directly, or as a second path alongside the
+// live connection). Payload shape matches Uptime Kuma's built-in
+// "Webhook" notification provider exactly: { heartbeat, monitor, msg }.
+//
+// Uptime Kuma has no built-in request signing, so this is authenticated
+// with a shared secret instead: set UPTIME_KUMA_WEBHOOK_SECRET here, and
+// in the monitor's Webhook notification, add an "Additional Headers"
+// entry of {"Authorization": "Bearer <the same secret>"}.
+app.post('/api/webhooks/uptime-kuma', async (req, res) => {
+  const secret = process.env.UPTIME_KUMA_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('❌ [Uptime Kuma Webhook] UPTIME_KUMA_WEBHOOK_SECRET is not set - rejecting');
+    return res.status(503).json({ error: 'Webhook not configured' });
+  }
+  const providedToken = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+  if (providedToken !== secret) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { heartbeat, monitor } = req.body || {};
+  if (!heartbeat || !monitor) {
+    return res.status(400).json({ error: 'Missing heartbeat or monitor in payload' });
+  }
+
+  // `important` is Uptime Kuma's own marker for "this heartbeat is a status
+  // change", not just a routine check-in - acknowledge but skip anything
+  // else so Kuma doesn't treat it as a failed delivery and retry.
+  if (!heartbeat.important) {
+    return res.json({ success: true, skipped: 'not a status change' });
+  }
+
+  try {
+    const config = await uptimeKumaService.loadConfig();
+    const isDown = heartbeat.status === 0;
+    const isUp = heartbeat.status === 1;
+
+    let type = null;
+    if (isDown && config.createTasksOnDown) {
+      if (config.minDowntimeSeconds > 0 && (heartbeat.duration || 0) < config.minDowntimeSeconds) {
+        return res.json({ success: true, skipped: 'below minimum downtime' });
+      }
+      type = 'down';
+    } else if (isUp && config.createTasksOnUp) {
+      type = 'recovery';
+    }
+
+    if (!type) {
+      return res.json({ success: true, skipped: 'no task configured for this status' });
+    }
+
+    // Prefer a per-monitor mapping (Monitor Integration settings); fall
+    // back to the single global auto-assign client/project.
+    db.get('SELECT client_id, project_id FROM monitor_mappings WHERE monitor_id = ?', [monitor.id], async (err, mapping) => {
+      if (err) {
+        console.error('❌ [Uptime Kuma Webhook] Error looking up monitor mapping:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      try {
+        const taskId = await uptimeKumaService.createIncidentTask(
+          monitor, heartbeat, type,
+          mapping?.client_id, mapping?.project_id
+        );
+        res.json({ success: true, taskId });
+      } catch (createErr) {
+        console.error('❌ [Uptime Kuma Webhook] Error creating incident task:', createErr);
+        res.status(500).json({ error: 'Failed to create incident task' });
+      }
+    });
+  } catch (error) {
+    console.error('❌ [Uptime Kuma Webhook] Error processing webhook:', error);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
 // Status Page Management
 app.get('/api/status-pages', authenticateToken, (req, res) => {
   db.all('SELECT * FROM status_pages ORDER BY created_at DESC', (err, pages) => {
