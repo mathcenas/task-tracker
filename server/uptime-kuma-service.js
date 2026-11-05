@@ -203,7 +203,22 @@ class UptimeKumaService {
     }
   }
 
-  async createIncidentTask(monitor, heartbeat, type) {
+  // clientId/projectId let a caller (e.g. the webhook route, resolving a
+  // per-monitor mapping) target a specific client/project; omitted, this
+  // falls back to the single global auto-assign pair from settings - same
+  // as the live socket connection always has.
+  async createIncidentTask(monitor, heartbeat, type, clientId = null, projectId = null) {
+    const targetClientId = clientId || this.config.autoAssignClient;
+    const targetProjectId = projectId || this.config.autoAssignProject;
+
+    // client_id/project_id are NOT NULL (with FK constraints) on tasks, so
+    // there's nothing valid to insert without these configured - fail loud
+    // in the log rather than let the INSERT reject on a constraint.
+    if (!targetClientId || !targetProjectId) {
+      console.warn(`⚠️ [Uptime Kuma] Skipping incident task for "${monitor.name}" - no client/project mapping for this monitor and no Auto-assign Client/Project set in the integration settings`);
+      return null;
+    }
+
     const isDown = type === 'down';
     const description = isDown
       ? `🚨 INCIDENT: ${monitor.name} is DOWN - ${heartbeat.msg}`
@@ -226,24 +241,33 @@ ${monitor.accepted_statuscodes_json ? `Expected Status Codes: ${monitor.accepted
 
     return new Promise((resolve, reject) => {
       const now = new Date().toISOString();
+      const today = now.split('T')[0];
       const taskId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+      // Matches the real tasks schema: date/client_id/project_id are
+      // NOT NULL, and there's no updated_at/due_date column (that was the
+      // bug - this insert 500'd on every single run, so no incident task
+      // has ever actually been created by this integration). `finished`
+      // is the field the rest of the app treats as the real completion
+      // flag (reports/billing filter on it, not status), so it has to
+      // agree with status here too.
       this.db.run(
         `INSERT INTO tasks
-         (id, description, notes, type, priority, status, client_id, project_id, created_at, updated_at, due_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, client_id, project_id, description, date, type, status, priority, finished, notes, completed_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           taskId,
+          targetClientId,
+          targetProjectId,
           description,
-          notes,
+          today,
           'incident',
-          isDown ? 'high' : 'low',
           isDown ? 'not_started' : 'completed',
-          this.config.autoAssignClient,
-          this.config.autoAssignProject,
-          now,
-          now,
-          isDown ? now : null
+          isDown ? 'high' : 'low',
+          isDown ? 0 : 1,
+          notes,
+          isDown ? null : now,
+          now
         ],
         (err) => {
           if (err) {

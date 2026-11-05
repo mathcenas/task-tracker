@@ -121,6 +121,8 @@ const initDB = async () => {
       recurring_weekend_type TEXT,
       recurring_weekend_day TEXT,
       recurring_end_date DATE,
+      frequency TEXT NOT NULL DEFAULT 'monthly',
+      month_of_year INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)

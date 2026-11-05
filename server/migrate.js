@@ -50,6 +50,30 @@ const runMigrations = async () => {
       sql: `ALTER TABLE recurring_tasks ADD COLUMN recurring_start_date DATE`
     },
     {
+      name: 'Add recurring_weekend to recurring_tasks',
+      sql: `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend BOOLEAN DEFAULT 0`
+    },
+    {
+      name: 'Add recurring_weekend_type to recurring_tasks',
+      sql: `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend_type TEXT`
+    },
+    {
+      name: 'Add recurring_weekend_day to recurring_tasks',
+      sql: `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend_day TEXT`
+    },
+    {
+      name: 'Add recurring_end_date to recurring_tasks',
+      sql: `ALTER TABLE recurring_tasks ADD COLUMN recurring_end_date DATE`
+    },
+    {
+      name: 'Add frequency to recurring_tasks',
+      sql: `ALTER TABLE recurring_tasks ADD COLUMN frequency TEXT NOT NULL DEFAULT 'monthly'`
+    },
+    {
+      name: 'Add month_of_year to recurring_tasks',
+      sql: `ALTER TABLE recurring_tasks ADD COLUMN month_of_year INTEGER`
+    },
+    {
       name: 'Update status: pending to not_started',
       sql: `UPDATE tasks SET status = 'not_started' WHERE status = 'pending'`
     },

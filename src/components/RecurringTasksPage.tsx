@@ -23,7 +23,14 @@ interface RecurringTask {
   recurringWeekendType?: 'first' | 'second' | 'third' | 'fourth' | 'last';
   recurringWeekendDay?: 'saturday' | 'sunday';
   recurringEndDate?: string;
+  frequency: 'monthly' | 'yearly';
+  monthOfYear?: number;
 }
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
 export function RecurringTasksPage() {
   const { clients, projects, tasks, getClient, getProject } = useApp();
@@ -52,7 +59,9 @@ export function RecurringTasksPage() {
     recurringWeekendType: 'first',
     recurringWeekendDay: 'saturday',
     recurringStartDate: '',
-    recurringEndDate: ''
+    recurringEndDate: '',
+    frequency: 'monthly',
+    monthOfYear: 1
   });
 
   useEffect(() => {
@@ -70,7 +79,7 @@ export function RecurringTasksPage() {
     }
   };
 
-  const calculateNextOccurrence = (dayOfMonth: number, startDate?: string, weekend?: boolean, weekendType?: string, weekendDay?: string) => {
+  const calculateNextOccurrence = (dayOfMonth: number, startDate?: string, weekend?: boolean, weekendType?: string, weekendDay?: string, frequency?: string, monthOfYear?: number) => {
     const today = new Date();
     let baseDate = startDate ? new Date(startDate) : today;
 
@@ -78,6 +87,21 @@ export function RecurringTasksPage() {
       baseDate = new Date(startDate);
     } else {
       baseDate = today;
+    }
+
+    if (frequency === 'yearly') {
+      const year = baseDate.getFullYear();
+      const month = (monthOfYear || 1) - 1;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const targetDay = Math.min(dayOfMonth, daysInMonth);
+      const nextDate = new Date(year, month, targetDay);
+      if (nextDate < today) {
+        const nextYear = year + 1;
+        const daysInMonthNextYear = new Date(nextYear, month + 1, 0).getDate();
+        const targetDayNextYear = Math.min(dayOfMonth, daysInMonthNextYear);
+        return format(new Date(nextYear, month, targetDayNextYear), 'MMM d, yyyy');
+      }
+      return format(nextDate, 'MMM d, yyyy');
     }
 
     if (weekend && weekendType && weekendDay) {
@@ -135,7 +159,9 @@ export function RecurringTasksPage() {
         task.recurringStartDate,
         task.recurringWeekend,
         task.recurringWeekendType,
-        task.recurringWeekendDay
+        task.recurringWeekendDay,
+        task.frequency,
+        task.monthOfYear
       );
       setNextOccurrence(next);
 
@@ -153,11 +179,15 @@ export function RecurringTasksPage() {
     editingTask?.recurringWeekend,
     editingTask?.recurringWeekendType,
     editingTask?.recurringWeekendDay,
+    editingTask?.frequency,
+    editingTask?.monthOfYear,
     newTask.dayOfMonth,
     newTask.recurringStartDate,
     newTask.recurringWeekend,
     newTask.recurringWeekendType,
     newTask.recurringWeekendDay,
+    newTask.frequency,
+    newTask.monthOfYear,
     isCreating
   ]);
 
@@ -168,8 +198,11 @@ export function RecurringTasksPage() {
     }
 
     try {
-      const nextDue = calculateNextDueDate(newTask.dayOfMonth!, newTask.recurringStartDate, newTask.recurringWeekend, newTask.recurringWeekendType, newTask.recurringWeekendDay);
-      await apiService.createRecurringTask({ ...newTask, nextDue } as RecurringTask);
+      const nextDue = calculateNextDueDate(newTask.dayOfMonth!, newTask.recurringStartDate, newTask.recurringWeekend, newTask.recurringWeekendType, newTask.recurringWeekendDay, newTask.frequency, newTask.monthOfYear);
+      // Without a client-generated id, this row saves with a NULL id - the
+      // recurring-task generator explicitly (and silently) refuses to ever
+      // process those, so the task would never actually fire.
+      await apiService.createRecurringTask({ ...newTask, id: crypto.randomUUID(), nextDue } as RecurringTask);
       await loadRecurringTasks();
       setIsCreating(false);
       setNewTask({
@@ -185,7 +218,9 @@ export function RecurringTasksPage() {
         recurringWeekendType: 'first',
         recurringWeekendDay: 'saturday',
         recurringStartDate: '',
-        recurringEndDate: ''
+        recurringEndDate: '',
+        frequency: 'monthly',
+        monthOfYear: 1
       });
     } catch (error) {
       console.error('Error creating recurring task:', error);
@@ -193,7 +228,7 @@ export function RecurringTasksPage() {
     }
   };
 
-  const calculateNextDueDate = (dayOfMonth: number, startDate?: string, weekend?: boolean, weekendType?: string, weekendDay?: string): string => {
+  const calculateNextDueDate = (dayOfMonth: number, startDate?: string, weekend?: boolean, weekendType?: string, weekendDay?: string, frequency?: string, monthOfYear?: number): string => {
     const today = new Date();
     let baseDate = startDate ? new Date(startDate) : today;
 
@@ -201,6 +236,21 @@ export function RecurringTasksPage() {
       baseDate = new Date(startDate);
     } else {
       baseDate = today;
+    }
+
+    if (frequency === 'yearly') {
+      const year = baseDate.getFullYear();
+      const month = (monthOfYear || 1) - 1;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const targetDay = Math.min(dayOfMonth, daysInMonth);
+      const nextDate = new Date(year, month, targetDay);
+      if (nextDate < today) {
+        const nextYear = year + 1;
+        const daysInMonthNextYear = new Date(nextYear, month + 1, 0).getDate();
+        const targetDayNextYear = Math.min(dayOfMonth, daysInMonthNextYear);
+        return format(new Date(nextYear, month, targetDayNextYear), 'yyyy-MM-dd');
+      }
+      return format(nextDate, 'yyyy-MM-dd');
     }
 
     if (weekend && weekendType && weekendDay) {
@@ -254,7 +304,20 @@ export function RecurringTasksPage() {
     if (!editingTask) return;
 
     try {
-      await apiService.updateRecurringTask(taskId, editingTask);
+      // Recompute nextDue from the (possibly just-edited) schedule fields -
+      // otherwise a change to day/frequency/month/start date here would only
+      // take effect the cycle AFTER the one already stored, silently
+      // disagreeing with the "Next occurrence" preview shown above.
+      const nextDue = calculateNextDueDate(
+        editingTask.dayOfMonth,
+        editingTask.recurringStartDate,
+        editingTask.recurringWeekend,
+        editingTask.recurringWeekendType,
+        editingTask.recurringWeekendDay,
+        editingTask.frequency,
+        editingTask.monthOfYear
+      );
+      await apiService.updateRecurringTask(taskId, { ...editingTask, nextDue });
       await loadRecurringTasks();
       setEditingTask(null);
     } catch (error) {
@@ -481,6 +544,37 @@ export function RecurringTasksPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Frequency
+              </label>
+              <select
+                value={newTask.frequency}
+                onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value as 'monthly' | 'yearly' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+
+            {newTask.frequency === 'yearly' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Month
+                </label>
+                <select
+                  value={newTask.monthOfYear}
+                  onChange={(e) => setNewTask({ ...newTask, monthOfYear: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                  {MONTH_NAMES.map((name, i) => (
+                    <option key={name} value={i + 1}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Day of Month
               </label>
               <input
@@ -503,6 +597,19 @@ export function RecurringTasksPage() {
                 onChange={(e) => setNewTask({ ...newTask, recurringStartDate: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={newTask.recurringEndDate}
+                onChange={(e) => setNewTask({ ...newTask, recurringEndDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to repeat indefinitely.</p>
             </div>
 
             <div>
@@ -643,7 +750,12 @@ export function RecurringTasksPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                        Day {task.dayOfMonth} of month
+                        {task.frequency === 'yearly'
+                          ? `${MONTH_NAMES[(task.monthOfYear || 1) - 1]} ${task.dayOfMonth}, every year`
+                          : `Day ${task.dayOfMonth} of month`}
+                        {task.recurringEndDate && (
+                          <div className="text-xs text-gray-400 dark:text-gray-500">Ends {format(new Date(task.recurringEndDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
+                        )}
                         {task.estimatedHours && <div className="text-gray-500 dark:text-gray-400">{task.estimatedHours}h</div>}
                         {task.estimatedCost && <div className="text-gray-500 dark:text-gray-400">${task.estimatedCost}</div>}
                       </td>
@@ -821,6 +933,37 @@ export function RecurringTasksPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Frequency
+                  </label>
+                  <select
+                    value={editingTask.frequency}
+                    onChange={(e) => setEditingTask({ ...editingTask, frequency: e.target.value as 'monthly' | 'yearly' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+
+                {editingTask.frequency === 'yearly' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Month
+                    </label>
+                    <select
+                      value={editingTask.monthOfYear || 1}
+                      onChange={(e) => setEditingTask({ ...editingTask, monthOfYear: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                      {MONTH_NAMES.map((name, i) => (
+                        <option key={name} value={i + 1}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Day of Month
                   </label>
                   <input
@@ -843,6 +986,19 @@ export function RecurringTasksPage() {
                     onChange={(e) => setEditingTask({ ...editingTask, recurringStartDate: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editingTask.recurringEndDate || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, recurringEndDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to repeat indefinitely.</p>
                 </div>
 
                 <div>

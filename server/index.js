@@ -151,6 +151,8 @@ const initDB = () => {
       recurring_weekend_type TEXT,
       recurring_weekend_day TEXT,
       recurring_end_date DATE,
+      frequency TEXT NOT NULL DEFAULT 'monthly',
+      month_of_year INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients (id),
       FOREIGN KEY (project_id) REFERENCES projects (id)
@@ -317,6 +319,26 @@ const initDB = () => {
         console.log(`Default users initialized: ${adminUsername} (admin), ${userUsername} (user)`);
       }
     });
+
+  // Optional dedicated service account for automated integrations (e.g. the
+  // client-messaging system creating incident/roadmap tasks) so their
+  // activity isn't attributed to a personal login. Only created when both
+  // env vars are set - unlike admin/user, there's no hardcoded fallback,
+  // since this account shouldn't exist unless explicitly configured.
+  const apiUsername = process.env.API_USERNAME;
+  const apiPasswordPlain = process.env.API_PASSWORD;
+
+  if (apiUsername && apiPasswordPlain) {
+    const apiPassword = bcrypt.hashSync(apiPasswordPlain, 10);
+    db.run(`INSERT OR IGNORE INTO users (id, username, password_hash, email, role) VALUES
+      ('api-1', ?, ?, 'api@tasktracker.pro', 'user')`,
+      [apiUsername, apiPassword],
+      (err) => {
+        if (!err) {
+          console.log(`Service account initialized: ${apiUsername} (user)`);
+        }
+      });
+  }
 };
 
 initDB();
@@ -354,6 +376,15 @@ const runMigrations = () => {
     `ALTER TABLE tasks ADD COLUMN vendor TEXT`,
     `ALTER TABLE tasks ADD COLUMN receipt_ref TEXT`,
     `ALTER TABLE tasks ADD COLUMN approval_status TEXT DEFAULT 'pending'`,
+    // These four were only ever in the CREATE TABLE, never migrated in - any
+    // database older than that addition is missing them, and recurring-task
+    // create/update unconditionally references all four.
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend BOOLEAN DEFAULT 0`,
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend_type TEXT`,
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_weekend_day TEXT`,
+    `ALTER TABLE recurring_tasks ADD COLUMN recurring_end_date DATE`,
+    `ALTER TABLE recurring_tasks ADD COLUMN frequency TEXT NOT NULL DEFAULT 'monthly'`,
+    `ALTER TABLE recurring_tasks ADD COLUMN month_of_year INTEGER`,
   ];
 
   migrations.forEach(sql => {
@@ -1273,18 +1304,19 @@ app.post('/api/recurring-tasks', authenticateToken, (req, res) => {
   const {
     id, name, description, type, priority, clientId, projectId,
     dayOfMonth, estimatedHours, estimatedCost, isActive, nextDue, recurringStartDate,
-    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
+    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate,
+    frequency, monthOfYear
   } = req.body;
 
   db.run(
     `INSERT INTO recurring_tasks
     (id, name, description, type, priority, client_id, project_id, day_of_month,
      estimated_hours, estimated_cost, is_active, next_due, recurring_start_date, recurring_weekend,
-     recurring_weekend_type, recurring_weekend_day, recurring_end_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     recurring_weekend_type, recurring_weekend_day, recurring_end_date, frequency, month_of_year)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, name, description, type, priority, clientId, projectId, dayOfMonth,
      estimatedHours, estimatedCost, isActive ? 1 : 0, nextDue, recurringStartDate, recurringWeekend ? 1 : 0,
-     recurringWeekendType, recurringWeekendDay, recurringEndDate],
+     recurringWeekendType, recurringWeekendDay, recurringEndDate, frequency || 'monthly', monthOfYear],
     function(err) {
       if (err) {
         console.error('Error creating recurring task:', err);
@@ -1300,7 +1332,8 @@ app.put('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
   const {
     name, description, type, priority, clientId, projectId, dayOfMonth,
     estimatedHours, estimatedCost, isActive, lastGenerated, nextDue, recurringStartDate,
-    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate
+    recurringWeekend, recurringWeekendType, recurringWeekendDay, recurringEndDate,
+    frequency, monthOfYear
   } = req.body;
 
   db.run(
@@ -1308,11 +1341,13 @@ app.put('/api/recurring-tasks/:id', authenticateToken, (req, res) => {
     name = ?, description = ?, type = ?, priority = ?, client_id = ?,
     project_id = ?, day_of_month = ?, estimated_hours = ?, estimated_cost = ?,
     is_active = ?, last_generated = ?, next_due = ?, recurring_start_date = ?, recurring_weekend = ?,
-    recurring_weekend_type = ?, recurring_weekend_day = ?, recurring_end_date = ?
+    recurring_weekend_type = ?, recurring_weekend_day = ?, recurring_end_date = ?,
+    frequency = ?, month_of_year = ?
     WHERE id = ?`,
     [name, description, type, priority, clientId, projectId, dayOfMonth,
      estimatedHours, estimatedCost, isActive ? 1 : 0, lastGenerated, nextDue, recurringStartDate,
-     recurringWeekend ? 1 : 0, recurringWeekendType, recurringWeekendDay, recurringEndDate, id],
+     recurringWeekend ? 1 : 0, recurringWeekendType, recurringWeekendDay, recurringEndDate,
+     frequency || 'monthly', monthOfYear, id],
     function(err) {
       if (err) {
         console.error('Error updating recurring task:', err);
@@ -1877,6 +1912,83 @@ app.post('/api/uptime-kuma/connect', authenticateToken, async (req, res) => {
 app.post('/api/uptime-kuma/disconnect', authenticateToken, (req, res) => {
   uptimeKumaService.disconnect();
   res.json({ success: true });
+});
+
+// Inbound webhook - lets Uptime Kuma report a monitor status change over
+// plain HTTP and have it create/close an incident task here, without
+// needing a live socket.io connection to this server (useful when Kuma
+// can't reach this server directly, or as a second path alongside the
+// live connection). Payload shape matches Uptime Kuma's built-in
+// "Webhook" notification provider exactly: { heartbeat, monitor, msg }.
+//
+// Uptime Kuma has no built-in request signing, so this is authenticated
+// with a shared secret instead: set UPTIME_KUMA_WEBHOOK_SECRET here, and
+// in the monitor's Webhook notification, add an "Additional Headers"
+// entry of {"Authorization": "Bearer <the same secret>"}.
+app.post('/api/webhooks/uptime-kuma', async (req, res) => {
+  const secret = process.env.UPTIME_KUMA_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('❌ [Uptime Kuma Webhook] UPTIME_KUMA_WEBHOOK_SECRET is not set - rejecting');
+    return res.status(503).json({ error: 'Webhook not configured' });
+  }
+  const providedToken = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+  if (providedToken !== secret) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { heartbeat, monitor } = req.body || {};
+  if (!heartbeat || !monitor) {
+    return res.status(400).json({ error: 'Missing heartbeat or monitor in payload' });
+  }
+
+  // `important` is Uptime Kuma's own marker for "this heartbeat is a status
+  // change", not just a routine check-in - acknowledge but skip anything
+  // else so Kuma doesn't treat it as a failed delivery and retry.
+  if (!heartbeat.important) {
+    return res.json({ success: true, skipped: 'not a status change' });
+  }
+
+  try {
+    const config = await uptimeKumaService.loadConfig();
+    const isDown = heartbeat.status === 0;
+    const isUp = heartbeat.status === 1;
+
+    let type = null;
+    if (isDown && config.createTasksOnDown) {
+      if (config.minDowntimeSeconds > 0 && (heartbeat.duration || 0) < config.minDowntimeSeconds) {
+        return res.json({ success: true, skipped: 'below minimum downtime' });
+      }
+      type = 'down';
+    } else if (isUp && config.createTasksOnUp) {
+      type = 'recovery';
+    }
+
+    if (!type) {
+      return res.json({ success: true, skipped: 'no task configured for this status' });
+    }
+
+    // Prefer a per-monitor mapping (Monitor Integration settings); fall
+    // back to the single global auto-assign client/project.
+    db.get('SELECT client_id, project_id FROM monitor_mappings WHERE monitor_id = ?', [monitor.id], async (err, mapping) => {
+      if (err) {
+        console.error('❌ [Uptime Kuma Webhook] Error looking up monitor mapping:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      try {
+        const taskId = await uptimeKumaService.createIncidentTask(
+          monitor, heartbeat, type,
+          mapping?.client_id, mapping?.project_id
+        );
+        res.json({ success: true, taskId });
+      } catch (createErr) {
+        console.error('❌ [Uptime Kuma Webhook] Error creating incident task:', createErr);
+        res.status(500).json({ error: 'Failed to create incident task' });
+      }
+    });
+  } catch (error) {
+    console.error('❌ [Uptime Kuma Webhook] Error processing webhook:', error);
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
 
 // Status Page Management
@@ -3132,6 +3244,15 @@ const formatDateOnly = (d) => d.toISOString().split('T')[0];
 
 const computeNextDue = (recurringTask, fromDateStr) => {
   const currentDate = new Date(fromDateStr);
+
+  if (recurringTask.frequency === 'yearly') {
+    const nextYear = currentDate.getFullYear() + 1;
+    const targetMonth = (recurringTask.month_of_year || 1) - 1; // 0-indexed
+    const daysInTargetMonth = new Date(nextYear, targetMonth + 1, 0).getDate();
+    const targetDay = Math.min(recurringTask.day_of_month || 1, daysInTargetMonth);
+    return formatDateOnly(new Date(nextYear, targetMonth, targetDay));
+  }
+
   const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
 
   if (recurringTask.recurring_weekend) {
