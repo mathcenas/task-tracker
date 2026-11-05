@@ -319,6 +319,26 @@ const initDB = () => {
         console.log(`Default users initialized: ${adminUsername} (admin), ${userUsername} (user)`);
       }
     });
+
+  // Optional dedicated service account for automated integrations (e.g. the
+  // client-messaging system creating incident/roadmap tasks) so their
+  // activity isn't attributed to a personal login. Only created when both
+  // env vars are set - unlike admin/user, there's no hardcoded fallback,
+  // since this account shouldn't exist unless explicitly configured.
+  const apiUsername = process.env.API_USERNAME;
+  const apiPasswordPlain = process.env.API_PASSWORD;
+
+  if (apiUsername && apiPasswordPlain) {
+    const apiPassword = bcrypt.hashSync(apiPasswordPlain, 10);
+    db.run(`INSERT OR IGNORE INTO users (id, username, password_hash, email, role) VALUES
+      ('api-1', ?, ?, 'api@tasktracker.pro', 'user')`,
+      [apiUsername, apiPassword],
+      (err) => {
+        if (!err) {
+          console.log(`Service account initialized: ${apiUsername} (user)`);
+        }
+      });
+  }
 };
 
 initDB();
