@@ -878,6 +878,38 @@ app.post('/api/tasks', authenticateTokenOrApiKey, (req, res) => {
     recurringWeekendDay, recurringEndDate, accepted, acceptedAt, reportedBy
   } = req.body;
 
+  const missingFields = [];
+  if (!id) missingFields.push('id');
+  if (!clientId) missingFields.push('clientId');
+  if (!projectId) missingFields.push('projectId');
+  if (!description) missingFields.push('description');
+  if (!date) missingFields.push('date');
+  if (!type) missingFields.push('type');
+  if (!status) missingFields.push('status');
+  if (!priority) missingFields.push('priority');
+
+  const VALID_TYPES = ['incident', 'problem', 'change', 'request', 'insumos'];
+  const VALID_STATUSES = ['not_started', 'in_progress', 'review', 'completed'];
+  const VALID_PRIORITIES = ['low', 'medium', 'high'];
+  const invalidFields = [];
+  if (type && !VALID_TYPES.includes(type)) invalidFields.push(`type "${type}" (must be one of: ${VALID_TYPES.join(', ')})`);
+  if (status && !VALID_STATUSES.includes(status)) invalidFields.push(`status "${status}" (must be one of: ${VALID_STATUSES.join(', ')})`);
+  if (priority && !VALID_PRIORITIES.includes(priority)) invalidFields.push(`priority "${priority}" (must be one of: ${VALID_PRIORITIES.join(', ')})`);
+
+  if (missingFields.length > 0 || invalidFields.length > 0) {
+    const parts = [];
+    if (missingFields.length > 0) parts.push(`Missing required field(s): ${missingFields.join(', ')}`);
+    if (invalidFields.length > 0) parts.push(`Invalid field(s): ${invalidFields.join('; ')}`);
+    const errorMessage = parts.join('. ');
+    console.error('❌ [API] Rejected task creation:', errorMessage);
+    logActivity('error', 'task', id || null, description || 'Untitled Task', {
+      error: errorMessage,
+      clientId,
+      projectId
+    }, req.user?.id);
+    return res.status(400).json({ error: errorMessage });
+  }
+
   console.log('📝 [API] Creating task with data:', { id, clientId, projectId, description });
 
   db.run(`INSERT INTO tasks (
