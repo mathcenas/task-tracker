@@ -431,6 +431,34 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Same as authenticateToken, plus a static shared-secret bypass for
+// external integrations (e.g. the client-messaging portal pushing
+// incident/roadmap tasks) that don't want to manage JWT login/refresh.
+// Only applied to the specific routes an integration actually needs -
+// everything else still requires a real user JWT.
+const authenticateTokenOrApiKey = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  const integrationKey = process.env.INTEGRATION_API_KEY;
+  if (integrationKey && token === integrationKey) {
+    req.user = { id: 'api-integration', username: 'integration-api-key', role: 'user' };
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = { id: decoded.id, username: decoded.username, role: decoded.role };
+    next();
+  });
+};
+
 const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
@@ -485,7 +513,7 @@ app.post('/api/auth/login', loginRateLimiter, (req, res) => {
 });
 
 // Client routes
-app.get('/api/clients', authenticateToken, (req, res) => {
+app.get('/api/clients', authenticateTokenOrApiKey, (req, res) => {
   db.all('SELECT * FROM clients ORDER BY name', (err, clients) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
@@ -727,7 +755,7 @@ function getHourlyRateForYear(clientId, year, callback) {
 }
 
 // Project routes
-app.get('/api/projects', authenticateToken, (req, res) => {
+app.get('/api/projects', authenticateTokenOrApiKey, (req, res) => {
   db.all('SELECT * FROM projects ORDER BY name', (err, projects) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
@@ -842,7 +870,7 @@ app.get('/api/tasks', authenticateToken, (req, res) => {
   });
 });
 
-app.post('/api/tasks', authenticateToken, (req, res) => {
+app.post('/api/tasks', authenticateTokenOrApiKey, (req, res) => {
   const {
     id, clientId, projectId, description, hours, cost, date, type,
     status, priority, finished, notes, completedAt, assignedTo,

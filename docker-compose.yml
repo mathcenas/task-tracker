@@ -25,6 +25,9 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-TaskTracker2025!}
       - USER_USERNAME=${USER_USERNAME:-user}
       - USER_PASSWORD=${USER_PASSWORD:-User2025!}
+      - API_USERNAME=${API_USERNAME:-}
+      - API_PASSWORD=${API_PASSWORD:-}
+      - INTEGRATION_API_KEY=${INTEGRATION_API_KEY:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-onboarding@tasktracker.pro}
       - PUBLIC_APP_URL=${PUBLIC_APP_URL:-https://clientes.cenas-support.com}
