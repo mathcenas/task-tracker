@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, FileText, Users, Folder, CheckCircle, CheckCheck, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink, Calendar, DollarSign, Timer } from 'lucide-react';
+import { Clock, FileText, Users, Folder, CheckCircle, CheckCheck, CreditCard as Edit, Trash2, Plus, RefreshCw, ExternalLink, Calendar, DollarSign, Timer, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
@@ -34,6 +34,28 @@ export function ActivityLog() {
     }, { replace: true });
   };
 
+  // Fixed ids used by the two non-interactive ways tasks get created
+  // outside the UI (see server/index.js's authenticateTokenOrApiKey and
+  // the default-users INSERT block) - everything else is a real person.
+  const INTEGRATION_USER_IDS = ['api-integration', 'api-1'];
+  const sourceLabel = (userId: string) => {
+    if (userId === 'api-integration') return 'API Key (portal)';
+    if (userId === 'api-1') return 'Service account';
+    if (userId === 'admin-1') return 'Admin';
+    if (userId === 'user-1') return 'User';
+    return null;
+  };
+
+  const source = (searchParams.get('source') || 'all') as 'all' | 'integration';
+  const setSource = (value: 'all' | 'integration') => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value === 'all') next.delete('source');
+      else next.set('source', value);
+      return next;
+    }, { replace: true });
+  };
+
   const clientName = (id: string) => clients.find(c => c.id === id)?.name ?? id;
   const projectName = (id: string) => projects.find(p => p.id === id)?.name ?? id;
 
@@ -60,6 +82,7 @@ export function ActivityLog() {
     if (action === 'updated') return <Edit className="w-4 h-4" />;
     if (action === 'deleted') return <Trash2 className="w-4 h-4" />;
     if (action === 'completed') return <CheckCircle className="w-4 h-4" />;
+    if (action === 'error') return <AlertTriangle className="w-4 h-4" />;
 
     switch (entityType) {
       case 'task': return <FileText className="w-4 h-4" />;
@@ -76,6 +99,7 @@ export function ActivityLog() {
       case 'updated': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20';
       case 'deleted': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
       case 'completed': return 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20';
+      case 'error': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
       default: return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20';
     }
   };
@@ -89,8 +113,32 @@ export function ActivityLog() {
     }
   };
 
-  const formatDetails = (details: any, entityType: string) => {
+  const formatDetails = (details: any, entityType: string, action: string) => {
     if (!details) return null;
+
+    if (action === 'error') {
+      return (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {details.clientId && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
+              <Users className="w-3 h-3" />
+              {clientName(details.clientId)}
+            </span>
+          )}
+          {details.projectId && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
+              <Folder className="w-3 h-3" />
+              {projectName(details.projectId)}
+            </span>
+          )}
+          {details.error && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-xs text-red-700 dark:text-red-400 w-full">
+              {details.error}
+            </span>
+          )}
+        </div>
+      );
+    }
 
     if (entityType === 'task') {
       const chips: { label: string; value: string; icon?: React.ReactNode }[] = [];
@@ -154,9 +202,9 @@ export function ActivityLog() {
     ) : null;
   };
 
-  const filteredLogs = filter === 'all'
-    ? logs
-    : logs.filter(log => log.entity_type === filter);
+  const filteredLogs = logs
+    .filter(log => filter === 'all' || log.entity_type === filter)
+    .filter(log => source === 'all' || INTEGRATION_USER_IDS.includes(log.user_id));
 
   const handleLogClick = (log: ActivityLog) => {
     if (log.entity_type === 'task' && log.action !== 'deleted') {
@@ -169,6 +217,7 @@ export function ActivityLog() {
   };
 
   const isClickable = (log: ActivityLog) => {
+    if (log.action === 'error' || !log.entity_id) return false;
     return (log.entity_type === 'task' && log.action !== 'deleted') ||
            log.entity_type === 'client' ||
            log.entity_type === 'project';
@@ -236,6 +285,17 @@ export function ActivityLog() {
               >
                 Projects
               </button>
+              <span className="w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+              <button
+                onClick={() => setSource(source === 'integration' ? 'all' : 'integration')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  source === 'integration'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                Solo Portal/API
+              </button>
             </div>
           </div>
 
@@ -281,13 +341,18 @@ export function ActivityLog() {
                         {isClickable(log) && (
                           <ExternalLink className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                         )}
+                        {sourceLabel(log.user_id) && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400">
+                            {sourceLabel(log.user_id)}
+                          </span>
+                        )}
                       </div>
 
                       <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white truncate">
                         {log.entity_name}
                       </p>
 
-                      {formatDetails(log.details, log.entity_type)}
+                      {formatDetails(log.details, log.entity_type, log.action)}
 
                       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                         {format(new Date(log.created_at), 'MMM d, yyyy • h:mm a')}
@@ -304,6 +369,7 @@ export function ActivityLog() {
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
               Showing {filteredLogs.length} {filteredLogs.length === 1 ? 'entry' : 'entries'}
               {filter !== 'all' && ` • Filtered by ${filter}`}
+              {source === 'integration' && ` • Solo Portal/API`}
             </p>
           </div>
         </div>

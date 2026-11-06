@@ -896,6 +896,12 @@ app.post('/api/tasks', authenticateTokenOrApiKey, (req, res) => {
     function(err) {
       if (err) {
         console.error('❌ [API] Error inserting task:', err);
+        logActivity('error', 'task', id || null, description || 'Untitled Task', {
+          error: err.message,
+          type,
+          clientId,
+          projectId
+        }, req.user?.id);
         return res.status(500).json({ error: 'Database error: ' + err.message });
       }
       console.log('✅ [API] Task created successfully with id:', id);
