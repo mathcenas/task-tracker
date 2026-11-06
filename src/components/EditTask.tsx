@@ -22,6 +22,17 @@ export function EditTask() {
 
   const task = taskId ? getTask(taskId) : null;
 
+  // The task list in AppContext loads once on app start. A task created
+  // after that (e.g. pushed in by an external integration while this tab
+  // was already open) won't be in it yet - refetch once before giving up.
+  const [reloadState, setReloadState] = useState<'idle' | 'loading' | 'done'>('idle');
+  useEffect(() => {
+    if (!task && taskId && reloadState === 'idle') {
+      setReloadState('loading');
+      reloadTasks().finally(() => setReloadState('done'));
+    }
+  }, [task, taskId, reloadState, reloadTasks]);
+
   const [formData, setFormData] = useState({
     clientId: '',
     projectId: '',
@@ -143,7 +154,9 @@ export function EditTask() {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-md border border-gray-200 dark:border-gray-700 p-6 dark:bg-gray-800">
-          <p className="text-gray-500 dark:text-gray-400">Task not found</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {reloadState === 'done' ? 'Task not found' : 'Loading...'}
+          </p>
           <button
             onClick={() => navigate(returnPath)}
             className="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
