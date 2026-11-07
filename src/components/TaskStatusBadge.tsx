@@ -42,7 +42,14 @@ export function TaskStatusBadge({ status, size = 'md' }: TaskStatusBadgeProps) {
     }
   };
 
-  const statusConfig = config[status];
+  // Data from outside the UI (e.g. the external integration) isn't
+  // guaranteed to send one of the 4 known statuses - fall back instead of
+  // crashing the whole page on an unrecognized value.
+  const statusConfig = config[status] ?? {
+    label: status || 'Unknown',
+    icon: <Clock className={iconSizes[size]} />,
+    classes: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+  };
 
   return (
     <span className={`inline-flex items-center space-x-1 font-medium rounded-full ${sizeClasses[size]} ${statusConfig.classes}`}>
