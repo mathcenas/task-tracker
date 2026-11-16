@@ -1188,6 +1188,48 @@ app.post('/api/tasks/:id/notes', authenticateToken, (req, res) => {
   );
 });
 
+// Cierre automático desde integraciones (Service Catalog): cuando la alerta que abrió la
+// tarea desaparece, se marca completada con una nota. No manda mail al cliente ni publica al
+// portal (eso queda para /close, que es el cierre manual de problem/change).
+// Con la API key solo se pueden resolver tareas creadas por una integración (reported_by
+// empieza con "integration:"); un usuario logueado puede resolver cualquiera.
+app.post('/api/tasks/:id/resolve', authenticateTokenOrApiKey, (req, res) => {
+  const { id } = req.params;
+  const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
+
+  db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+    if (err) {
+      console.error('❌ Error fetching task to resolve:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+    if (req.user?.id === 'api-integration' && !String(task.reported_by || '').startsWith('integration:')) {
+      return res.status(403).json({ error: 'Only tasks created by an integration can be resolved with the API key' });
+    }
+    if (task.status === 'completed') return res.json({ success: true, alreadyCompleted: true });
+
+    const now = new Date().toISOString();
+    const finish = () => db.run(
+      `UPDATE tasks SET status = 'completed', finished = 1, completed_at = ? WHERE id = ?`,
+      [now, id],
+      (updateErr) => {
+        if (updateErr) {
+          console.error('❌ Error resolving task:', updateErr);
+          return res.status(500).json({ error: 'Database error resolving task' });
+        }
+        logActivity('completed', 'task', id, task.description, { type: task.type, reportedBy: task.reported_by, auto: true }, req.user?.id);
+        res.json({ success: true });
+      }
+    );
+
+    if (!note) return finish();
+    db.run('INSERT INTO task_notes (id, task_id, note) VALUES (?, ?, ?)', [crypto.randomUUID(), id, note], (noteErr) => {
+      if (noteErr) console.error('❌ Error adding resolve note:', noteErr);
+      finish();
+    });
+  });
+});
+
 app.delete('/api/tasks/:id/notes/:noteId', authenticateToken, (req, res) => {
   db.run(
     'DELETE FROM task_notes WHERE id = ? AND task_id = ?',
