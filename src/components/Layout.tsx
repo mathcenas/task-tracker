@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database, Package, Printer, UserCog, StickyNote, BookOpen, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Clock, Calendar, Folders, Menu, X, Search, BarChart3, CheckSquare, Repeat, Columns2 as Columns, ChevronLeft, ChevronRight, Download, Upload, Activity, FileSpreadsheet, History, Globe, FileText, Building2, Lightbulb, Database, Package, Printer, UserCog, StickyNote, BookOpen, DollarSign, TrendingUp } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { UserProfile } from './auth/UserProfile';
 import { QuickTaskEntry } from './QuickTaskEntry';
@@ -196,6 +196,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/fortnight', icon: Calendar, label: '15 Days', group: 'Dashboards' },
     { path: '/monthly', icon: Calendar, label: 'Monthly', group: 'Dashboards' },
     { path: '/overview', icon: BarChart3, label: 'Overview', group: 'Dashboards' },
+    { path: '/trends', icon: TrendingUp, label: 'Trends', group: 'Dashboards' },
     { path: '/tasks', icon: CheckSquare, label: 'All Tasks', group: 'Tasks' },
     { path: '/kanban', icon: Columns, label: 'Kanban', group: 'Tasks' },
     { path: '/ideas', icon: Lightbulb, label: 'Ideas Board', group: 'Tasks' },
