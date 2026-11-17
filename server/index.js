@@ -300,6 +300,21 @@ const initDB = () => {
     // task individually. task_ids is a JSON array - fixed at export time,
     // not a live date-range query, so marking paid stays correct even if
     // later edits change which tasks fall in that period.
+    // Was only ever created via init-db.js (fresh installs) and migrate.js
+    // (existing DBs) - both run before this file in start-with-cron.sh, so
+    // it's always present in practice, but add it here too for consistency
+    // with every other table, in case this file is ever run standalone.
+    `CREATE TABLE IF NOT EXISTS client_yearly_rates (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      hourly_rate REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
+      UNIQUE(client_id, year)
+    )`,
+
     `CREATE TABLE IF NOT EXISTS billing_reports (
       id TEXT PRIMARY KEY,
       client_id TEXT NOT NULL,
