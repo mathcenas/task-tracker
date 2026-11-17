@@ -609,6 +609,47 @@ class ApiService {
     });
   }
 
+  // Billing reports - a snapshot of which tasks were included in a client
+  // PDF export, so a whole report can be marked paid in one action later
+  async getBillingReports() {
+    const reports = await this.request('/billing-reports');
+    return reports.map((r: {
+      id: string; client_id: string; client_name: string; report_number: string | null;
+      period_label: string | null; period_start: string; period_end: string;
+      task_ids: string[]; total_amount: number; generated_at: string; paid: number; paid_at: string | null;
+    }) => ({
+      id: r.id,
+      clientId: r.client_id,
+      clientName: r.client_name,
+      reportNumber: r.report_number,
+      periodLabel: r.period_label,
+      periodStart: r.period_start,
+      periodEnd: r.period_end,
+      taskIds: r.task_ids as string[],
+      totalAmount: r.total_amount,
+      generatedAt: r.generated_at,
+      paid: Boolean(r.paid),
+      paidAt: r.paid_at
+    }));
+  }
+
+  async saveBillingReport(data: {
+    clientId: string; reportNumber?: string; periodLabel: string;
+    periodStart: string; periodEnd: string; taskIds: string[]; totalAmount: number;
+  }) {
+    return this.request('/billing-reports', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async setBillingReportPaid(id: string, paid: boolean) {
+    return this.request(`/billing-reports/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ paid })
+    });
+  }
+
   // Health check
   async healthCheck() {
     return this.request('/health');

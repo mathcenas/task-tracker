@@ -7,6 +7,7 @@ import { PDFExporter, BRAND_DARK, BRAND_TEAL, TASK_TYPE_COLORS } from '../utils/
 import { apiService } from '../services/api';
 import { ClientYearlyRates } from './ClientYearlyRates';
 import { getHourlyRateForYear } from '../utils/clientRates';
+import { saveBillingReportSnapshot } from '../utils/billingReports';
 
 export function ClientDashboard() {
   const { clients, getClientTasks, getProject, getProjectTasks, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, updateTask, addProject, updateProject, deleteProject } = useApp();
@@ -254,6 +255,17 @@ export function ClientDashboard() {
       pdf.addThankYouNote();
 
       pdf.save(`${clientData.name.toLowerCase().replace(/\s+/g, '-')}-monthly-report-${format(exportMonth, 'yyyy-MM')}.pdf`);
+
+      const totalAmount = exportTasks.reduce((sum, t) => sum + (t.type === 'insumos' ? (t.cost || 0) : (t.hours || 0) * hourlyRate), 0);
+      saveBillingReportSnapshot({
+        clientId: clientData.id,
+        reportNumber,
+        periodLabel: format(exportMonth, 'MMMM yyyy'),
+        periodStart: format(exportMonthStart, 'yyyy-MM-dd'),
+        periodEnd: format(exportMonthEnd, 'yyyy-MM-dd'),
+        taskIds: exportTasks.map(t => t.id),
+        totalAmount
+      });
     } catch (error: any) {
       console.error('Failed to generate monthly report:', error);
       alert(`Failed to generate PDF report: ${error.message || error}`);
@@ -342,6 +354,20 @@ export function ClientDashboard() {
 
       const projectSlug = selectedProjectId === 'all' ? 'all-projects' : projectName.toLowerCase().replace(/\s+/g, '-');
       pdf.save(`${clientName.toLowerCase().replace(/\s+/g, '-')}-${projectSlug}-complete.pdf`);
+
+      const totalAmount = filteredTasks.reduce((sum, t) => {
+        if (t.type === 'insumos') return sum + (t.cost || 0);
+        return sum + (t.hours || 0) * getHourlyRateForYear(projectFilterClient, parseISO(t.date).getFullYear());
+      }, 0);
+      saveBillingReportSnapshot({
+        clientId: projectFilterClient.id,
+        reportNumber,
+        periodLabel: `${projectName} (${periodText})`,
+        periodStart: firstTaskDate,
+        periodEnd: lastTaskDate,
+        taskIds: filteredTasks.map(t => t.id),
+        totalAmount
+      });
 
       setShowProjectFilterModal(false);
       alert('Project report generated successfully!');
@@ -557,6 +583,16 @@ export function ClientDashboard() {
 
       const filename = `${clientName.toLowerCase().replace(/\s+/g, '-')}-report-${format(start, 'yyyy-MM')}-to-${format(end, 'yyyy-MM')}.pdf`;
       pdf.save(filename);
+
+      saveBillingReportSnapshot({
+        clientId: multiMonthClient.id,
+        reportNumber,
+        periodLabel: dateRange,
+        periodStart: format(start, 'yyyy-MM-dd'),
+        periodEnd: format(end, 'yyyy-MM-dd'),
+        taskIds: filteredTasks.map(t => t.id),
+        totalAmount
+      });
 
       setShowMultiMonthModal(false);
       alert('Multi-month report generated successfully!');
