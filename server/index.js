@@ -1166,7 +1166,9 @@ app.get('/api/tasks/:id/notes', authenticateToken, (req, res) => {
   );
 });
 
-app.post('/api/tasks/:id/notes', authenticateToken, (req, res) => {
+// Con la API key (integraciones como Service Catalog) solo se puede agregar notas a tareas creadas
+// por una integración (reported_by "integration:*"): así una alerta abierta suma novedades a su tarea.
+app.post('/api/tasks/:id/notes', authenticateTokenOrApiKey, (req, res) => {
   const { id } = req.params;
   const { note } = req.body;
 
@@ -1174,18 +1176,33 @@ app.post('/api/tasks/:id/notes', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'note is required' });
   }
 
-  const noteId = crypto.randomUUID();
-  db.run(
-    'INSERT INTO task_notes (id, task_id, note) VALUES (?, ?, ?)',
-    [noteId, id, note.trim()],
-    (err) => {
-      if (err) {
-        console.error('❌ Error adding task note:', err);
-        return res.status(500).json({ error: 'Database error' });
+  const insert = () => {
+    const noteId = crypto.randomUUID();
+    db.run(
+      'INSERT INTO task_notes (id, task_id, note) VALUES (?, ?, ?)',
+      [noteId, id, note.trim()],
+      (err) => {
+        if (err) {
+          console.error('❌ Error adding task note:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ success: true, id: noteId });
       }
-      res.json({ success: true, id: noteId });
+    );
+  };
+
+  if (req.user?.id !== 'api-integration') return insert();
+  db.get('SELECT reported_by FROM tasks WHERE id = ?', [id], (err, task) => {
+    if (err) {
+      console.error('❌ Error fetching task for note:', err);
+      return res.status(500).json({ error: 'Database error' });
     }
-  );
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+    if (!String(task.reported_by || '').startsWith('integration:')) {
+      return res.status(403).json({ error: 'Only tasks created by an integration accept notes with the API key' });
+    }
+    insert();
+  });
 });
 
 // Cierre automático desde integraciones (Service Catalog): cuando la alerta que abrió la
