@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Receipt, CheckCircle2, Circle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { apiService } from '../services/api';
+import { getHourlyRateForYear } from '../utils/clientRates';
+
+const BREAKDOWN_TYPES: { type: string; label: string }[] = [
+  { type: 'incident', label: 'Incidents' },
+  { type: 'request', label: 'Requests' },
+  { type: 'problem', label: 'Problems' },
+  { type: 'change', label: 'Changes' }
+];
 
 interface BillingReport {
   id: string;
@@ -20,7 +28,7 @@ interface BillingReport {
 }
 
 export function PaymentReportsPage() {
-  const { getTask } = useApp();
+  const { getTask, getClient } = useApp();
   const [reports, setReports] = useState<BillingReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unpaid' | 'paid'>('unpaid');
@@ -153,26 +161,85 @@ export function PaymentReportsPage() {
 
                 {isOpen && (
                   <div className="px-4 pb-4 pl-11">
-                    <div className="space-y-1">
-                      {report.taskIds.map(taskId => {
-                        const task = getTask(taskId);
-                        if (!task) {
-                          return (
-                            <p key={taskId} className="text-xs text-gray-400 dark:text-gray-500 italic">
-                              Tarea {taskId.slice(0, 8)}… (ya no existe)
+                    {(() => {
+                      const client = getClient(report.clientId);
+                      const resolvedTasks = report.taskIds.map(id => getTask(id)).filter((t): t is NonNullable<typeof t> => !!t);
+                      const missingCount = report.taskIds.length - resolvedTasks.length;
+                      const getRate = (t: { date: string }) => client ? getHourlyRateForYear(client, parseISO(t.date).getFullYear()) : 0;
+
+                      const servicesTasks = resolvedTasks.filter(t => t.type !== 'insumos');
+                      const suppliesTasks = resolvedTasks.filter(t => t.type === 'insumos');
+                      const breakdownGroups = BREAKDOWN_TYPES
+                        .map(({ type, label }) => ({ label, tasks: servicesTasks.filter(t => t.type === type) }))
+                        .filter(g => g.tasks.length > 0);
+                      const suppliesTotal = suppliesTasks.reduce((s, t) => s + (t.cost || 0), 0);
+                      const servicesTotal = servicesTasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
+                      const grandTotal = servicesTotal + suppliesTotal;
+
+                      if (breakdownGroups.length === 0 && suppliesTasks.length === 0) {
+                        return <p className="text-sm text-gray-400 dark:text-gray-500 italic">Ninguna de las tareas de este reporte existe ya.</p>;
+                      }
+
+                      return (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                <th className="pb-2 pr-4">Type</th>
+                                <th className="pb-2 pr-4 text-center">Tasks</th>
+                                <th className="pb-2 pr-4 text-right">Hours</th>
+                                <th className="pb-2 pr-4 text-right">Amount</th>
+                                <th className="pb-2 text-right">% of Total</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                              {breakdownGroups.map(({ label, tasks }) => {
+                                const h = tasks.reduce((s, t) => s + (t.hours || 0), 0);
+                                const amt = tasks.reduce((s, t) => s + (t.hours || 0) * getRate(t), 0);
+                                return (
+                                  <tr key={label}>
+                                    <td className="py-2 pr-4 font-medium text-gray-900 dark:text-white">{label}</td>
+                                    <td className="py-2 pr-4 text-center text-gray-600 dark:text-gray-400">{tasks.length}</td>
+                                    <td className="py-2 pr-4 text-right text-gray-600 dark:text-gray-400">{h.toFixed(1)}h</td>
+                                    <td className="py-2 pr-4 text-right font-semibold text-gray-900 dark:text-white">${amt.toFixed(2)}</td>
+                                    <td className="py-2 text-right text-gray-500 dark:text-gray-400">
+                                      {grandTotal > 0 ? `${((amt / grandTotal) * 100).toFixed(0)}%` : '0%'}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {suppliesTasks.length > 0 && (
+                                <tr>
+                                  <td className="py-2 pr-4 font-medium text-gray-900 dark:text-white">Supplies</td>
+                                  <td className="py-2 pr-4 text-center text-gray-600 dark:text-gray-400">{suppliesTasks.length}</td>
+                                  <td className="py-2 pr-4 text-right text-gray-400 dark:text-gray-500">—</td>
+                                  <td className="py-2 pr-4 text-right font-semibold text-gray-900 dark:text-white">${suppliesTotal.toFixed(2)}</td>
+                                  <td className="py-2 text-right text-gray-500 dark:text-gray-400">
+                                    {grandTotal > 0 ? `${((suppliesTotal / grandTotal) * 100).toFixed(0)}%` : '0%'}
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t-2 border-gray-200 dark:border-gray-600">
+                                <td className="pt-2 pr-4 font-bold text-gray-900 dark:text-white text-xs uppercase">Total</td>
+                                <td className="pt-2 pr-4 text-center font-bold text-gray-900 dark:text-white">{resolvedTasks.length}</td>
+                                <td className="pt-2 pr-4 text-right font-bold text-gray-900 dark:text-white">
+                                  {servicesTasks.reduce((s, t) => s + (t.hours || 0), 0).toFixed(1)}h
+                                </td>
+                                <td className="pt-2 pr-4 text-right font-bold text-green-600 dark:text-green-400">${grandTotal.toFixed(2)}</td>
+                                <td className="pt-2 text-right font-bold text-gray-500 dark:text-gray-400">100%</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                          {missingCount > 0 && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-2">
+                              {missingCount} tarea{missingCount !== 1 ? 's' : ''} de este reporte ya no existe{missingCount !== 1 ? 'n' : ''} (no incluida{missingCount !== 1 ? 's' : ''} arriba).
                             </p>
-                          );
-                        }
-                        return (
-                          <div key={taskId} className="flex items-center justify-between text-sm py-1 border-b border-gray-50 dark:border-gray-700/50 last:border-0">
-                            <span className="text-gray-700 dark:text-gray-300 truncate">{task.description}</span>
-                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0 ml-3">
-                              {task.type === 'insumos' ? `$${(task.cost || 0).toFixed(0)}` : `${(task.hours || 0).toFixed(1)}h`}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
