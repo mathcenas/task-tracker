@@ -210,6 +210,21 @@ const initDB = async () => {
       content TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS billing_reports (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      report_number TEXT,
+      period_label TEXT,
+      period_start DATE,
+      period_end DATE,
+      task_ids TEXT NOT NULL,
+      total_amount REAL DEFAULT 0,
+      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paid BOOLEAN DEFAULT 0,
+      paid_at DATETIME,
+      FOREIGN KEY (client_id) REFERENCES clients (id)
     )`
   ];
 

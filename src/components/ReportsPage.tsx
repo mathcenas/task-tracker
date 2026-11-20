@@ -13,6 +13,7 @@ import { generateMarkdownReport, downloadMarkdown } from '../utils/markdownExpor
 import { apiService } from '../services/api';
 import { MarkdownImportModal } from './MarkdownImportModal';
 import { getHourlyRateForYear } from '../utils/clientRates';
+import { saveBillingReportSnapshot } from '../utils/billingReports';
 
 type ExportMode = 'monthly' | 'multimonth' | 'project';
 
@@ -148,6 +149,17 @@ export function ReportsPage() {
         pdf.addThankYouNote();
         pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-monthly-${format(selectedMonth, 'yyyy-MM')}.pdf`);
 
+        const monthlyTotal = exportTasks.reduce((sum, t) => sum + (t.type === 'insumos' ? (t.cost || 0) : (t.hours || 0) * hourlyRate), 0);
+        saveBillingReportSnapshot({
+          clientId: selectedClient.id,
+          reportNumber,
+          periodLabel: format(selectedMonth, 'MMMM yyyy'),
+          periodStart: format(s, 'yyyy-MM-dd'),
+          periodEnd: format(e, 'yyyy-MM-dd'),
+          taskIds: exportTasks.map(t => t.id),
+          totalAmount: monthlyTotal
+        });
+
       } else if (exportMode === 'multimonth') {
         const s = startOfMonth(startMonth);
         const e = endOfMonth(endMonth);
@@ -180,6 +192,20 @@ export function ReportsPage() {
         pdf.addThankYouNote();
         const multiMonthProjectSuffix = selectedProjectIds.length > 0 ? `-${projectFilterSlug}` : '';
         pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-report-${format(s, 'yyyy-MM')}-to-${format(e, 'yyyy-MM')}${multiMonthProjectSuffix}.pdf`);
+
+        const multiMonthTotal = exportTasks.reduce((sum, t) => {
+          if (t.type === 'insumos') return sum + (t.cost || 0);
+          return sum + (t.hours || 0) * getHourlyRateForYear(selectedClient, parseISO(t.date).getFullYear());
+        }, 0);
+        saveBillingReportSnapshot({
+          clientId: selectedClient.id,
+          reportNumber: `RPT-${format(s, 'yyyyMM')}-${format(e, 'yyyyMM')}-${selectedClient.id.slice(-6)}`,
+          periodLabel: `${format(s, 'MMM yyyy')} – ${format(e, 'MMM yyyy')}`,
+          periodStart: format(s, 'yyyy-MM-dd'),
+          periodEnd: format(e, 'yyyy-MM-dd'),
+          taskIds: exportTasks.map(t => t.id),
+          totalAmount: multiMonthTotal
+        });
 
       } else {
         // project mode
@@ -227,6 +253,20 @@ export function ReportsPage() {
         pdf.addThankYouNote();
         const yearSlug = selectedYear === 'all' ? 'all-years' : selectedYear;
         pdf.save(`${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-${projectFilterSlug}-${yearSlug}.pdf`);
+
+        const rateFor = (t: { date: string }) => typeof hourlyRate === 'function' ? hourlyRate(t) : hourlyRate;
+        const projectTotal = exportTasks.reduce((sum, t) => sum + (t.type === 'insumos' ? (t.cost || 0) : (t.hours || 0) * rateFor(t)), 0);
+        const periodStart = selectedYear === 'all' ? sortedTasks[0].date : `${selectedYear}-01-01`;
+        const periodEnd = selectedYear === 'all' ? sortedTasks[sortedTasks.length - 1].date : `${selectedYear}-12-31`;
+        saveBillingReportSnapshot({
+          clientId: selectedClient.id,
+          reportNumber: `RPT-PROJECT-${selectedClient.id.slice(-6)}${selectedProjectIds.length === 1 ? '-' + selectedProjectIds[0].slice(-4) : ''}${selectedYear !== 'all' ? '-' + selectedYear : ''}`,
+          periodLabel: `${projectName} (${periodLabel})`,
+          periodStart,
+          periodEnd,
+          taskIds: exportTasks.map(t => t.id),
+          totalAmount: projectTotal
+        });
       }
     } catch (err: any) {
       alert(`Failed to generate report: ${err.message || err}`);

@@ -34,6 +34,7 @@ import { SuppliesPage } from './components/SuppliesPage';
 import { SuppliesPaymentTracker } from './components/SuppliesPaymentTracker';
 import { OverviewDashboard } from './components/OverviewDashboard';
 import { TrendsDashboard } from './components/TrendsDashboard';
+import { PaymentReportsPage } from './components/PaymentReportsPage';
 import { ReportsPage } from './components/ReportsPage';
 import { NotesPage } from './components/NotesPage';
 import { ManualPage } from './components/ManualPage';
@@ -64,6 +65,7 @@ export default function App() {
                   <Route path="/monthly" element={<MonthlyDashboard />} />
                   <Route path="/overview" element={<OverviewDashboard />} />
                   <Route path="/trends" element={<TrendsDashboard />} />
+                  <Route path="/payment-reports" element={<PaymentReportsPage />} />
                   <Route path="/tasks" element={<AllTasksPage />} />
                   <Route path="/kanban" element={<KanbanBoard />} />
                   <Route path="/ideas" element={<IdeasBoard />} />

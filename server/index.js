@@ -292,6 +292,42 @@ const initDB = () => {
       content TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+
+    // A snapshot of which tasks were included in a client PDF export, so a
+    // whole "report" (sometimes covering months of work, paid in one lump
+    // sum) can be marked paid in one action instead of hunting down each
+    // task individually. task_ids is a JSON array - fixed at export time,
+    // not a live date-range query, so marking paid stays correct even if
+    // later edits change which tasks fall in that period.
+    // Was only ever created via init-db.js (fresh installs) and migrate.js
+    // (existing DBs) - both run before this file in start-with-cron.sh, so
+    // it's always present in practice, but add it here too for consistency
+    // with every other table, in case this file is ever run standalone.
+    `CREATE TABLE IF NOT EXISTS client_yearly_rates (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      hourly_rate REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
+      UNIQUE(client_id, year)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS billing_reports (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      report_number TEXT,
+      period_label TEXT,
+      period_start DATE,
+      period_end DATE,
+      task_ids TEXT NOT NULL,
+      total_amount REAL DEFAULT 0,
+      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paid BOOLEAN DEFAULT 0,
+      paid_at DATETIME,
+      FOREIGN KEY (client_id) REFERENCES clients (id)
     )`
   ];
 
@@ -1986,6 +2022,106 @@ app.get('/api/activity-logs', authenticateToken, (req, res) => {
       res.json(parsedLogs);
     }
   );
+});
+
+// Billing reports - a snapshot of which tasks were included in a client PDF
+// export, so a whole report (sometimes paid months later, in one lump sum)
+// can be marked paid in one action. See the billing_reports table comment.
+app.get('/api/billing-reports', authenticateToken, (req, res) => {
+  db.all(
+    `SELECT br.*, c.name as client_name FROM billing_reports br
+     LEFT JOIN clients c ON c.id = br.client_id
+     ORDER BY br.generated_at DESC`,
+    (err, rows) => {
+      if (err) {
+        console.error('Error fetching billing reports:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(rows.map(r => ({ ...r, task_ids: JSON.parse(r.task_ids || '[]') })));
+    }
+  );
+});
+
+// Upsert: re-exporting the same client+period while the existing report for
+// it is still unpaid updates that report in place, instead of piling up
+// duplicates every time a PDF gets re-generated (e.g. after a correction).
+// Once a report is paid, a later export for that same period starts a new
+// one - the paid record stays untouched as history.
+app.post('/api/billing-reports', authenticateToken, async (req, res) => {
+  const { clientId, reportNumber, periodLabel, periodStart, periodEnd, taskIds, totalAmount } = req.body;
+
+  if (!clientId || !periodStart || !periodEnd || !Array.isArray(taskIds)) {
+    return res.status(400).json({ error: 'clientId, periodStart, periodEnd and taskIds are required' });
+  }
+
+  try {
+    const existing = await dbAllAsync(
+      `SELECT id FROM billing_reports WHERE client_id = ? AND period_start = ? AND period_end = ? AND paid = 0`,
+      [clientId, periodStart, periodEnd]
+    );
+
+    if (existing.length > 0) {
+      const id = existing[0].id;
+      await dbRunAsync(
+        `UPDATE billing_reports SET report_number = ?, period_label = ?, task_ids = ?, total_amount = ?, generated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [reportNumber || null, periodLabel || null, JSON.stringify(taskIds), totalAmount || 0, id]
+      );
+      return res.json({ success: true, id, updated: true });
+    }
+
+    const id = crypto.randomUUID();
+    await dbRunAsync(
+      `INSERT INTO billing_reports (id, client_id, report_number, period_label, period_start, period_end, task_ids, total_amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, clientId, reportNumber || null, periodLabel || null, periodStart, periodEnd, JSON.stringify(taskIds), totalAmount || 0]
+    );
+    res.json({ success: true, id, updated: false });
+  } catch (err) {
+    console.error('Error saving billing report:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Marking paid cascades to every task in the snapshot (billed+paid, only
+// filling in timestamps that aren't already set); un-marking only reverts
+// paid, since "billed" (it was invoiced) shouldn't un-happen.
+app.put('/api/billing-reports/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { paid } = req.body;
+
+  try {
+    const reports = await dbAllAsync('SELECT * FROM billing_reports WHERE id = ?', [id]);
+    if (reports.length === 0) {
+      return res.status(404).json({ error: 'Billing report not found' });
+    }
+    const report = reports[0];
+    const taskIds = JSON.parse(report.task_ids || '[]');
+
+    await dbRunAsync(
+      `UPDATE billing_reports SET paid = ?, paid_at = ? WHERE id = ?`,
+      [paid ? 1 : 0, paid ? new Date().toISOString() : null, id]
+    );
+
+    if (taskIds.length > 0) {
+      const placeholders = taskIds.map(() => '?').join(',');
+      if (paid) {
+        await dbRunAsync(
+          `UPDATE tasks SET billed = 1, billedAt = COALESCE(billedAt, CURRENT_TIMESTAMP), paid = 1, paidAt = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`,
+          taskIds
+        );
+      } else {
+        await dbRunAsync(
+          `UPDATE tasks SET paid = 0, paidAt = NULL WHERE id IN (${placeholders})`,
+          taskIds
+        );
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error updating billing report:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Uptime Kuma Integration
