@@ -125,6 +125,7 @@ class ApiService {
       createdAt: c.created_at,
       archived: Boolean(c.archived),
       taskSelectionEnabled: Boolean(c.task_selection_enabled),
+      reportToken: c.report_token || undefined,
       yearlyRates: c.yearly_rates?.map((r: any) => ({
         id: r.id,
         clientId: r.client_id,
@@ -188,6 +189,10 @@ class ApiService {
       method: 'PATCH',
       body: JSON.stringify({ archived }),
     });
+  }
+
+  async rotateClientReportToken(id: string): Promise<{ reportToken: string }> {
+    return this.request(`/clients/${id}/report-token`, { method: 'POST' });
   }
 
   async setClientTaskSelectionEnabled(id: string, enabled: boolean) {

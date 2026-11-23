@@ -20,6 +20,7 @@ interface AppContextType {
   updateClient: (client: Client) => Promise<void>;
   archiveClient: (clientId: string, archived: boolean) => Promise<void>;
   setClientTaskSelectionEnabled: (clientId: string, enabled: boolean) => Promise<void>;
+  rotateClientReportToken: (clientId: string) => Promise<string>;
   updateProject: (project: Project) => Promise<void>;
   reloadTasks: () => Promise<void>;
   refreshClientYearlyRates: (clientId: string) => Promise<void>;
@@ -261,6 +262,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Nuevo link del reporte mensual: el anterior deja de funcionar
+  const rotateClientReportToken = async (clientId: string) => {
+    const { reportToken } = await apiService.rotateClientReportToken(clientId);
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, reportToken } : c));
+    return reportToken;
+  };
+
   const updateClient = async (client: Client) => {
     try {
       await apiService.updateClient(client.id, client);
@@ -340,6 +348,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateClient,
       archiveClient,
       setClientTaskSelectionEnabled,
+      rotateClientReportToken,
       updateProject
     }}>
       {children}

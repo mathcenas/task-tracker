@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { clientReportUrl } from '../utils/reportUrl';
 import { useApp } from '../context/AppContext';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths, parseISO } from 'date-fns';
 import { Download, Plus, AlertTriangle, FileText, Pencil, Package, DollarSign, Clock, Calendar, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Trash2, ChevronDown, ChevronUp, Users, CalendarDays, Archive, ArchiveRestore, EyeOff, Eye, Receipt, CheckCheck, ListChecks, Folders, X } from 'lucide-react';
@@ -10,7 +11,7 @@ import { getHourlyRateForYear } from '../utils/clientRates';
 import { saveBillingReportSnapshot } from '../utils/billingReports';
 
 export function ClientDashboard() {
-  const { clients, getClientTasks, getProject, getProjectTasks, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, updateTask, addProject, updateProject, deleteProject } = useApp();
+  const { clients, getClientTasks, getProject, getProjectTasks, deleteClient, projects, updateClient, archiveClient, setClientTaskSelectionEnabled, rotateClientReportToken, updateTask, addProject, updateProject, deleteProject } = useApp();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const monthParam = searchParams.get('month');
@@ -885,7 +886,7 @@ export function ClientDashboard() {
                             return;
                           }
 
-                          const url = `${window.location.origin}/report/${client.slug}/${year}/${month}`;
+                          const url = clientReportUrl(client, year, month);
                           navigator.clipboard.writeText(url);
                           alert(`✅ Client report URL copied!\n\n${url}`);
                         }}
@@ -893,6 +894,24 @@ export function ClientDashboard() {
                       >
                         <Calendar className="w-4 h-4 mr-2" />
                         Copy Client URL
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!window.confirm(`¿Generar un link nuevo para el reporte de "${client.name}"?\n\nLos links que ya mandaste dejan de funcionar.`)) return;
+                          try {
+                            const reportToken = await rotateClientReportToken(client.id);
+                            const url = clientReportUrl({ ...client, reportToken }, selectedMonth.getFullYear(), selectedMonth.getMonth() + 1);
+                            navigator.clipboard.writeText(url);
+                            alert(`✅ Link nuevo copiado.\n\n${url}`);
+                          } catch {
+                            alert('No se pudo generar el link nuevo.');
+                          }
+                        }}
+                        title="Genera un link nuevo; los anteriores dejan de funcionar"
+                        className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        New link
                       </button>
                       <button
                         onClick={(e) => {

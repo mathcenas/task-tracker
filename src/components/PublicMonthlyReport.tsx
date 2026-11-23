@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, isAfter, endOfDay, subMonths, addMonths, parseISO } from 'date-fns';
 import { Clock, AlertTriangle, FileText, Package, DollarSign, Calendar, Download, ChevronLeft, ChevronRight, BarChart3, TrendingUp } from 'lucide-react';
 import { PDFExporter } from '../utils/pdfExport';
@@ -9,6 +9,10 @@ import { getHourlyRateForYear } from '../utils/clientRates';
 
 export function PublicMonthlyReport() {
   const { clientSlug, year, month } = useParams<{ clientSlug: string; year: string; month: string }>();
+  // Token del link (?k=…): el servidor lo pide para ver el reporte y para enviar la selección
+  const [searchParams] = useSearchParams();
+  const reportKey = searchParams.get('k');
+  const kq = reportKey ? `?k=${encodeURIComponent(reportKey)}` : '';
   const [client, setClient] = useState<Client | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -37,11 +41,13 @@ export function PublicMonthlyReport() {
         const apiUrl = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
 
         // Load current month data
-        const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}`);
+        const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}${kq}`);
 
         if (!response.ok) {
           if (response.status === 404) {
             setError('not_found');
+          } else if (response.status === 403) {
+            setError('expired');
           } else {
             setError('server_error');
           }
@@ -74,7 +80,7 @@ export function PublicMonthlyReport() {
           const trendMonth = trendDate.getMonth() + 1;
 
           trendPromises.push(
-            fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${trendYear}/${trendMonth}`)
+            fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${trendYear}/${trendMonth}${kq}`)
               .then(res => res.ok ? res.json() : { tasks: [] })
               .catch(() => ({ tasks: [] }))
           );
@@ -93,7 +99,7 @@ export function PublicMonthlyReport() {
     };
 
     loadReportData();
-  }, [clientSlug, year, month]);
+  }, [clientSlug, year, month, kq]);
 
   // Handle missing parameters
   if (!clientSlug || !year || !month) {
@@ -150,7 +156,9 @@ export function PublicMonthlyReport() {
               </p>
               <div className="mt-6 p-4 bg-red-50 rounded-lg dark:bg-red-900/20">
                 <p className="text-sm text-red-800 dark:text-red-300">
-                  <strong>Error:</strong> Client report not accessible
+                  <strong>Error:</strong> {error === 'expired'
+                    ? 'Este link ya no es válido. Pedí el link actualizado a tu proveedor.'
+                    : 'Client report not accessible'}
                 </p>
                 <p className="text-xs text-red-600 dark:text-red-400 mt-2">
                   Please contact your service provider if you believe this is an error.
@@ -292,7 +300,7 @@ export function PublicMonthlyReport() {
     setSelectionError(null);
     try {
       const apiUrl = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
-      const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}/selections`, {
+      const response = await fetch(`${apiUrl}/api/public/client-report/${clientSlug}/${year}/${month}/selections${kq}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selectedTaskIds: Array.from(selectedTaskIds) })
@@ -352,21 +360,21 @@ export function PublicMonthlyReport() {
     const prevMonth = subMonths(reportDate, 1);
     const newYear = prevMonth.getFullYear();
     const newMonth = prevMonth.getMonth() + 1;
-    window.location.href = `/report/${clientSlug}/${newYear}/${newMonth}`;
+    window.location.href = `/report/${clientSlug}/${newYear}/${newMonth}${kq}`;
   };
 
   const nextMonth = () => {
     const nextMonth = addMonths(reportDate, 1);
     const newYear = nextMonth.getFullYear();
     const newMonth = nextMonth.getMonth() + 1;
-    window.location.href = `/report/${clientSlug}/${newYear}/${newMonth}`;
+    window.location.href = `/report/${clientSlug}/${newYear}/${newMonth}${kq}`;
   };
 
   const goToCurrentMonth = () => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
-    window.location.href = `/report/${clientSlug}/${currentYear}/${currentMonth}`;
+    window.location.href = `/report/${clientSlug}/${currentYear}/${currentMonth}${kq}`;
   };
 
   const getTaskIcon = (type: string) => {
@@ -739,7 +747,7 @@ export function PublicMonthlyReport() {
                         <div
                           key={`${data.year}-${data.monthNum}`}
                           className="text-center cursor-pointer group transition-all duration-200 hover:scale-105"
-                          onClick={() => window.location.href = `/report/${clientSlug}/${data.year}/${data.monthNum}`}
+                          onClick={() => window.location.href = `/report/${clientSlug}/${data.year}/${data.monthNum}${kq}`}
                           title={`Click to view ${data.month} ${data.year} report\nIncidents: ${data.incidentHours.toFixed(1)}h\nRequests: ${data.requestHours.toFixed(1)}h\nTotal: ${data.hours.toFixed(1)}h`}
                         >
                           <div className="h-32 flex items-end justify-center mb-2 relative">

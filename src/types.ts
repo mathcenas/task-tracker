@@ -9,6 +9,8 @@ export interface Client {
   archived?: boolean;
   yearlyRates?: ClientYearlyRate[];
   taskSelectionEnabled?: boolean;
+  /** Token del link del reporte mensual público (?k=…) */
+  reportToken?: string;
 }
 
 export interface Note {

@@ -421,6 +421,8 @@ const runMigrations = () => {
     `ALTER TABLE recurring_tasks ADD COLUMN recurring_end_date DATE`,
     `ALTER TABLE recurring_tasks ADD COLUMN frequency TEXT NOT NULL DEFAULT 'monthly'`,
     `ALTER TABLE recurring_tasks ADD COLUMN month_of_year INTEGER`,
+    // Token del link del reporte mensual público (?k=…): sin él el slug solo no alcanza
+    `ALTER TABLE clients ADD COLUMN report_token TEXT`,
   ];
 
   migrations.forEach(sql => {
@@ -433,6 +435,30 @@ const runMigrations = () => {
 };
 
 runMigrations();
+
+// ── Reporte mensual público: acceso con token ───────────────────────────────
+// El link del reporte lleva ?k=<report_token> (32 caracteres al azar, uno por cliente,
+// se regenera desde la ficha del cliente). El slug sale del nombre y se adivina, así que
+// solo no alcanza. Hasta REPORT_SLUG_ONLY_UNTIL (por defecto 2026-12-31) los links viejos
+// sin token se pueden seguir viendo, pero no se puede enviar la selección de tareas.
+const REPORT_SLUG_ONLY_UNTIL = process.env.REPORT_SLUG_ONLY_UNTIL || '2026-12-31';
+const newReportToken = () => crypto.randomBytes(16).toString('hex');
+const ensureReportTokens = () => {
+  db.all("SELECT id FROM clients WHERE report_token IS NULL OR report_token = ''", (err, rows) => {
+    if (err) return console.error('report_token:', err.message);
+    (rows || []).forEach(r => db.run('UPDATE clients SET report_token = ? WHERE id = ?', [newReportToken(), r.id]));
+  });
+};
+setTimeout(ensureReportTokens, 3000);   // después de las migraciones
+const reportTokenMatches = (client, k) => {
+  if (!client.report_token || typeof k !== 'string' || k.length !== client.report_token.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(k), Buffer.from(client.report_token));
+};
+// 'token' = link nuevo; 'legacy' = link viejo sin token, todavía aceptado; null = sin acceso
+const reportAccess = (client, k) => {
+  if (reportTokenMatches(client, k)) return 'token';
+  return new Date() <= new Date(`${REPORT_SLUG_ONLY_UNTIL}T23:59:59`) ? 'legacy' : null;
+};
 
 // Activity logging helper function
 const logActivity = (action, entityType, entityId, entityName, details = null, userId = 'system') => {
@@ -494,6 +520,16 @@ const authenticateTokenOrApiKey = (req, res, next) => {
     next();
   });
 };
+
+// Rutas públicas (reporte mensual, páginas de estado): límite por IP para que no se puedan
+// recorrer slugs o meses a fuerza bruta
+app.use('/api/public/', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados pedidos. Probá de nuevo en unos minutos.' }
+}));
 
 const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -607,6 +643,7 @@ app.post('/api/clients', authenticateToken, (req, res) => {
         return res.status(500).json({ error: 'Database error: ' + err.message });
       }
       console.log('✅ [API] Client created successfully with id:', id);
+      db.run('UPDATE clients SET report_token = ? WHERE id = ?', [newReportToken(), id]);
 
       // Log activity
       logActivity('created', 'client', id, name, { hourlyRate, email, phone }, req.user?.id);
@@ -1636,6 +1673,56 @@ app.put('/api/users/:id/password', authenticateToken, (req, res) => {
 });
 
 // Public endpoint for client reports
+// Regenera el token del link del reporte (el link anterior deja de funcionar)
+app.post('/api/clients/:id/report-token', authenticateToken, (req, res) => {
+  const token = newReportToken();
+  db.run('UPDATE clients SET report_token = ? WHERE id = ?', [token, req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (this.changes === 0) return res.status(404).json({ error: 'Client not found' });
+    logActivity('updated', 'client', req.params.id, 'report link', { action: 'report_token_rotated' }, req.user?.id);
+    res.json({ reportToken: token });
+  });
+});
+
+// Horas trabajadas para integraciones (Service Catalog las muestra en el portal del cliente).
+// Solo tareas terminadas con horas, sin insumos. GET /api/integrations/hours?from=YYYY-MM-DD&to=YYYY-MM-DD
+app.get('/api/integrations/hours', authenticateTokenOrApiKey, (req, res) => {
+  const { from, to } = req.query;
+  const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  if (!isDate(from) || !isDate(to) || from > to) {
+    return res.status(400).json({ error: 'from y to son obligatorios (YYYY-MM-DD) y from <= to' });
+  }
+  if ((new Date(to) - new Date(from)) / 86400000 > 400) {
+    return res.status(400).json({ error: 'El rango no puede superar 400 días' });
+  }
+  db.all(
+    `SELECT t.id, t.client_id, t.project_id, p.name AS project_name, t.date, t.hours, t.description,
+            t.type, t.completed_at, t.client_excluded_at
+       FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
+      WHERE t.finished = 1 AND t.hours > 0 AND t.type != 'insumos' AND t.date >= ? AND t.date <= ?
+      ORDER BY t.date`,
+    [from, to],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      res.json({
+        from, to,
+        tasks: (rows || []).map(t => ({
+          id: t.id,
+          clientId: t.client_id,
+          projectId: t.project_id,
+          projectName: t.project_name,
+          date: t.date,
+          hours: t.hours,
+          description: t.description,
+          type: t.type,
+          completedAt: t.completed_at,
+          clientExcluded: Boolean(t.client_excluded_at),
+        })),
+      });
+    }
+  );
+});
+
 app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
   const { slug, year, month } = req.params;
 
@@ -1650,6 +1737,10 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
     if (!client) {
       console.log('❌ Client not found for slug:', slug);
       return res.status(404).json({ error: 'Client not found' });
+    }
+    const access = reportAccess(client, req.query.k);
+    if (!access) {
+      return res.status(403).json({ error: 'Este link ya no es válido. Pedí el link actualizado.' });
     }
 
     const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
@@ -1699,9 +1790,8 @@ app.get('/api/public/client-report/:slug/:year/:month', (req, res) => {
                   slug: client.slug,
                   hourlyRate: client.hourly_rate,
                   contactPerson: client.contact_person,
-                  email: client.email,
-                  phone: client.phone,
-                  taskSelectionEnabled: Boolean(client.task_selection_enabled),
+                  // Con un link viejo (sin token) se puede ver, pero no enviar la selección
+                  taskSelectionEnabled: Boolean(client.task_selection_enabled) && access === 'token',
                   yearlyRates: (yearlyRates || []).map(r => ({
                     id: r.id,
                     clientId: r.client_id,
@@ -1783,6 +1873,9 @@ app.post('/api/public/client-report/:slug/:year/:month/selections', (req, res) =
     }
     if (!client.task_selection_enabled) {
       return res.status(403).json({ error: 'Task selection is not enabled for this client' });
+    }
+    if (!reportTokenMatches(client, req.query.k)) {
+      return res.status(403).json({ error: 'Este link no permite enviar la selección. Pedí el link actualizado.' });
     }
 
     const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);

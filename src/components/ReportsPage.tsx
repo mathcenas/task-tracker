@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { clientReportUrl } from '../utils/reportUrl';
 import { useApp } from '../context/AppContext';
 import {
   format, startOfMonth, endOfMonth, subMonths, addMonths,
@@ -346,7 +347,7 @@ export function ReportsPage() {
   const copyPublicUrl = () => {
     if (!selectedClient?.slug) { alert('Client has no slug.'); return; }
     const d = exportMode === 'monthly' ? selectedMonth : new Date();
-    const url = `${window.location.origin}/report/${selectedClient.slug}/${d.getFullYear()}/${d.getMonth() + 1}`;
+    const url = clientReportUrl(selectedClient, d.getFullYear(), d.getMonth() + 1);
     navigator.clipboard.writeText(url);
     alert(`URL copied!\n\n${url}`);
   };
